@@ -26,20 +26,20 @@ To get a local copy up and running, follow these simple steps.
 ### Clone the repository
 
 ```bash
-git clone https://github.com/thediymaker/hpc-dashboard.git
-cd hpc-dashboard
+git clone https://github.com/thediymaker/slurm-node-dashboard.git
+cd slurm-node-dashboard
 ```
 
 ### Build the Docker image
 
 ```bash
-docker build -t hpc-dashboard .
+docker build -t slurm-node-dashboard .
 ```
 
 ### Run the Docker container
 
 ```bash
-docker run -p 3000:3000 hpc-dashboard
+docker run -p 3000:3000 slurm-node-dashboard
 ```
 
 The application should now be running on [http://localhost:3000](http://localhost:3000).
@@ -96,7 +96,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 Your Name – [john.lee@thediymaker.com](mailto:john.lee@thediymaker.com)
 
-Project Link: [https://github.com/thediymaker/hpc-dashboard](https://github.com/thediymaker/hpc-dashboard)
+Project Link: [https://github.com/thediymaker/slurm-node-dashboard](https://github.com/thediymaker/slurm-node-dashboard)
 
 ## Screenshots
 
