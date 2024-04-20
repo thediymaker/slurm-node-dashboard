@@ -1,7 +1,7 @@
 
 # HPC Dashboard
 
-This repository contains the source code for the HPC Dashboard, a Next.js application designed to monitor the status of SLURM nodes. The dashboard provides total utilization metrics for CPU and GPU nodes, as well as detailed individual node status.
+This repository contains the source code for the HPC Dashboard, a Next.js application designed to monitor the status of SLURM nodes. The dashboard provides total utilization metrics for CPU and GPU nodes, as well as detailed individual node status. This is a small portion of a much larger, full HPC management project i am working on that includes things like managing LDAP users, slurm associations, tracking services sold, and renewals.
 
 ## Features
 
