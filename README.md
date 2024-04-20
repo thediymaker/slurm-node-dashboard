@@ -100,12 +100,12 @@ Project Link: [https://github.com/thediymaker/hpc-dashboard](https://github.com/
 
 ## Screenshots
 
-# Dashboard
+### Dashboard
 ![Dashboard Screenshot](/images/dashboard_screenshot.png "Dashboard Overview")
 
-# Dashboard Hover
+### Dashboard Hover
 ![Dashboard Hover Screenshot](/images/dashboard_screenshot2.png "Hover Status")
 
-# Dashboard Footer
+### Dashboard Footer
 ![Dashboard Footer Screenshot](/images/dashboard_screenshot3.png "Footer")
 
