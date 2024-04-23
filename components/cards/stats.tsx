@@ -9,7 +9,7 @@ interface Node {
   real_memory: number;
   alloc_cpus: number;
   cpus: number;
-  gres: string | null; // assuming 'gres' can be null if not a GPU node
+  gres: string | null
   gres_used: string;
 }
 
