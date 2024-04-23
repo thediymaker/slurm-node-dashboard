@@ -1,5 +1,5 @@
 import { CpuIcon } from "lucide-react";
-import React, { Component } from "react";
+import React from "react";
 
 interface IconComponentProps {
   num_used: number;

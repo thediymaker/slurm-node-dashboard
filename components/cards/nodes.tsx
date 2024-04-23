@@ -25,7 +25,7 @@ interface Node {
   real_memory: number;
   alloc_cpus: number;
   cpus: number;
-  gres: string | null;
+  gres: string;
   gres_used: string;
 }
 
@@ -92,6 +92,26 @@ const Nodes = () => {
       [index]: !prevState[index],
     }));
   };
+
+  function parseGpuInfo(node: Node): { gpuUsed: number; gpuTotal: number } {
+    const gpuRegex = /gpu:([^:]+):(\d+)/g; // Capture type and quantity
+
+    const gresMatches = [...node.gres.matchAll(gpuRegex)];
+    const gresUsedMatches = [...node.gres_used.matchAll(gpuRegex)];
+
+    const gpuUsed = gresUsedMatches.reduce((acc, match) => {
+      const type = match[1];
+      const quantity = parseInt(match[2], 10);
+      const matchingGres = gresMatches.find((m) => m[1] === type);
+      return acc + (matchingGres ? quantity : 0); // Sum only if a match is found
+    }, 0);
+
+    const gpuTotal = gresMatches.reduce((acc, match) => {
+      return acc + parseInt(match[2], 10);
+    }, 0);
+
+    return { gpuUsed, gpuTotal };
+  }
 
   if (error) return <div>failed to load</div>;
   if (isLoading)
@@ -193,8 +213,8 @@ const Nodes = () => {
               memoryTotal={node.real_memory}
               memoryUsed={node.alloc_memory}
               status={node.state}
-              gpuUsed={node.gres_used.match(/:(\d+)/)[1]}
-              gpuTotal={node.gres.match(/:(\d+)/)[1]}
+              gpuUsed={parseGpuInfo(node).gpuUsed}
+              gpuTotal={parseGpuInfo(node).gpuTotal}
               index={index}
               data={node}
               dropdownOpenStatus={dropdownOpenStatus}
