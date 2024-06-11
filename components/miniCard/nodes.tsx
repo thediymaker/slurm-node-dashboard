@@ -1,5 +1,5 @@
 "use client";
-import { NodeCard } from "./node-card";
+import { MiniNodeCard } from "./node-card";
 import useSWR from "swr";
 import {
   Select,
@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { useMemo, useState } from "react";
-import Stats from "./stats";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import JobSearch from "../job-search";
@@ -40,7 +39,7 @@ const nodeFetcher = () =>
     },
   }).then((res) => res.json());
 
-const Nodes = () => {
+const MiniNodes = () => {
   const form = useForm();
 
   const {
@@ -135,93 +134,112 @@ const Nodes = () => {
   return (
     <div>
       <div className="mt-3 justify-between flex ">
-        <div className="mr-2">
+      <div className="mr-2">
           <JobSearch />
         </div>
         <Form {...form}>
-          <form className="mx-1 mb-4 flex items-center justify-end">
-            <div className="mr-2">
-              <Button className="px-5" variant={"outline"} asChild>
-                <Link href={"/basic"}>Simple Status</Link>
-              </Button>
+          <form className="mx-1 mb-4 flex items-center ">
+            <div className="flex items-center">
+              <div className="mr-2">
+                <Button className="px-5" variant={"outline"} asChild>
+                  <Link href={"/"}>Detailed Status</Link>
+                </Button>
+              </div>
+              <FormField
+                control={form.control}
+                name="nodes"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex pr-2">
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleNodeTypeChange(value);
+                        }}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="All Nodes" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="allNodes">All Nodes</SelectItem>
+                          <SelectItem value="gpuNodes">GPU Nodes</SelectItem>
+                          <SelectItem value="cpuNodes">CPU Nodes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="states"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex pr-2">
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleNodeStateChange(value);
+                        }}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="All States" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="allState">All States</SelectItem>
+                          <SelectItem value="idleState">Idle Nodes</SelectItem>
+                          <SelectItem value="mixedState">
+                            Mixed Nodes
+                          </SelectItem>
+                          <SelectItem value="allocState">
+                            Allocated Nodes
+                          </SelectItem>
+                          <SelectItem value="downState">Down Nodes</SelectItem>
+                          <SelectItem value="drainState">
+                            Draining Nodes
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-            <FormField
-              control={form.control}
-              name="nodes"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex pr-2">
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handleNodeTypeChange(value);
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="All Nodes" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="allNodes">All Nodes</SelectItem>
-                        <SelectItem value="gpuNodes">GPU Nodes</SelectItem>
-                        <SelectItem value="cpuNodes">CPU Nodes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="states"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex pr-2">
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handleNodeStateChange(value);
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="All States" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="allState">All States</SelectItem>
-                        <SelectItem value="idleState">Idle Nodes</SelectItem>
-                        <SelectItem value="mixedState">Mixed Nodes</SelectItem>
-                        <SelectItem value="allocState">
-                          Allocated Nodes
-                        </SelectItem>
-                        <SelectItem value="downState">Down Nodes</SelectItem>
-                        <SelectItem value="drainState">
-                          Draining Nodes
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </form>
         </Form>
-      </div>
-      <Stats data={nodeData} />
-      <div className="text-xl font-bold uppercase p-3">
-        GPU Systems : <span className="text-blue-400">{totalGpuNodes}</span>
       </div>
       <Separator />
       <div className="flex flex-wrap p-3 uppercase">
         {filteredNodes.map((node: any, index: number) =>
-          node.gres === "" ? null : (
-            <NodeCard
+          node.gres === "" ? (
+            <MiniNodeCard
+              key={node.hostname}
+              name={node.name}
+              load={node.cpu_load.number}
+              partitions={node.partitions}
+              features={node.features}
+              coresTotal={node.cpus}
+              coresUsed={node.alloc_cpus}
+              memoryTotal={node.real_memory}
+              memoryUsed={node.alloc_memory}
+              status={node.state}
+              gpuUsed={0}
+              gpuTotal={0}
+              nodeData={node}
+              index={index}
+              dropdownOpenStatus={dropdownOpenStatus}
+              toggleDropdown={toggleDropdown}
+            />
+          ) : (
+            <MiniNodeCard
               key={node.hostname}
               name={node.name}
               load={node.cpu_load.number}
@@ -242,36 +260,8 @@ const Nodes = () => {
           )
         )}
       </div>
-      <div className="text-xl font-bold uppercase p-5">
-        CPU Systems : <span className="text-blue-400">{totalCpuNodes}</span>
-      </div>
-      <Separator />
-      <div className="flex flex-wrap p-3 uppercase">
-        {filteredNodes.map((node: any, index: number) =>
-          node.gres !== "" ? null : (
-            <NodeCard
-              key={node.hostname}
-              name={node.name}
-              load={node.cpu_load.number}
-              partitions={node.partitions}
-              features={node.features}
-              coresTotal={node.cpus}
-              coresUsed={node.alloc_cpus}
-              memoryTotal={node.real_memory}
-              memoryUsed={node.alloc_memory}
-              status={node.state}
-              gpuUsed={0}
-              gpuTotal={0}
-              nodeData={node}
-              index={index}
-              dropdownOpenStatus={dropdownOpenStatus}
-              toggleDropdown={toggleDropdown}
-            />
-          )
-        )}
-      </div>
     </div>
   );
 };
 
-export default Nodes;
+export default MiniNodes;
