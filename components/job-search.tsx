@@ -12,7 +12,10 @@ const JobSearch = () => {
   const jobIdSchema = z.object({
     jobID: z
       .string()
-      .regex(/^\d+$/)
+      .regex(
+        /^\s*\d+\s*$/,
+        "Job ID must be numeric and can have leading and trailing spaces"
+      )
       .min(2, "Job ID must be at least 2 digits long"),
   });
 
@@ -28,7 +31,8 @@ const JobSearch = () => {
   const { errors } = form.formState;
 
   const handleSearch = (data: JobIdFormData) => {
-    setJobId(data.jobID);
+    const trimmedJobID = data.jobID.trim();
+    setJobId(trimmedJobID);
     setOpen(true);
     setSearch("");
     form.reset();
