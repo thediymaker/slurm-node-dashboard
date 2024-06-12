@@ -31,6 +31,7 @@ interface Node {
   cpus: number;
   gres: string;
   gres_used: string;
+  partitions: string[];
 }
 
 const nodeURL = "/api/slurm/nodes";
@@ -42,7 +43,6 @@ const nodeFetcher = () =>
   }).then((res) => res.json());
 
 const Nodes = () => {
-
   const {
     data: nodeData,
     error: nodeError,
@@ -54,9 +54,20 @@ const Nodes = () => {
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
+  const [selectedNodePartitions, setSelectedNodePartitions] =
+    useState<string>("allPartitions");
   const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
 
   const systems: Node[] = nodeData?.nodes || [];
+
+  const uniquePartitions = useMemo(() => {
+    const partitions = new Set<string>();
+    systems.forEach((node) => {
+      node.partitions.forEach((partition) => partitions.add(partition));
+    });
+    return Array.from(partitions);
+  }, [systems]);
+
   const filteredNodes = systems.filter((node: any) => {
     const nodeMatchesType =
       selectedNodeType === "allNodes" ||
@@ -71,7 +82,11 @@ const Nodes = () => {
       (selectedNodeState === "downState" && node.state[0] === "DOWN") ||
       (selectedNodeState === "drainState" && node.state[1] === "DRAIN");
 
-    return nodeMatchesType && nodeMatchesState;
+    const nodeMatchesPartitions =
+      selectedNodePartitions === "allPartitions" ||
+      node.partitions.includes(selectedNodePartitions);
+
+    return nodeMatchesType && nodeMatchesState && nodeMatchesPartitions;
   });
 
   const totalCpuNodes = useMemo(
@@ -90,6 +105,10 @@ const Nodes = () => {
   // This function handles the change event for the node state selection menu
   const handleNodeStateChange = (value: string) => {
     setSelectedNodeState(value);
+  };
+
+  const handleNodePartitionsChange = (value: string) => {
+    setSelectedNodePartitions(value);
   };
 
   const toggleDropdown = (index: any) => {
@@ -135,9 +154,11 @@ const Nodes = () => {
       <NodeHeader
         handleNodeStateChange={handleNodeStateChange}
         handleNodeTypeChange={handleNodeTypeChange}
+        handleNodePartitionsChange={handleNodePartitionsChange}
+        partitions={uniquePartitions}
       />
       <Stats data={nodeData} />
-      <div className="text-xl font-bold uppercase p-3">
+      <div className="text-xl font-bold uppercase p-3 mb-5">
         GPU Systems : <span className="text-blue-400">{totalGpuNodes}</span>
       </div>
       <Separator />

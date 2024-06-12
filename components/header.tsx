@@ -12,7 +12,12 @@ import {
 } from "./ui/select";
 import { useForm } from "react-hook-form";
 
-const NodeHeader = ({ handleNodeStateChange, handleNodeTypeChange }: any) => {
+const NodeHeader = ({
+  handleNodeStateChange,
+  handleNodeTypeChange,
+  handleNodePartitionsChange,
+  partitions,
+}: any) => {
   const form = useForm();
   const pathname = usePathname();
 
@@ -54,6 +59,40 @@ const NodeHeader = ({ handleNodeStateChange, handleNodeTypeChange }: any) => {
                       <SelectItem value="allNodes">All Nodes</SelectItem>
                       <SelectItem value="gpuNodes">GPU Nodes</SelectItem>
                       <SelectItem value="cpuNodes">CPU Nodes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="partitions"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex pr-2">
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      handleNodePartitionsChange(value);
+                    }}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All Partitions" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="allPartitions">
+                        All Partitions
+                      </SelectItem>
+                      {partitions.map((partition: string) => (
+                        <SelectItem key={partition} value={partition}>
+                          {partition}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
