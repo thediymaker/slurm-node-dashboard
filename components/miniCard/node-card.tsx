@@ -4,92 +4,14 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "../ui/hover-card";
-import NodeCardModal from "../modals/card-modal";
-
-interface BaseCardProps {
-  name: string;
-  load: number;
-  partitions: string;
-  features: string;
-  coresUsed: number;
-  coresTotal: number;
-  memoryUsed: number;
-  memoryTotal: number;
-  status: string;
-  nodeData: any;
-  gpuUsed: number;
-  gpuTotal: number;
-  toggleDropdown: (index: number) => void;
-  dropdownOpenStatus: any;
-  index: number;
-}
-
-interface GpuAllocation {
-  type: string;
-  count: number;
-  indexRange?: string;
-}
-
-function parseGpuAllocations(gresString: string): GpuAllocation[] {
-  return gresString.split(",").map((item) => {
-    const parts = item.split(":");
-    const count = parseInt(parts[2], 10);
-    return { type: parts[0] + ":" + parts[1], count };
-  });
-}
-
-function parseUsedGpuAllocations(gresUsedString: string): GpuAllocation[] {
-  return gresUsedString.split(",").map((item) => {
-    const [typeAndCount, indexRange] = item.split("(");
-    const parts = typeAndCount.split(":");
-    const count = parseInt(parts[2], 10);
-    return { type: parts[0] + ":" + parts[1], count, indexRange };
-  });
-}
-
-function getStatusColor(status: string): string {
-  const statusLevel = status[1] || status[0];
-  switch (statusLevel) {
-    case "DRAIN":
-    case "NOT_RESPONDING":
-    case "DOWN":
-      return "bg-blue-400";
-    case "IDLE":
-      return "bg-green-700";
-    case "MIXED":
-      return "bg-orange-800";
-    case "PLANNED":
-      return "bg-purple-500";
-    case "ALLOCATED":
-      return "bg-red-900";
-    case "COMPLETING":
-      return "bg-yellow-500";
-    default:
-      return "bg-gray-900";
-  }
-}
-
-function getStatusDef(status: string): string {
-  const statusLevel = status[1] || status[0];
-  switch (statusLevel) {
-    case "DRAIN":
-    case "NOT_RESPONDING":
-    case "DOWN":
-      return "This System is currently unavailable. This could be due to maintenance, or hardware issues.";
-    case "IDLE":
-      return "System is idle ready for use.";
-    case "MIXED":
-      return "System is currently in use, but not fully allocated.";
-    case "ALLOCATED":
-      return "System is fully allocated.";
-    case "COMPLETING":
-      return "System is currently in the process of completing a task.";
-    case "PLANNED":
-      return "System is being prepared for use.";
-    default:
-      return "System status unknown, this is likely due to the system being offline.";
-  }
-}
+import NodeCardModal from "../modals/card-job-modal";
+import {
+  getStatusColor,
+  getStatusDef,
+  parseGpuAllocations,
+  parseUsedGpuAllocations,
+  BaseCardProps,
+} from "@/utils/nodes";
 
 function CardContent(props: BaseCardProps) {
   return (
@@ -143,6 +65,8 @@ export const MiniNodeCard = ({
     setOpen(!open);
   };
 
+  const cpuLoad = (nodeData.cpu_load / coresTotal).toFixed(2);
+
   return (
     <HoverCard>
       <HoverCardTrigger asChild>
@@ -181,6 +105,7 @@ export const MiniNodeCard = ({
       </HoverCardTrigger>
       <HoverCardContent className="w-96 m-5 font-extralight text-sm">
         <div>Hostname: {nodeData.hostname}</div>
+        <div>CPU Load: {cpuLoad} %</div>
         <div className="flex flex-wrap items-center">
           Features:
           {nodeData.features.map((feature: any, index: any) => (

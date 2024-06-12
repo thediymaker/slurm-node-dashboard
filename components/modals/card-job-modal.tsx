@@ -12,8 +12,9 @@ import {
 import { DNA } from "react-loader-spinner";
 
 const NodeCardModal = ({ open, setOpen, nodename }: any) => {
+  const slurmURL = `/api/slurm/jobs/node/${nodename}`;
   const jobFetcher = () =>
-    fetch(`/api/slurm/jobs/${nodename}`, {
+    fetch(slurmURL, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -23,7 +24,7 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
     data: jobData,
     error: jobError,
     isLoading: jobIsLoading,
-  } = useSWR(open ? `/api/slurm/jobs/${nodename}` : null, jobFetcher);
+  } = useSWR(open ? slurmURL : null, jobFetcher);
 
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);

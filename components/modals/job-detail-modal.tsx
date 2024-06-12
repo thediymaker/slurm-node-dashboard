@@ -1,18 +1,11 @@
 import useSWR from "swr";
 import { Dialog, DialogContent } from "../ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
+import { Table, TableBody, TableCell, TableRow } from "../ui/table";
 import { DNA } from "react-loader-spinner";
 
-const JobCardModal = ({ open, setOpen, jobId }: any) => {
+const JobDetailModal = ({ open, setOpen, searchID }: any) => {
   const jobFetcher = () =>
-    fetch(`/api/slurm/job/${jobId}`, {
+    fetch(`/api/slurm/job/${searchID}`, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -22,15 +15,13 @@ const JobCardModal = ({ open, setOpen, jobId }: any) => {
     data: jobData,
     error: jobError,
     isLoading: jobIsLoading,
-  } = useSWR(open ? `/api/slurm/job/${jobId}` : null, jobFetcher);
+  } = useSWR(open ? `/api/slurm/job/${searchID}` : null, jobFetcher);
 
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);
     const formattedDate = date.toLocaleString();
     return formattedDate;
   }
-
-  console.log(jobData);
 
   if (jobError)
     return (
@@ -64,7 +55,7 @@ const JobCardModal = ({ open, setOpen, jobId }: any) => {
       <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
         {jobData && jobData?.jobs?.length > 0 ? (
           <div>
-            <h1 className="text-2xl mb-2 font-extralight">{jobId}</h1>
+            <h1 className="text-2xl mb-2 font-extralight">{searchID}</h1>
             <div className="mb-5">Job Details</div>
             <Table>
               <TableBody>
@@ -136,4 +127,4 @@ const JobCardModal = ({ open, setOpen, jobId }: any) => {
   );
 };
 
-export default JobCardModal;
+export default JobDetailModal;
