@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import JobSearch from "../job-search";
+import NodeHeader from "../header";
 
 interface Node {
   alloc_memory: number;
@@ -40,8 +41,7 @@ const nodeFetcher = () =>
   }).then((res) => res.json());
 
 const MiniNodes = () => {
-  const form = useForm();
-
+  
   const {
     data: nodeData,
     error: nodeError,
@@ -72,17 +72,6 @@ const MiniNodes = () => {
 
     return nodeMatchesType && nodeMatchesState;
   });
-
-  const totalCpuNodes = useMemo(
-    () => systems.filter((node) => !node.gres).length,
-    [systems]
-  );
-  const totalGpuNodes = useMemo(
-    () => systems.filter((node) => node.gres).length,
-    [systems]
-  );
-
-  const totalNodes = useMemo(() => filteredNodes.length, [filteredNodes]);
 
   const handleNodeTypeChange = (value: string) => {
     setSelectedNodeType(value);
@@ -133,89 +122,10 @@ const MiniNodes = () => {
 
   return (
     <div>
-      <div className="mt-3 justify-between flex ">
-      <div className="mr-2">
-          <JobSearch />
-        </div>
-        <Form {...form}>
-          <form className="mx-1 mb-4 flex items-center ">
-            <div className="flex items-center">
-              <div className="mr-2">
-                <Button className="px-5" variant={"outline"} asChild>
-                  <Link href={"/"}>Detailed Status</Link>
-                </Button>
-              </div>
-              <FormField
-                control={form.control}
-                name="nodes"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex pr-2">
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleNodeTypeChange(value);
-                        }}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="All Nodes" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="allNodes">All Nodes</SelectItem>
-                          <SelectItem value="gpuNodes">GPU Nodes</SelectItem>
-                          <SelectItem value="cpuNodes">CPU Nodes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="states"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex pr-2">
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleNodeStateChange(value);
-                        }}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="All States" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="allState">All States</SelectItem>
-                          <SelectItem value="idleState">Idle Nodes</SelectItem>
-                          <SelectItem value="mixedState">
-                            Mixed Nodes
-                          </SelectItem>
-                          <SelectItem value="allocState">
-                            Allocated Nodes
-                          </SelectItem>
-                          <SelectItem value="downState">Down Nodes</SelectItem>
-                          <SelectItem value="drainState">
-                            Draining Nodes
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </form>
-        </Form>
-      </div>
+      <NodeHeader
+        handleNodeStateChange={handleNodeStateChange}
+        handleNodeTypeChange={handleNodeTypeChange}
+      />
       <Separator />
       <div className="flex flex-wrap p-3 uppercase">
         {filteredNodes.map((node: any, index: number) =>
