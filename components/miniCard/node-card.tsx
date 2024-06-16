@@ -6,7 +6,6 @@ import {
 } from "../ui/hover-card";
 import NodeCardModal from "../modals/card-job-modal";
 import {
-  getStatusColor,
   getStatusDef,
   parseGpuAllocations,
   parseUsedGpuAllocations,
@@ -15,12 +14,13 @@ import {
 
 function CardContent(props: BaseCardProps) {
   return (
-    <>
+    <div className="">
       <p className="font-extralight text-[10px]">
         CPU: {props.coresUsed} / {props.coresTotal}
       </p>
       <p className="font-extralight text-[10px]">
-        MEM: {props.memoryUsed} / {props.memoryTotal}
+        MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
+        {(props.memoryTotal / 1024).toFixed(0)}
       </p>
       {props.gpuUsed !== undefined &&
         props.gpuTotal !== undefined &&
@@ -29,8 +29,30 @@ function CardContent(props: BaseCardProps) {
             GPU: {props.gpuUsed} / {props.gpuTotal}
           </p>
         )}
-    </>
+    </div>
   );
+}
+
+export function getStatusColor(status: string): string {
+  const statusLevel = status[1] || status[0];
+  switch (statusLevel) {
+    case "DRAIN":
+    case "NOT_RESPONDING":
+    case "DOWN":
+      return "bg-blue-400";
+    case "IDLE":
+      return "bg-green-700";
+    case "MIXED":
+      return "bg-orange-800";
+    case "PLANNED":
+      return "bg-purple-500";
+    case "ALLOCATED":
+      return "bg-red-900";
+    case "COMPLETING":
+      return "bg-yellow-500";
+    default:
+      return "bg-gray-900";
+  }
 }
 
 export const MiniNodeCard = ({
@@ -75,7 +97,7 @@ export const MiniNodeCard = ({
           onClick={openModal}
         >
           <div className="p-1 items-center justify-center">
-            <div className="flex justify-between">
+            <div className="flex">
               <div className="text-[12px] font-bold">{name}</div>
             </div>
 

@@ -96,7 +96,7 @@ const JobSearch = () => {
             name="searchID"
             render={({ field }) => (
               <FormItem>
-                <div className="flex pr-2 w-[300px]">
+                <div className="flex pr-2 w-[250px]">
                   <Input
                     type="text"
                     placeholder="Search by username or job ID"

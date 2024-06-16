@@ -1,8 +1,6 @@
 "use client";
-import { Progress } from "@/components/ui/progress";
 import { Gauge } from "../ui/gauge";
 import React from "react";
-import { stat } from "fs";
 
 interface Node {
   alloc_memory: number;

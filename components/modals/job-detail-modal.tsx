@@ -50,69 +50,10 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
       </Dialog>
     );
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
-        {jobData && jobData?.jobs?.length > 0 ? (
-          <div>
-            <h1 className="text-2xl mb-2 font-extralight">{searchID}</h1>
-            <div className="mb-5">Job Details</div>
-            <Table>
-              <TableBody>
-                <TableRow>
-                  <TableCell>Nodes</TableCell>
-                  <TableCell>{jobData?.jobs[0].nodes}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Command</TableCell>
-                  <TableCell>{jobData?.jobs[0].command}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>State</TableCell>
-                  <TableCell>{jobData?.jobs[0].job_state}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Start Time</TableCell>
-                  <TableCell>
-                    {convertUnixToHumanReadable(
-                      jobData?.jobs[0].start_time.number
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>End Time</TableCell>
-                  <TableCell>
-                    {convertUnixToHumanReadable(
-                      jobData?.jobs[0].end_time.number
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>CPUs Per Task</TableCell>
-                  <TableCell>{jobData?.jobs[0].cpus_per_task.number}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Memory per Node (MB)</TableCell>
-                  <TableCell>
-                    {jobData?.jobs[0].memory_per_node.number}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Gres Detail</TableCell>
-                  <TableCell>{jobData?.jobs[0].gres_detail}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Output Path</TableCell>
-                  <TableCell>{jobData?.jobs[0].standard_output}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>User</TableCell>
-                  <TableCell>{jobData?.jobs[0].user_name}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
+  if (!jobData || !jobData?.jobs || jobData?.jobs.length === 0) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
           <div className="m-auto text-center">
             <h1 className="font-bold text-xl">Invalid Job ID.</h1>
             <p className="mt-5 font-extralight">
@@ -121,7 +62,121 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
             </p>
             <p className="mt-5">Please try another job ID.</p>
           </div>
-        )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const job = jobData?.jobs[0];
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <div>
+          <h1 className="text-2xl mb-2 font-extralight">{searchID}</h1>
+          <div className="mb-5">Job Details</div>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell>Job ID</TableCell>
+                <TableCell>{job?.job_id}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Job Name</TableCell>
+                <TableCell>{job?.name}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Nodes</TableCell>
+                <TableCell>{job?.nodes}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Command</TableCell>
+                <TableCell>{job?.command}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>State</TableCell>
+                <TableCell>{job?.job_state?.join(", ")}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Start Time</TableCell>
+                <TableCell>
+                  {job?.start_time?.number
+                    ? convertUnixToHumanReadable(job?.start_time?.number)
+                    : "N/A"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>End Time</TableCell>
+                <TableCell>
+                  {job?.end_time?.number
+                    ? convertUnixToHumanReadable(job?.end_time?.number)
+                    : "N/A"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>CPUs Per Task</TableCell>
+                <TableCell>{job?.cpus_per_task?.number}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Memory per Node (GB)</TableCell>
+                <TableCell>
+                  {job?.memory_per_node?.number
+                    ? job?.memory_per_node?.number / 1024
+                    : "N/A"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Gres Detail</TableCell>
+                <TableCell>{job?.gres_detail?.join(", ")}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Output Path</TableCell>
+                <TableCell>{job?.standard_output}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>User</TableCell>
+                <TableCell>{job?.user_name}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Group Name</TableCell>
+                <TableCell>{job?.group_name}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Partition</TableCell>
+                <TableCell>{job?.partition}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Job Resources</TableCell>
+                <TableCell>
+                  Cores: {job?.job_resources?.allocated_cores}, Nodes:{" "}
+                  {job?.job_resources?.allocated_nodes
+                    ?.map((node: any) => node.nodename)
+                    ?.join(", ")}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Flags</TableCell>
+                <TableCell>{job?.flags?.join(", ")}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Standard Error Path</TableCell>
+                <TableCell>{job?.standard_error}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Standard Input Path</TableCell>
+                <TableCell>{job?.standard_input}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Time Limit (mins)</TableCell>
+                <TableCell>{job?.time_limit?.number}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Priority</TableCell>
+                <TableCell>{job?.priority?.number}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
       </DialogContent>
     </Dialog>
   );

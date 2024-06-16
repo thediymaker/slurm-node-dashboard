@@ -8,7 +8,6 @@ import {
 } from "../ui/hover-card";
 import NodeCardModal from "../modals/card-job-modal";
 import {
-  getStatusColor,
   getStatusDef,
   parseGpuAllocations,
   parseUsedGpuAllocations,
@@ -33,6 +32,28 @@ function CardContent(props: BaseCardProps) {
         )}
     </>
   );
+}
+
+export function getStatusColor(status: string): string {
+  const statusLevel = status[1] || status[0];
+  switch (statusLevel) {
+    case "DRAIN":
+    case "NOT_RESPONDING":
+    case "DOWN":
+      return "bg-blue-400";
+    case "IDLE":
+      return "bg-green-700";
+    case "MIXED":
+      return "bg-orange-800";
+    case "PLANNED":
+      return "bg-purple-500";
+    case "ALLOCATED":
+      return "bg-red-900";
+    case "COMPLETING":
+      return "bg-yellow-500";
+    default:
+      return "bg-gray-900";
+  }
 }
 
 export const NodeCard = ({
