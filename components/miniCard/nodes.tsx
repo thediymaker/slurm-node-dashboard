@@ -1,26 +1,8 @@
 "use client";
 import { MiniNodeCard } from "./node-card";
 import useSWR from "swr";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
 import { useMemo, useState } from "react";
-import { Button } from "../ui/button";
-import Link from "next/link";
-import JobSearch from "../job-search";
 import NodeHeader from "../header";
 
 interface Node {
@@ -31,6 +13,7 @@ interface Node {
   gres: string;
   gres_used: string;
   partitions: string[];
+  features?: string[];
 }
 
 const nodeURL = "/api/slurm/nodes";
@@ -55,6 +38,8 @@ const MiniNodes = () => {
     useState<string>("allState");
   const [selectedNodePartitions, setSelectedNodePartitions] =
     useState<string>("allPartitions");
+  const [selectedNodeFeature, setSelectedNodeFeature] =
+    useState<string>("allFeatures");
   const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
 
   const systems: Node[] = nodeData?.nodes || [];
@@ -65,6 +50,14 @@ const MiniNodes = () => {
       node.partitions.forEach((partition) => partitions.add(partition));
     });
     return Array.from(partitions);
+  }, [systems]);
+
+  const uniqueFeatures = useMemo(() => {
+    const features = new Set<string>();
+    systems.forEach((node) => {
+      (node.features || []).forEach((feature) => features.add(feature));
+    });
+    return Array.from(features);
   }, [systems]);
 
   const filteredNodes = systems.filter((node: any) => {
@@ -85,7 +78,16 @@ const MiniNodes = () => {
       selectedNodePartitions === "allPartitions" ||
       node.partitions.includes(selectedNodePartitions);
 
-    return nodeMatchesType && nodeMatchesState && nodeMatchesPartitions;
+    const nodeMatchesFeature =
+      selectedNodeFeature === "allFeatures" ||
+      (node.features || []).includes(selectedNodeFeature);
+
+    return (
+      nodeMatchesType &&
+      nodeMatchesState &&
+      nodeMatchesPartitions &&
+      nodeMatchesFeature
+    );
   });
 
   const handleNodeTypeChange = (value: string) => {
@@ -98,6 +100,10 @@ const MiniNodes = () => {
 
   const handleNodePartitionsChange = (value: string) => {
     setSelectedNodePartitions(value);
+  };
+
+  const handleNodeFeatureChange = (value: string) => {
+    setSelectedNodeFeature(value);
   };
 
   const toggleDropdown = (index: any) => {
@@ -144,7 +150,9 @@ const MiniNodes = () => {
         handleNodeStateChange={handleNodeStateChange}
         handleNodeTypeChange={handleNodeTypeChange}
         handleNodePartitionsChange={handleNodePartitionsChange}
+        handleNodeFeatureChange={handleNodeFeatureChange}
         partitions={uniquePartitions}
+        features={uniqueFeatures} // Pass unique features to the header
       />
       <Separator />
       <div className="flex flex-wrap p-3 uppercase mb-5">

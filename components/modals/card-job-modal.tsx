@@ -80,7 +80,14 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
             </TableHeader>
             <TableBody>
               {jobData?.jobs.map((job: any, index: any) => (
-                <TableRow key={index}>
+                //TODO: Add onClick event to open job detail modal
+                <TableRow
+                  key={index}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    console.log("Test");
+                  }}
+                >
                   <TableCell>{job.job_id}</TableCell>
                   <TableCell>
                     {job.array && job.array.task_id.set

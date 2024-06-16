@@ -14,12 +14,13 @@ import {
 
 function CardContent(props: BaseCardProps) {
   return (
-    <>
+    <div className="">
       <p className="font-extralight text-[10px]">
         CPU: {props.coresUsed} / {props.coresTotal}
       </p>
       <p className="font-extralight text-[10px]">
-        MEM: {props.memoryUsed} / {props.memoryTotal}
+        MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
+        {(props.memoryTotal / 1024).toFixed(0)}
       </p>
       {props.gpuUsed !== undefined &&
         props.gpuTotal !== undefined &&
@@ -28,7 +29,7 @@ function CardContent(props: BaseCardProps) {
             GPU: {props.gpuUsed} / {props.gpuTotal}
           </p>
         )}
-    </>
+    </div>
   );
 }
 
@@ -96,7 +97,7 @@ export const MiniNodeCard = ({
           onClick={openModal}
         >
           <div className="p-1 items-center justify-center">
-            <div className="flex justify-between">
+            <div className="flex">
               <div className="text-[12px] font-bold">{name}</div>
             </div>
 
