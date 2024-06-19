@@ -193,6 +193,7 @@ const NodeHeader = ({
             </DropdownMenuItem>
             <DropdownMenuItem className="font-light ">
               <Link
+                target="_blank"
                 href={"https://github.com/thediymaker/slurm-node-dashboard"}
               >
                 Github
