@@ -100,6 +100,18 @@ Project Link: [https://github.com/thediymaker/slurm-node-dashboard](https://gith
 
 ## Screenshots
 
+###  Basic Dashboard
+![Dashboard Screenshot](/images/basic_screenshot.png "Basic Dashboard")
+
+### Dashboard Features
+![Dashboard Hover Screenshot](/images/features_screenshot.png "Features")
+
+### Job Detail
+![Dashboard Footer Screenshot](/images/job_detail_screenshot.png "Job Detail")
+
+### Node Detail
+![Dashboard Footer Screenshot](/images/node_job_detail_screenshot.png "Basic Job Detail")
+
 ### Dashboard
 ![Dashboard Screenshot](/images/dashboard_screenshot.png "Dashboard Overview")
 
@@ -108,4 +120,3 @@ Project Link: [https://github.com/thediymaker/slurm-node-dashboard](https://gith
 
 ### Dashboard Footer
 ![Dashboard Footer Screenshot](/images/dashboard_screenshot3.png "Footer")
-
