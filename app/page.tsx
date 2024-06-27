@@ -1,4 +1,4 @@
-import Nodes from "@/components/cards/nodes";
+import Nodes from "@/components/card/nodes";
 import Footer from "@/components/layout/footer";
 import ChatIcon from "@/components/llm/chat-icon";
 import { env } from "process";
