@@ -184,12 +184,14 @@ const NodeHeader = ({
               Menu
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="font-light ">
-              {pathname === "/" ? (
-                <Link href={"/basic"}>Basic Status</Link>
-              ) : (
-                <Link href={"/"}>Detailed Status</Link>
-              )}
+            <DropdownMenuItem className="font-light cursor-pointer" asChild>
+              <Link href={"/"}>Home</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="font-light cursor-pointer" asChild>
+              <Link href={"/basic"}>Basic Status</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="font-light cursor-pointer" asChild>
+              <Link href={"/detailed"}>Detailed Status</Link>
             </DropdownMenuItem>
             <DropdownMenuItem className="font-light ">
               <Link
