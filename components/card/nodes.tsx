@@ -1,9 +1,9 @@
 "use client";
-import { NodeCard } from "@/components/cards/node-card";
+import { NodeCard } from "@/components/card/node-card";
 import useSWR from "swr";
 import { Separator } from "@/components/ui/separator";
 import { useMemo, useState } from "react";
-import Stats from "@/components/cards/stats";
+import Stats from "@/components/card/stats";
 import NodeHeader from "@/components/header";
 
 interface Node {
