@@ -22,7 +22,12 @@ const nodeFetcher = () =>
     headers: {
       "Content-Type": "application/json",
     },
-  }).then((res) => res.json());
+  }).then((res) => {
+    if (!res.ok) {
+      throw new Error("Network response was not ok");
+    }
+    return res.json();
+  });
 
 const MiniNodes = () => {
   const {
@@ -30,7 +35,12 @@ const MiniNodes = () => {
     error: nodeError,
     isLoading: nodeIsLoading,
   } = useSWR(nodeURL, nodeFetcher, {
-    refreshInterval: 5000,
+    refreshInterval: 30000,
+    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      if (error.status === 404) return; // Don't retry on 404.
+      if (retryCount >= 3) return; // Only retry up to 3 times.
+      setTimeout(() => revalidate({ retryCount }), 5000);
+    },
   });
 
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
