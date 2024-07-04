@@ -1,4 +1,4 @@
-import IconComponent from "@/components/cards/gpu-icon";
+import IconComponent from "@/components/card/gpu-icon";
 import { useState } from "react";
 import {
   HoverCard,
