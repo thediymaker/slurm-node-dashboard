@@ -50,6 +50,8 @@ export function getStatusColor(status: string): string {
       return "bg-red-900";
     case "COMPLETING":
       return "bg-yellow-500";
+    case "MAINTENANCE":
+      return "bg-red-950"
     default:
       return "bg-gray-900";
   }

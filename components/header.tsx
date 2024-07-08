@@ -35,7 +35,6 @@ const NodeHeader = ({
   features,
 }: any) => {
   const form = useForm();
-  const pathname = usePathname();
 
   return (
     <div className="mt-3 justify-between flex mb-5">

@@ -170,7 +170,7 @@ const Nodes = () => {
         GPU Systems : <span className="text-blue-400">{totalGpuNodes}</span>
       </div>
       <Separator />
-      <div className="flex flex-wrap p-3 uppercase justify-center">
+      <div className="flex flex-wrap p-3 uppercase">
         {filteredNodes.map((node: any, index: number) =>
           node.gres === "" ? null : (
             <NodeCard
@@ -198,7 +198,7 @@ const Nodes = () => {
         CPU Systems : <span className="text-blue-400">{totalCpuNodes}</span>
       </div>
       <Separator />
-      <div className="flex flex-wrap p-3 uppercase justify-center mb-5">
+      <div className="flex flex-wrap p-3 uppercase mb-5">
         {filteredNodes.map((node: any, index: number) =>
           node.gres !== "" ? null : (
             <NodeCard
