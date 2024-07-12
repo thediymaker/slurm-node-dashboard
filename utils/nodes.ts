@@ -40,6 +40,8 @@ export function getStatusDef(status: string): string {
       return "System is currently in the process of completing a task.";
     case "PLANNED":
       return "System is being prepared for use.";
+    case "RESERVED":
+      return "System is reserved for maintenance.";
     default:
       return "System status unknown, this is likely due to the system being offline.";
   }

@@ -18,17 +18,17 @@ interface Node {
 }
 
 const nodeURL = "/api/slurm/nodes";
-const nodeFetcher = () =>
-  fetch(nodeURL, {
+const nodeFetcher = async () => {
+  const res = await fetch(nodeURL, {
     headers: {
       "Content-Type": "application/json",
     },
-  }).then((res) => {
-    if (!res.ok) {
-      throw new Error("Network response was not ok");
-    }
-    return res.json();
   });
+  if (!res.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return res.json();
+};
 
 const Nodes = () => {
   const {
@@ -71,35 +71,43 @@ const Nodes = () => {
     return Array.from(features);
   }, [systems]);
 
-  const filteredNodes = systems.filter((node: any) => {
-    const nodeMatchesType =
-      selectedNodeType === "allNodes" ||
-      (selectedNodeType === "gpuNodes" && node.gres !== "") ||
-      (selectedNodeType === "cpuNodes" && node.gres === "");
+  const filteredNodes = useMemo(() => {
+    return systems.filter((node: any) => {
+      const nodeMatchesType =
+        selectedNodeType === "allNodes" ||
+        (selectedNodeType === "gpuNodes" && node.gres !== "") ||
+        (selectedNodeType === "cpuNodes" && node.gres === "");
 
-    const nodeMatchesState =
-      selectedNodeState === "allState" ||
-      (selectedNodeState === "idleState" && node.state[0] === "IDLE") ||
-      (selectedNodeState === "mixedState" && node.state[0] === "MIXED") ||
-      (selectedNodeState === "allocState" && node.state[0] === "ALLOCATED") ||
-      (selectedNodeState === "downState" && node.state[0] === "DOWN") ||
-      (selectedNodeState === "drainState" && node.state[1] === "DRAIN");
+      const nodeMatchesState =
+        selectedNodeState === "allState" ||
+        (selectedNodeState === "idleState" && node.state[0] === "IDLE") ||
+        (selectedNodeState === "mixedState" && node.state[0] === "MIXED") ||
+        (selectedNodeState === "allocState" && node.state[0] === "ALLOCATED") ||
+        (selectedNodeState === "downState" && node.state[0] === "DOWN") ||
+        (selectedNodeState === "drainState" && node.state[1] === "DRAIN");
 
-    const nodeMatchesPartitions =
-      selectedNodePartitions === "allPartitions" ||
-      node.partitions.includes(selectedNodePartitions);
+      const nodeMatchesPartitions =
+        selectedNodePartitions === "allPartitions" ||
+        node.partitions.includes(selectedNodePartitions);
 
-    const nodeMatchesFeature =
-      selectedNodeFeature === "allFeatures" ||
-      (node.features || []).includes(selectedNodeFeature);
+      const nodeMatchesFeature =
+        selectedNodeFeature === "allFeatures" ||
+        (node.features || []).includes(selectedNodeFeature);
 
-    return (
-      nodeMatchesType &&
-      nodeMatchesState &&
-      nodeMatchesPartitions &&
-      nodeMatchesFeature
-    );
-  });
+      return (
+        nodeMatchesType &&
+        nodeMatchesState &&
+        nodeMatchesPartitions &&
+        nodeMatchesFeature
+      );
+    });
+  }, [
+    systems,
+    selectedNodeType,
+    selectedNodeState,
+    selectedNodePartitions,
+    selectedNodeFeature,
+  ]);
 
   const totalCpuNodes = useMemo(
     () => systems.filter((node) => !node.gres).length,
@@ -109,12 +117,10 @@ const Nodes = () => {
     () => systems.filter((node) => node.gres).length,
     [systems]
   );
-
   const handleNodeTypeChange = (value: string) => {
     setSelectedNodeType(value);
   };
 
-  // This function handles the change event for the node state selection menu
   const handleNodeStateChange = (value: string) => {
     setSelectedNodeState(value);
   };
@@ -135,7 +141,7 @@ const Nodes = () => {
   };
 
   function parseGpuInfo(node: Node): { gpuUsed: number; gpuTotal: number } {
-    const gpuRegex = /gpu:([^:]+):(\d+)/g; // Capture type and quantity
+    const gpuRegex = /gpu:([^:]+):(\d+)/g;
 
     const gresMatches = [...node.gres.matchAll(gpuRegex)];
     const gresUsedMatches = [...node.gres_used.matchAll(gpuRegex)];
@@ -144,7 +150,7 @@ const Nodes = () => {
       const type = match[1];
       const quantity = parseInt(match[2], 10);
       const matchingGres = gresMatches.find((m) => m[1] === type);
-      return acc + (matchingGres ? quantity : 0); // Sum only if a match is found
+      return acc + (matchingGres ? quantity : 0);
     }, 0);
 
     const gpuTotal = gresMatches.reduce((acc, match) => {
@@ -154,16 +160,22 @@ const Nodes = () => {
     return { gpuUsed, gpuTotal };
   }
 
-  if (nodeError)
+  if (nodeError) {
     return (
-      <div>Failed to load, or session expired, please reload the page.</div>
+      <div>
+        {nodeError.message === "Network response was not ok"
+          ? "Failed to load, please check your network connection."
+          : "Session expired, please reload the page."}
+      </div>
     );
-  if (nodeIsLoading)
+  }
+  if (nodeIsLoading) {
     return (
       <div className="font-bold text-2xl uppercase flex justify-center items-center mx-auto pt-20">
         loading...
       </div>
     );
+  }
 
   return (
     <div>

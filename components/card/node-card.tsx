@@ -46,11 +46,15 @@ export function getStatusColor(status: string): string {
     case "MIXED":
       return "bg-orange-800";
     case "PLANNED":
-      return "bg-purple-500";
+      return "bg-indigo-500";
     case "ALLOCATED":
       return "bg-red-900";
     case "COMPLETING":
       return "bg-yellow-500";
+    case "RESERVED":
+      return "bg-indigo-800";
+    case "FUTURE":
+      return "bg-yellow-950";
     default:
       return "bg-gray-900";
   }
