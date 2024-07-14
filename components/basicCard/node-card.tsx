@@ -53,7 +53,9 @@ export function getStatusColor(status: string): string {
     case "RESERVED":
       return "bg-indigo-800";
     case "FUTURE":
-      return "bg-yellow-950";
+      return "bg-emerald-500";
+    case "REBOOT_REQUESTED":
+      return "bg-stone-500";
     default:
       return "bg-gray-900";
   }
@@ -61,19 +63,9 @@ export function getStatusColor(status: string): string {
 
 export const BasicNodeCard = ({
   name,
-  load,
-  partitions,
-  features,
-  coresUsed,
   coresTotal,
-  memoryUsed,
-  memoryTotal,
   status,
-  gpuUsed,
-  gpuTotal,
   nodeData,
-  toggleDropdown,
-  dropdownOpenStatus,
 }: BaseCardProps) => {
   const [open, setOpen] = useState(false);
   const color = getStatusColor(status);

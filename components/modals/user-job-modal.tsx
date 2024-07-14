@@ -1,6 +1,6 @@
 "use client";
 import useSWR from "swr";
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import {
   Table,
   TableBody,
@@ -171,6 +171,7 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTitle>Error</DialogTitle>
         <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
@@ -181,6 +182,7 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+          <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
             <DNA
               visible={true}
@@ -205,7 +207,7 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
             <h1 className="text-2xl mb-2 font-extralight uppercase">
               {searchID}
             </h1>
-            <div className="mb-5">User Job Details</div>
+            <DialogTitle className="mb-5">User Job Details</DialogTitle>
             <Table>
               <TableHeader>
                 <TableRow>

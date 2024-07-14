@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import { Table, TableBody, TableCell, TableRow } from "../ui/table";
 import { DNA } from "react-loader-spinner";
 
@@ -26,6 +26,7 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTitle>Error</DialogTitle>
         <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
@@ -36,6 +37,7 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+          <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
             <DNA
               visible={true}
@@ -55,7 +57,9 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
           <div className="m-auto text-center">
-            <h1 className="font-bold text-xl">Invalid Job ID.</h1>
+            <DialogTitle className="font-bold text-xl">
+              Invalid Job ID.
+            </DialogTitle>
             <p className="mt-5 font-extralight">
               Job data is only available while the job is running, or shortly
               after the job has completed.
@@ -73,7 +77,9 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
         <div>
-          <h1 className="text-2xl mb-2 font-extralight">{searchID}</h1>
+          <DialogTitle className="text-2xl mb-2 font-extralight">
+            {searchID}
+          </DialogTitle>
           <div className="mb-5">Job Details</div>
           <Table>
             <TableBody>

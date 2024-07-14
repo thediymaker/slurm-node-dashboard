@@ -16,13 +16,13 @@ const IconComponent: React.FC<IconComponentProps> = ({
     for (let i = 1; i <= num_total; i++) {
       const iconColor = i <= num_used ? "text-red-500" : "text-gray-400";
 
-      icons.push(<CpuIcon key={i} className={`${iconColor}`} />);
+      icons.push(<CpuIcon key={i} size={14} className={`${iconColor}`} />);
     }
 
     return icons;
   };
 
-  return <div className="flex mt-2">{renderIcons()}</div>;
+  return <div className="grid grid-cols-8 mt-2">{renderIcons()}</div>;
 };
 
 export default IconComponent;

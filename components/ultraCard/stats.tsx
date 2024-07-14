@@ -1,4 +1,5 @@
 "use client";
+import { RadialChart } from "../radialChart";
 import { Gauge } from "../ui/gauge";
 import React from "react";
 
@@ -7,7 +8,7 @@ interface Node {
   real_memory: number;
   alloc_cpus: number;
   cpus: number;
-  gres: string | null
+  gres: string | null;
   gres_used: string;
 }
 
@@ -60,38 +61,29 @@ export default function Stats({ data }: any) {
 
   return (
     <div>
-      <div className="flex gap-2 mx-auto justify-center items-center mb-5 mt-16">
+      <div className="flex gap-2 mx-auto justify-center items-center mb-10">
         <div className="w-[250px] h-[200px]">
-          <Gauge
-            showValue
-            size="large"
+          <RadialChart
             value={Math.round((stats.totalCoresUsed / stats.totalCores) * 100)}
+            maxValue={100}
+            label="CPU % Allocated"
           />
-          <p className="mx-auto text-center mt-5 text-xl font-extralight tracking-tighter">
-            CPU % Allocated
-          </p>
         </div>
         <div className="w-[250px] h-[200px]">
-          <Gauge
-            showValue
-            size="large"
+          <RadialChart
             value={Math.round((stats.totalGpuUsed / stats.totalGpu) * 100)}
+            maxValue={100}
+            label="GPU % Allocated"
           />
-          <p className="mx-auto text-center mt-5 text-xl font-extralight tracking-tighter">
-            GPU % Allocated
-          </p>
         </div>
         <div className="w-[250px] h-[200px]">
-          <Gauge
-            showValue
-            size="large"
+          <RadialChart
             value={Math.round(
               (stats.totalMemoryUsed / stats.totalMemory) * 100
             )}
+            maxValue={100}
+            label="Memory % Allocated"
           />
-          <p className="mx-auto text-center mt-5 text-xl font-extralight tracking-tighter">
-            Memory % Allocated
-          </p>
         </div>
       </div>
     </div>
