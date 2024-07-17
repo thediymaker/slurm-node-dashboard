@@ -11,7 +11,7 @@ const fetcher = () =>
 
 const Footer = ({ cluster, logo }: any) => {
   const { data, error } = useSWR("/api/slurm/diag", fetcher, {
-    refreshInterval: 10000,
+    refreshInterval: 15000,
   });
 
   if (!data && !error)

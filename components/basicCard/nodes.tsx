@@ -39,7 +39,7 @@ const BasicNodes = () => {
     error: nodeError,
     isLoading: nodeIsLoading,
   } = useSWR(nodeURL, nodeFetcher, {
-    refreshInterval: 10000,
+    refreshInterval: 15000,
   });
 
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");

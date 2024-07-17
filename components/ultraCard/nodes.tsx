@@ -30,13 +30,12 @@ const nodeFetcher = async () => {
 
 //main card component
 const UltraNodes = () => {
-  //call fetch from server
   const {
     data: nodeData,
     error: nodeError,
     isLoading: nodeIsLoading,
   } = useSWR(nodeURL, nodeFetcher, {
-    refreshInterval: 10000,
+    refreshInterval: 15000,
   });
 
   const getInitialCardSize = () => {
