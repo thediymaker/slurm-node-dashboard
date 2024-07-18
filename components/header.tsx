@@ -190,9 +190,6 @@ const NodeHeader = ({
             <DropdownMenuItem className="font-light cursor-pointer" asChild>
               <Link href={"/basic"}>Basic Status</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="font-light cursor-pointer" asChild>
-              <Link href={"/detailed"}>Detailed Status</Link>
-            </DropdownMenuItem>
             <DropdownMenuItem className="font-light ">
               <Link
                 target="_blank"

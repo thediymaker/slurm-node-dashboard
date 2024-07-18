@@ -1,6 +1,7 @@
 "use client";
 import SystemHealth from "@/components/layout/systemHealth";
 import useSWR from "swr";
+import { Skeleton } from "../ui/skeleton";
 
 // Separate fetching logic into a dedicated function.
 const fetcher = () =>
@@ -10,11 +11,29 @@ const fetcher = () =>
 
 const Footer = ({ cluster, logo }: any) => {
   const { data, error } = useSWR("/api/slurm/diag", fetcher, {
-    refreshInterval: 10000,
+    refreshInterval: 15000,
   });
 
-  if (!data && !error) return <div>Loading...</div>;
-  if (error) return <div>Failed to load cluster status information.</div>;
+  if (!data && !error)
+    return (
+      <div className="fixed inset-x-0 bottom-0 dark:bg-background border-t-2 border-b-2 text-card-foreground bg-gray-300">
+        <div className="text-sm font-bold flex justify-between items-center p-2 mx-auto">
+          <div className="flex items-center space-x-5">
+            <img src={logo} alt="Logo" className="w-8 h-8" />
+            <span className="text-blue-400 uppercase">{cluster}</span>
+            <span>Current System Status:</span>
+            <Skeleton className="w-12 h-4" />
+            <span>Slurm Release:</span>
+            <Skeleton className="w-10 h-4" />
+          </div>
+          <div className="flex gap-1 items-center">
+            Running Jobs: <Skeleton className="w-10 h-4" /> | Pending Jobs:{" "}
+            <Skeleton className="w-10 h-4" />
+          </div>
+        </div>
+      </div>
+    );
+  if (error) return <div>Something went wrong.</div>;
 
   const healthStatus = data.errors.length > 0 ? "unhealthy" : "healthy";
 

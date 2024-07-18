@@ -1,5 +1,6 @@
 
 export interface BaseCardProps {
+  size: number;
   name: string;
   load: number;
   partitions: string;
@@ -15,6 +16,17 @@ export interface BaseCardProps {
   toggleDropdown: (index: number) => void;
   dropdownOpenStatus: any;
   index: number;
+}
+
+export interface Node {
+  alloc_memory: number;
+  real_memory: number;
+  alloc_cpus: number;
+  cpus: number;
+  gres: string;
+  gres_used: string;
+  partitions: string[];
+  features?: string[];
 }
 
 export interface GpuAllocation {
@@ -40,6 +52,12 @@ export function getStatusDef(status: string): string {
       return "System is currently in the process of completing a task.";
     case "PLANNED":
       return "System is being prepared for use.";
+    case "RESERVED":
+      return "System is reserved for maintenance.";
+    case "FUTURE":
+      return "System is reserved for future use.";
+    case "REBOOT_REQUESTED":
+      return "System currently has a reboot request pending.";
     default:
       return "System status unknown, this is likely due to the system being offline.";
   }
@@ -60,4 +78,30 @@ export function parseUsedGpuAllocations(gresUsedString: string): GpuAllocation[]
     const count = parseInt(parts[2], 10);
     return { type: parts[0] + ":" + parts[1], count, indexRange };
   });
+}
+
+export function convertUnixToHumanReadable(unixTimestamp: any) {
+  const date = new Date(unixTimestamp * 1000);
+  const formattedDate = date.toLocaleString();
+  return formattedDate;
+}
+
+export function parseGpuInfo(node: Node): { gpuUsed: number; gpuTotal: number } {
+  const gpuRegex = /gpu:([^:]+):(\d+)/g;
+
+  const gresMatches = [...node.gres.matchAll(gpuRegex)];
+  const gresUsedMatches = [...node.gres_used.matchAll(gpuRegex)];
+
+  const gpuUsed = gresUsedMatches.reduce((acc, match) => {
+    const type = match[1];
+    const quantity = parseInt(match[2], 10);
+    const matchingGres = gresMatches.find((m) => m[1] === type);
+    return acc + (matchingGres ? quantity : 0);
+  }, 0);
+
+  const gpuTotal = gresMatches.reduce((acc, match) => {
+    return acc + parseInt(match[2], 10);
+  }, 0);
+
+  return { gpuUsed, gpuTotal };
 }

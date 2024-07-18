@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import {
   Table,
   TableBody,
@@ -35,6 +35,7 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTitle>Error</DialogTitle>
         <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
@@ -63,7 +64,9 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
         <div>
-          <h1 className="text-2xl mb-2 font-extralight">{nodename}</h1>
+          <DialogTitle className="text-2xl mb-2 font-extralight">
+            {nodename}
+          </DialogTitle>
           <div className="mb-5">Current Jobs on System</div>
           <Table>
             <TableHeader>
