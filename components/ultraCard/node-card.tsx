@@ -17,7 +17,7 @@ import IconComponent from "./gpu-icon";
 function SmallCardContent(props: any) {
   return (
     <div className="flex m-auto items-center justify-center w-full h-full">
-      <div className="text-[14px] font-semibold">{props.name}</div>
+      <div className="text-[12px]">{props.name}</div>
     </div>
   );
 }
