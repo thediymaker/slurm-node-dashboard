@@ -25,18 +25,18 @@ function SmallCardContent(props: any) {
 function MediumCardContent(props: any) {
   return (
     <div className="p-1">
-      <div className="font-bold text-[14px] mb-1">{props.name}</div>
-      <p className="font-extralight text-[10px]">
+      <div className="font-bold text-[12px] mb-.5">{props.name}</div>
+      <p className="font-extralight text-[9px]">
         CPU: {props.coresUsed} / {props.coresTotal}
       </p>
-      <p className="font-extralight text-[10px]">
+      <p className="font-extralight text-[9px]">
         MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
         {(props.memoryTotal / 1024).toFixed(0)}
       </p>
       {props.gpuUsed !== undefined &&
         props.gpuTotal !== undefined &&
         props.gpuTotal !== 0 && (
-          <p className="font-extralight text-[10px]">
+          <p className="font-extralight text-[9px]">
             GPU: {props.gpuUsed} / {props.gpuTotal}
           </p>
         )}
