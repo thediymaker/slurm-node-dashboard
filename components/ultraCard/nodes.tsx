@@ -4,7 +4,6 @@ import useSWR from "swr";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
 import NodeHeader from "../header";
-import { convertUnixToHumanReadable } from "@/utils/nodes";
 import CardSkeleton from "../card-skeleton";
 import { Node } from "@/utils/nodes";
 import { parseGpuInfo } from "@/utils/nodes";
@@ -13,6 +12,7 @@ import { cn } from "@/lib/utils";
 import Stats from "./stats";
 import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
+import { LastUpdated } from "../last-updated";
 
 // fetch data from the server
 const nodeURL = "/api/slurm/nodes";
@@ -64,8 +64,6 @@ const UltraNodes = () => {
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
   const systems: Node[] = nodeData?.nodes || [];
-  const lastUpdate: string =
-    convertUnixToHumanReadable(nodeData?.last_update.number) || "";
 
   useEffect(() => {
     localStorage.setItem("cardSize", cardSize.toString());
@@ -273,9 +271,7 @@ const UltraNodes = () => {
           />
         ))}
       </div>
-      <div className="fixed inset-x-0 bottom-16 text-sm font-light text-center p-2 border-2 bg-card w-[300px] mx-auto rounded-lg">
-        Last Updated: {lastUpdate}
-      </div>
+      <LastUpdated data={nodeData?.last_update.number} />
     </div>
   );
 };
