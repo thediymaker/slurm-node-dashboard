@@ -1,23 +1,28 @@
 
 # HPC Dashboard
 
-This repository contains the source code for the HPC Dashboard, a Next.js application designed to monitor the status of SLURM nodes. The dashboard provides total utilization metrics for CPU and GPU nodes, as well as detailed statuses for individual nodes. This is a small portion of a much larger, full HPC management project I am working on, which includes tasks such as managing LDAP users, SLURM associations, tracking services sold, and handling renewals.
+This repository contains the source code for the HPC Dashboard, a Next.js application designed to monitor the status of SLURM nodes. The dashboard provides comprehensive utilization metrics for both CPU and GPU nodes, along with detailed statuses for individual nodes. Additionally, you can search for individual users and their jobs.
 
 ## Features
 
 - View total utilization of CPU and GPU nodes.
+- Search for Users to see their current jobs.
+- Search for Jobs to see its current status.
 - Individual node status with details on CPU, GPU, and memory usage.
 - Styled with Shadcn and Tailwind CSS.
-- Built with Next.js and Docker for easy deployment and scalability.
+- Built with Next.js.
 
 ## Prerequisites
 
+### Note: Docker was the preferred way to install this application, but recently I have been experiencing issues with timeouts while using Docker, which I no longer encountered when running with PM2 natively. I've left the Docker instructions but recommend using PM2 natively for the time being.
+
 Before you begin, ensure you have the following installed:
-- Docker
 - Node.js (v18 or later)
 - Yarn or npm
-- Slurm API enabled on your HPC cluster
-- Slurm API token for authentication
+- PM2
+- Docker (optional)
+- SLURM API enabled on your HPC cluster
+- SLURM API token for authentication
 
 ## Getting Started
 
@@ -30,16 +35,21 @@ git clone https://github.com/thediymaker/slurm-node-dashboard.git
 cd slurm-node-dashboard
 ```
 
-### Build the Docker image
+### Install dependencies
 
-```bash
-docker build -t slurm-node-dashboard .
+```
+npm install
+```
+```
+dnf install pm2
+or
+apt install pm2
 ```
 
-### Run the Docker container
+### Run the application with PM2
 
-```bash
-docker run -p 3000:3000 slurm-node-dashboard
+```
+pm2 start npm --name "slurm-node-dashboard" -- start
 ```
 
 The application should now be running on [http://localhost:3000](http://localhost:3000).
@@ -67,7 +77,7 @@ SLURM_API_TOKEN=""
 **You will also need to make sure you place your logo.png in the plublic directory, as well as replace the default favicon.ico with your own.**
 
 
-## Docker Configuration
+## Docker Configuration (Optional) - Currently not the recommended install method
 
 Here's a brief overview of the Docker setup:
 
@@ -77,6 +87,19 @@ Here's a brief overview of the Docker setup:
 - **Running:** Uses a non-root user for improved security.
 
 Refer to the `Dockerfile` in the repository for detailed configuration.
+
+
+### Build the Docker image
+
+```bash
+docker build -t slurm-node-dashboard .
+```
+
+### Run the Docker container
+
+```bash
+docker run -p 3000:3000 slurm-node-dashboard
+```
 
 ## Contributing
 
