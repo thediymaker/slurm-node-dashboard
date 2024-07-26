@@ -136,10 +136,10 @@ Project Link: [https://github.com/thediymaker/slurm-node-dashboard](https://gith
 ![Dashboard Footer Screenshot](/images/node_job_details_screenshot.png "Basic Job Detail")
 
 ### Dashboard
-![Dashboard Screenshot](/images/dashboard_screenshot.png "Dashboard Overview")
+![Dashboard Screenshot](/images/dashboard_screenshot_1.png "Dashboard Overview")
 
 ### Dashboard Hover
-![Dashboard Hover Screenshot](/images/dashboard_screenshot2.png "Hover Status")
+![Dashboard Hover Screenshot](/images/dashboard_screenshot_2.png "Hover Status")
 
 ### Dashboard Footer
-![Dashboard Footer Screenshot](/images/dashboard_screenshot3.png "Footer")
+![Dashboard Footer Screenshot](/images/dashboard_screenshot_3.png "Footer")
