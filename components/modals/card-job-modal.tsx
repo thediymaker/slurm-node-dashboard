@@ -14,7 +14,6 @@ import { DNA } from "react-loader-spinner";
 import { NodeCpuChart } from "../node-cpu-chart";
 import JobDetailModal from "./job-detail-modal";
 import { useState } from "react";
-import { set } from "react-hook-form";
 
 const NodeCardModal = ({ open, setOpen, nodename }: any) => {
   const [showDetails, setShowDetails] = useState(false);
