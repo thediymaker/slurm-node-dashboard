@@ -12,8 +12,11 @@ import {
 } from "../ui/table";
 import { DNA } from "react-loader-spinner";
 import { NodeCpuChart } from "../node-cpu-chart";
+import JobDetailModal from "./job-detail-modal";
+import { useState } from "react";
 
 const NodeCardModal = ({ open, setOpen, nodename }: any) => {
+  const [showDetails, setShowDetails] = useState(false);
   const slurmURL = `/api/slurm/jobs/node/${nodename}`;
   const jobFetcher = () =>
     fetch(slurmURL, {
@@ -119,7 +122,7 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
                   key={index}
                   className="cursor-pointer"
                   onClick={() => {
-                    console.log("Test");
+                    setShowDetails(!showDetails);
                   }}
                 >
                   <TableCell>{job.job_id}</TableCell>
@@ -144,6 +147,11 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
                   <TableCell>
                     {convertUnixToHumanReadable(job.time.start)}
                   </TableCell>
+                  <JobDetailModal
+                    open={showDetails}
+                    setOpen={setShowDetails}
+                    searchID={job.job_id}
+                  />
                 </TableRow>
               ))}
             </TableBody>
