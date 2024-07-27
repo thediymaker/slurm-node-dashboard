@@ -27,7 +27,10 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTitle>Error</DialogTitle>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
       </Dialog>
@@ -36,7 +39,10 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
   if (jobIsLoading)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
           <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
             <DNA
@@ -55,7 +61,10 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
   if (!jobData || !jobData?.jobs || jobData?.jobs.length === 0) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
           <div className="m-auto text-center">
             <DialogTitle className="font-bold text-xl">
               Invalid Job ID.
@@ -75,7 +84,10 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+      >
         <div>
           <DialogTitle className="text-2xl mb-2 font-extralight">
             {searchID}
