@@ -9,7 +9,6 @@ import {
   getStatusDef,
   parseGpuAllocations,
   parseUsedGpuAllocations,
-  BaseCardProps,
 } from "@/utils/nodes";
 import CardHover from "@/components/card-hover";
 import IconComponent from "./gpu-icon";

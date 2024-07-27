@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
+
 import {
   Table,
   TableBody,
@@ -10,6 +11,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { DNA } from "react-loader-spinner";
+import { NodeCpuChart } from "../node-cpu-chart";
 
 const NodeCardModal = ({ open, setOpen, nodename }: any) => {
   const slurmURL = `/api/slurm/jobs/node/${nodename}`;
@@ -26,6 +28,20 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
     isLoading: jobIsLoading,
   } = useSWR(open ? slurmURL : null, jobFetcher);
 
+  const promURL = `/api/prometheus/${nodename}`;
+  const promFetcher = () =>
+    fetch(promURL, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then((res) => res.json());
+
+  const {
+    data: promData,
+    error: promError,
+    isLoading: promIsLoading,
+  } = useSWR(open ? promURL : null, promFetcher);
+
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);
     const formattedDate = date.toLocaleString();
@@ -36,7 +52,10 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTitle>Error</DialogTitle>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
       </Dialog>
@@ -45,7 +64,11 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
   if (jobIsLoading)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogTitle className="p-0 m-0"></DialogTitle>
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
             <DNA
               visible={true}
@@ -62,11 +85,15 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+      >
         <div>
           <DialogTitle className="text-2xl mb-2 font-extralight">
             {nodename}
           </DialogTitle>
+          {promError || promIsLoading ? "" : <NodeCpuChart data={promData} />}
           <div className="mb-5">Current Jobs on System</div>
           <Table>
             <TableHeader>
