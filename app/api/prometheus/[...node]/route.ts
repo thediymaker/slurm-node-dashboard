@@ -6,11 +6,11 @@ const prom = new PrometheusDriver({
     baseURL: "/api/v1",
 });
 
-const loadQuery = 'node_load5'; // query to get the 5-minute load average
+const loadQuery = 'node_load15'; // query to get the 5-minute load average
 const unameQuery = 'node_uname_info'; // query to get node uname info
 const end = new Date();
 const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days 
-const step = 60 * 60; // 1 hour
+const step = 15 * 60; // 1 hour
 
 interface SampleValue {
     time: Date;

@@ -40,7 +40,11 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
     data: promData,
     error: promError,
     isLoading: promIsLoading,
-  } = useSWR(open ? promURL : null, promFetcher);
+  } = useSWR(open ? promURL : null, promFetcher, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    refreshInterval: 300000,
+  });
 
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);
