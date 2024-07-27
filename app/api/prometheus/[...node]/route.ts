@@ -6,11 +6,11 @@ const prom = new PrometheusDriver({
     baseURL: "/api/v1",
 });
 
-const loadQuery = 'node_load15'; // query to get the 5-minute load average
+const loadQuery = 'node_load15'; // query to get the 15-minute load average
 const unameQuery = 'node_uname_info'; // query to get node uname info
 const end = new Date();
 const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days 
-const step = 15 * 60; // 1 hour
+const step = 15 * 60; // 15 minutes
 
 interface SampleValue {
     time: Date;
@@ -26,12 +26,6 @@ interface PrometheusQueryResponse {
         };
         values: SampleValue[];
     }>;
-}
-
-interface HourlyAverage {
-    date: string; // 'YYYY-MM-DD'
-    hour: number; // 0-23
-    averageLoad: number;
 }
 
 export async function GET(
@@ -70,36 +64,15 @@ export async function GET(
             return NextResponse.json({ status: 404, message: 'No data found for the specified instance.' });
         }
 
-        // Initialize a map to store hourly loads
-        const hourlyLoads: Map<string, Map<number, number[]>> = new Map();
+        // Extract and format the data points
+        const dataPoints = series.flatMap((serie) =>
+            serie.values.map(({ time, value }) => ({
+                time,
+                value
+            }))
+        );
 
-        series.forEach((serie) => {
-            serie.values.forEach(({ time, value }) => {
-                const date = time.toISOString().split('T')[0]; // 'YYYY-MM-DD'
-                const hour = time.getUTCHours(); // 0-23
-
-                if (!hourlyLoads.has(date)) {
-                    hourlyLoads.set(date, new Map());
-                }
-                const dateMap = hourlyLoads.get(date)!;
-
-                if (!dateMap.has(hour)) {
-                    dateMap.set(hour, []);
-                }
-                dateMap.get(hour)!.push(value);
-            });
-        });
-
-        // Calculate average load for each hour
-        const averages: HourlyAverage[] = [];
-        hourlyLoads.forEach((dateMap, date) => {
-            dateMap.forEach((values, hour) => {
-                const averageLoad = values.reduce((a, b) => a + b, 0) / values.length;
-                averages.push({ date, hour, averageLoad });
-            });
-        });
-
-        return NextResponse.json({ status: 200, data: averages });
+        return NextResponse.json({ status: 200, data: dataPoints });
     } catch (error) {
         console.error("Error:", error);
         return NextResponse.json({ status: 500, message: 'Internal Server Error' });
