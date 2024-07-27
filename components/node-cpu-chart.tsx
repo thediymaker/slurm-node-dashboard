@@ -38,11 +38,10 @@ export const NodeCpuChart = ({ data }: any) => {
               width={730}
               height={250}
             >
-              <XAxis dataKey="hour" hide />
               <YAxis type="number" domain={[]} width={20} scale="linear" />
               <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
               <Line
-                dataKey="averageLoad"
+                dataKey="value"
                 type="monotone"
                 stroke="#8884d8"
                 strokeWidth={3}
