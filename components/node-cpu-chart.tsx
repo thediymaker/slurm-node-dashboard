@@ -20,7 +20,10 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export const NodeCpuChart = ({ data }: any) => {
-  if (data)
+  if (data && data.status === 404) {
+    return
+  } else {
+    if (data)
     return (
       <Card className="mb-4">
         <CardHeader>
@@ -52,4 +55,5 @@ export const NodeCpuChart = ({ data }: any) => {
         </CardContent>
       </Card>
     );
+  }
 };
