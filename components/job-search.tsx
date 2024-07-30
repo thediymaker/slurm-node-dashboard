@@ -64,10 +64,16 @@ const JobSearch = () => {
       if (lastClosedTimestamp) {
         const elapsed = now - parseInt(lastClosedTimestamp, 10);
         if (elapsed > 24 * 60 * 60 * 1000) {
-          setMaintOpen(data.reservations?.length > 0);
+          setMaintOpen(
+            data.reservations?.length > 0 &&
+              data.reservations[0].flags.includes("MAINT")
+          );
         }
       } else {
-        setMaintOpen(data.reservations?.length > 0);
+        setMaintOpen(
+          data.reservations?.length > 0 &&
+            data.reservations[0].flags.includes("MAINT")
+        );
       }
     } catch (error) {
       console.error("Error fetching maintenance data:", error);
