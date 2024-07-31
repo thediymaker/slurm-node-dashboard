@@ -100,13 +100,15 @@ export const NodeCard = (props: any) => {
     setOpen(!open);
   };
 
-  const cpuLoad = (props.nodeData.cpu_load / props.coresTotal).toFixed(2);
+  const cpuLoad = parseFloat(
+    (props.nodeData.cpu_load / props.coresTotal).toFixed(2)
+  );
 
   return (
     <HoverCard>
       <HoverCardTrigger asChild>
         <div
-          className={`border-[1px] cursor-pointer m-0.5 p-1 rounded-[5px] bg-card text-card-foreground shadow-xl ${color} ${
+          className={`border-[1px] cursor-pointer m-0.5 p-1 rounded-[5px] text-card-foreground shadow-xl ${color} ${
             props.size === 50
               ? "w-[60px] h-[60px]"
               : props.size === 100
@@ -114,7 +116,7 @@ export const NodeCard = (props: any) => {
               : props.size === 150
               ? "w-[130px] h-[130px]"
               : "w-[100px] h-[100px]"
-          }`}
+          } ${cpuLoad > 125 ? "animate-pulse border-black" : ""}`}
           onClick={openModal}
         >
           <div className="items-center justify-center h-full w-full">

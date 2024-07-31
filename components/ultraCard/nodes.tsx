@@ -3,12 +3,11 @@ import { NodeCard } from "@/components/ultraCard/node-card";
 import useSWR from "swr";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
-import NodeHeader from "../header";
+import NodeHeader from "../node-header";
 import CardSkeleton from "../card-skeleton";
 import { Node } from "@/utils/nodes";
 import { parseGpuInfo } from "@/utils/nodes";
 import { Slider } from "../ui/slider";
-import { cn } from "@/lib/utils";
 import Stats from "./stats";
 import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
@@ -30,13 +29,13 @@ const nodeFetcher = async () => {
 
 //main card component
 const UltraNodes = () => {
-  const {
-    data: nodeData,
-    error: nodeError,
-    isLoading: nodeIsLoading,
-  } = useSWR(nodeURL, nodeFetcher, {
-    refreshInterval: 15000,
-  });
+  const { data: nodeData, error: nodeError, isLoading: nodeIsLoading } = useSWR(
+    nodeURL,
+    nodeFetcher,
+    {
+      refreshInterval: 15000,
+    }
+  );
 
   const getInitialCardSize = () => {
     if (typeof window !== "undefined") {
@@ -54,12 +53,15 @@ const UltraNodes = () => {
 
   //set states
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
-  const [selectedNodeState, setSelectedNodeState] =
-    useState<string>("allState");
-  const [selectedNodePartitions, setSelectedNodePartitions] =
-    useState<string>("allPartitions");
-  const [selectedNodeFeature, setSelectedNodeFeature] =
-    useState<string>("allFeatures");
+  const [selectedNodeState, setSelectedNodeState] = useState<string>(
+    "allState"
+  );
+  const [selectedNodePartitions, setSelectedNodePartitions] = useState<string>(
+    "allPartitions"
+  );
+  const [selectedNodeFeature, setSelectedNodeFeature] = useState<string>(
+    "allFeatures"
+  );
   const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);

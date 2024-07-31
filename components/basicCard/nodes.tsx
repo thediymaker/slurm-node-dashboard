@@ -3,7 +3,7 @@ import BasicNodeCard from "./node-card";
 import useSWR from "swr";
 import { Separator } from "@/components/ui/separator";
 import { useMemo, useState, useEffect } from "react";
-import NodeHeader from "../header";
+import NodeHeader from "../node-header";
 import { convertUnixToHumanReadable } from "@/utils/nodes";
 import { env } from "process";
 
@@ -34,21 +34,24 @@ const nodeFetcher = async () => {
 };
 
 const BasicNodes = () => {
-  const {
-    data: nodeData,
-    error: nodeError,
-    isLoading: nodeIsLoading,
-  } = useSWR(nodeURL, nodeFetcher, {
-    refreshInterval: 15000,
-  });
+  const { data: nodeData, error: nodeError, isLoading: nodeIsLoading } = useSWR(
+    nodeURL,
+    nodeFetcher,
+    {
+      refreshInterval: 15000,
+    }
+  );
 
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
-  const [selectedNodeState, setSelectedNodeState] =
-    useState<string>("allState");
-  const [selectedNodePartitions, setSelectedNodePartitions] =
-    useState<string>("allPartitions");
-  const [selectedNodeFeature, setSelectedNodeFeature] =
-    useState<string>("allFeatures");
+  const [selectedNodeState, setSelectedNodeState] = useState<string>(
+    "allState"
+  );
+  const [selectedNodePartitions, setSelectedNodePartitions] = useState<string>(
+    "allPartitions"
+  );
+  const [selectedNodeFeature, setSelectedNodeFeature] = useState<string>(
+    "allFeatures"
+  );
   const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
 
   const systems: Node[] = nodeData?.nodes || [];
