@@ -1,4 +1,3 @@
-
 export interface BaseCardProps {
   size: number;
   name: string;
@@ -71,7 +70,9 @@ export function parseGpuAllocations(gresString: string): GpuAllocation[] {
   });
 }
 
-export function parseUsedGpuAllocations(gresUsedString: string): GpuAllocation[] {
+export function parseUsedGpuAllocations(
+  gresUsedString: string
+): GpuAllocation[] {
   return gresUsedString.split(",").map((item) => {
     const [typeAndCount, indexRange] = item.split("(");
     const parts = typeAndCount.split(":");
@@ -86,7 +87,10 @@ export function convertUnixToHumanReadable(unixTimestamp: any) {
   return formattedDate;
 }
 
-export function parseGpuInfo(node: Node): { gpuUsed: number; gpuTotal: number } {
+export function parseGpuInfo(node: Node): {
+  gpuUsed: number;
+  gpuTotal: number;
+} {
   const gpuRegex = /gpu:([^:]+):(\d+)/g;
 
   const gresMatches = [...node.gres.matchAll(gpuRegex)];

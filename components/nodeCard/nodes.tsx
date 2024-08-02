@@ -1,31 +1,25 @@
 "use client";
-import BasicNodeCard from "./node-card";
+import { NodeCard } from "@/components/nodeCard/node-card";
 import useSWR from "swr";
 import { Separator } from "@/components/ui/separator";
-import { useMemo, useState, useEffect } from "react";
-import NodeHeader from "../node-header";
-import { convertUnixToHumanReadable } from "@/utils/nodes";
-import { env } from "process";
+import { useEffect, useMemo, useState } from "react";
+import NodeHeader from "./node-header";
+import CardSkeleton from "./card-skeleton";
+import { Node } from "@/utils/nodes";
+import { parseGpuInfo } from "@/utils/nodes";
+import { Slider } from "../ui/slider";
+import Stats from "./stats";
+import { Checkbox } from "../ui/checkbox";
+import { Skeleton } from "../ui/skeleton";
+import { LastUpdated } from "../last-updated";
 
-interface Node {
-  alloc_memory: number;
-  real_memory: number;
-  alloc_cpus: number;
-  cpus: number;
-  gres: string;
-  gres_used: string;
-  partitions: string[];
-  features?: string[];
-}
-
+// fetch data from the server
 const nodeURL = "/api/slurm/nodes";
-
 const nodeFetcher = async () => {
   const res = await fetch(nodeURL, {
     headers: {
       "Content-Type": "application/json",
     },
-    cache: "no-store",
   });
   if (!res.ok) {
     throw new Error("Network response was not ok");
@@ -33,7 +27,8 @@ const nodeFetcher = async () => {
   return res.json();
 };
 
-const BasicNodes = () => {
+//main card component
+const Nodes = () => {
   const { data: nodeData, error: nodeError, isLoading: nodeIsLoading } = useSWR(
     nodeURL,
     nodeFetcher,
@@ -42,6 +37,21 @@ const BasicNodes = () => {
     }
   );
 
+  const getInitialCardSize = () => {
+    if (typeof window !== "undefined") {
+      return parseInt(localStorage.getItem("cardSize") || "100", 10);
+    }
+    return 100;
+  };
+
+  const getInitialShowStats = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("showStats") === "true";
+    }
+    return false;
+  };
+
+  //set states
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] = useState<string>(
     "allState"
@@ -53,11 +63,19 @@ const BasicNodes = () => {
     "allFeatures"
   );
   const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
-
+  const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
+  const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
   const systems: Node[] = nodeData?.nodes || [];
-  const lastUpdate: string =
-    convertUnixToHumanReadable(nodeData?.last_update.number) || "";
 
+  useEffect(() => {
+    localStorage.setItem("cardSize", cardSize.toString());
+  }, [cardSize]);
+
+  useEffect(() => {
+    localStorage.setItem("showStats", showStats.toString());
+  }, [showStats]);
+
+  //get unique partitions
   const uniquePartitions = useMemo(() => {
     const partitions = new Set<string>();
     systems.forEach((node) => {
@@ -66,6 +84,7 @@ const BasicNodes = () => {
     return Array.from(partitions);
   }, [systems]);
 
+  //get unique features
   const uniqueFeatures = useMemo(() => {
     const features = new Set<string>();
     systems.forEach((node) => {
@@ -74,6 +93,7 @@ const BasicNodes = () => {
     return Array.from(features);
   }, [systems]);
 
+  //filter nodes
   const filteredNodes = useMemo(() => {
     return systems.filter((node: any) => {
       const nodeMatchesType =
@@ -112,6 +132,15 @@ const BasicNodes = () => {
     selectedNodeFeature,
   ]);
 
+  const totalCpuNodes = useMemo(
+    () => systems.filter((node) => !node.gres).length,
+    [systems]
+  );
+  const totalGpuNodes = useMemo(
+    () => systems.filter((node) => node.gres).length,
+    [systems]
+  );
+
   const handleNodeTypeChange = (value: string) => {
     setSelectedNodeType(value);
   };
@@ -135,37 +164,46 @@ const BasicNodes = () => {
     }));
   };
 
-  function parseGpuInfo(node: Node): { gpuUsed: number; gpuTotal: number } {
-    const gpuRegex = /gpu:([^:]+):(\d+)/g;
-    const gresMatches = [...node.gres.matchAll(gpuRegex)];
-    const gresUsedMatches = [...node.gres_used.matchAll(gpuRegex)];
-    const gpuUsed = gresUsedMatches.reduce((acc, match) => {
-      const type = match[1];
-      const quantity = parseInt(match[2], 10);
-      const matchingGres = gresMatches.find((m) => m[1] === type);
-      return acc + (matchingGres ? quantity : 0);
-    }, 0);
-
-    const gpuTotal = gresMatches.reduce((acc, match) => {
-      return acc + parseInt(match[2], 10);
-    }, 0);
-
-    return { gpuUsed, gpuTotal };
-  }
-
   if (nodeError) {
     return (
       <div>
-        <div className="font-bold text-2xl uppercase flex justify-center items-center mx-auto pt-20">
-          Error loading data, please refresh the page.
-        </div>
+        {nodeError.message === "Network response was not ok"
+          ? "Failed to load, please check your network connection."
+          : "Session expired, please reload the page."}
       </div>
     );
   }
   if (nodeIsLoading) {
     return (
-      <div className="font-bold text-2xl uppercase flex justify-center items-center mx-auto pt-20">
-        loading...
+      <div>
+        <NodeHeader
+          handleNodeStateChange={handleNodeStateChange}
+          handleNodeTypeChange={handleNodeTypeChange}
+          handleNodePartitionsChange={handleNodePartitionsChange}
+          handleNodeFeatureChange={handleNodeFeatureChange}
+          partitions={uniquePartitions}
+          features={uniqueFeatures}
+        />
+        <div className="flex justify-between">
+          <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
+            <div className="font-extralight">Card Size</div>
+            <Slider className="w-[100px]" />
+            <div className="font-extralight">Show Detail</div>
+            <Checkbox defaultChecked={showStats} />
+          </div>
+          <div className="flex justify-end w-full mb-4 gap-2 items-center">
+            <div className="flex items-center gap-2 font-extralight">
+              GPU Nodes
+              <Skeleton className="w-[20px]" />
+            </div>
+            <div className="flex items-center gap-2 font-extralight">
+              CPU Nodes
+              <Skeleton className="w-[20px]" />
+            </div>
+          </div>
+        </div>
+        <Separator />
+        <CardSkeleton qty={100} size={100} />
       </div>
     );
   }
@@ -178,12 +216,44 @@ const BasicNodes = () => {
         handleNodePartitionsChange={handleNodePartitionsChange}
         handleNodeFeatureChange={handleNodeFeatureChange}
         partitions={uniquePartitions}
-        features={uniqueFeatures}
+        features={uniqueFeatures} // Pass unique features to the header
       />
+      <div className="flex justify-between">
+        <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
+          <div className="font-extralight">Card Size</div>
+          <Slider
+            className="w-[100px]"
+            value={[cardSize]} // Change from defaultValue to value if the component supports controlled mode
+            min={50}
+            max={150}
+            step={50}
+            onValueChange={(values) => setCardSize(values[0])}
+          />
+          <div className="font-extralight">Show Detail</div>
+          <Checkbox
+            defaultChecked={showStats}
+            onCheckedChange={() => {
+              setShowStats(!showStats);
+            }}
+          />
+        </div>
+        <div className="flex justify-end w-full mb-4 gap-2 items-center">
+          <div className="flex items-center gap-2 font-extralight">
+            GPU Nodes
+            <span className="text-blue-400">{totalGpuNodes}</span>
+          </div>
+          <div className="flex items-center gap-2 font-extralight">
+            CPU Nodes
+            <span className="text-blue-400">{totalCpuNodes}</span>
+          </div>
+        </div>
+      </div>
+      {showStats ? <Stats data={nodeData} /> : null}
       <Separator />
       <div className="flex flex-wrap p-3 uppercase mb-20">
         {filteredNodes.map((node: any, index: number) => (
-          <BasicNodeCard
+          <NodeCard
+            size={cardSize} // Pass the card size based on the checkbox state
             key={node.hostname}
             name={node.name}
             load={node.cpu_load.number}
@@ -196,16 +266,16 @@ const BasicNodes = () => {
             status={node.state}
             gpuUsed={parseGpuInfo(node).gpuUsed}
             gpuTotal={parseGpuInfo(node).gpuTotal}
-            nodeData={node}
             index={index}
+            nodeData={node}
             dropdownOpenStatus={dropdownOpenStatus}
             toggleDropdown={toggleDropdown}
-            size={0}
           />
         ))}
       </div>
+      <LastUpdated data={nodeData?.last_update.number} />
     </div>
   );
 };
 
-export default BasicNodes;
+export default Nodes;

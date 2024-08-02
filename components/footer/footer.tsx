@@ -1,5 +1,5 @@
 "use client";
-import SystemHealth from "@/components/layout/systemHealth";
+import SystemHealth from "@/components/footer/systemHealth";
 import useSWR from "swr";
 import { Skeleton } from "../ui/skeleton";
 

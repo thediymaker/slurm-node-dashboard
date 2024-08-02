@@ -10,7 +10,7 @@ import {
   parseGpuAllocations,
   parseUsedGpuAllocations,
 } from "@/utils/nodes";
-import CardHover from "@/components/card-hover";
+import CardHover from "./card-hover";
 import IconComponent from "./gpu-icon";
 
 function SmallCardContent(props: any) {

@@ -6,7 +6,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 
 export default function HeaderMenu() {
@@ -20,9 +20,6 @@ export default function HeaderMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem className="font-light cursor-pointer" asChild>
           <Link href={"/"}>Home</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="font-light cursor-pointer" asChild>
-          <Link href={"/modules"}>Modules</Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="font-light" asChild>
           <Link

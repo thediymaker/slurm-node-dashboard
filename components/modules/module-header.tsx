@@ -1,4 +1,4 @@
-import HeaderMenu from "./header-menu";
+import HeaderMenu from "@/components/header/header-menu";
 
 const ModuleHeader = () => {
   return (

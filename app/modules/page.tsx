@@ -1,4 +1,4 @@
-import Footer from "@/components/layout/footer";
+import Footer from "@/components/footer/footer";
 import { env } from "process";
 
 import Modules from "@/components/modules/modules";

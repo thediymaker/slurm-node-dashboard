@@ -1,24 +1,20 @@
-import Link from "next/link";
-import JobSearch from "./job-search";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "./ui/form";
+import JobSearch from "../job-search";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "../ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "../ui/select";
 import { useForm } from "react-hook-form";
-import { Menu } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import HeaderMenu from "./header-menu";
+import HeaderMenu from "@/components/header/header-menu";
 
 const NodeHeader = ({
   handleNodeStateChange,
