@@ -87,6 +87,9 @@ export function convertUnixToHumanReadable(unixTimestamp: any) {
   return formattedDate;
 }
 
+export const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 export function parseGpuInfo(node: Node): {
   gpuUsed: number;
   gpuTotal: number;

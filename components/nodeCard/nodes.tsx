@@ -12,6 +12,7 @@ import Stats from "./stats";
 import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
+import ChatIcon from "../llm/chat-icon";
 
 // fetch data from the server
 const nodeURL = "/api/slurm/nodes";
@@ -274,6 +275,7 @@ const Nodes = () => {
         ))}
       </div>
       <LastUpdated data={nodeData?.last_update.number} />
+      <ChatIcon />
     </div>
   );
 };
