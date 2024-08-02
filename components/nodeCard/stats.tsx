@@ -1,6 +1,5 @@
 "use client";
 import { RadialChart } from "../radialChart";
-import { Gauge } from "../ui/gauge";
 import React from "react";
 
 interface Node {

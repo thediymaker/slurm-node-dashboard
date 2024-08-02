@@ -1,25 +1,20 @@
-import Link from "next/link";
-import JobSearch from "./job-search";
-import { Button } from "./ui/button";
-import { usePathname } from "next/navigation";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "./ui/form";
+import JobSearch from "../job-search";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "../ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "../ui/select";
 import { useForm } from "react-hook-form";
-import { Menu } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+import HeaderMenu from "@/components/header/header-menu";
 
 const NodeHeader = ({
   handleNodeStateChange,
@@ -30,7 +25,6 @@ const NodeHeader = ({
   features,
 }: any) => {
   const form = useForm();
-  const pathname = usePathname();
 
   return (
     <div className="mt-3 justify-between flex ">
@@ -175,31 +169,7 @@ const NodeHeader = ({
         </form>
       </Form>
       <div className="flex items-center h-full mr-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger className="">
-            <Menu className="m-1 w-[30px] h-[30px]" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="mr-4">
-            <DropdownMenuLabel className="text-blue-400">
-              Menu
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="font-light cursor-pointer" asChild>
-              <Link href={"/"}>Home</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="font-light cursor-pointer" asChild>
-              <Link href={"/basic"}>Basic Status</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="font-light ">
-              <Link
-                target="_blank"
-                href={"https://github.com/thediymaker/slurm-node-dashboard"}
-              >
-                Github
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <HeaderMenu />
       </div>
     </div>
   );

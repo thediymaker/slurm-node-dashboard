@@ -1,6 +1,5 @@
 import useSWR from "swr";
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
-
 import {
   Table,
   TableBody,
@@ -11,12 +10,15 @@ import {
   TableRow,
 } from "../ui/table";
 import { DNA } from "react-loader-spinner";
-import { NodeCpuChart } from "../node-cpu-chart";
+import { NodeCpuChart } from "../nodeCard/node-mon-chart";
 import JobDetailModal from "./job-detail-modal";
 import { useState } from "react";
+import PromComboBox from "../prom-metric";
 
 const NodeCardModal = ({ open, setOpen, nodename }: any) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [metricValue, setMetricValue] = useState("node_load15");
+  const [daysValue, setDaysValue] = useState("3");
   const slurmURL = `/api/slurm/jobs/node/${nodename}`;
   const jobFetcher = () =>
     fetch(slurmURL, {
@@ -25,13 +27,12 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
       },
     }).then((res) => res.json());
 
-  const {
-    data: jobData,
-    error: jobError,
-    isLoading: jobIsLoading,
-  } = useSWR(open ? slurmURL : null, jobFetcher);
+  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR(
+    open ? slurmURL : null,
+    jobFetcher
+  );
 
-  const promURL = `/api/prometheus/${nodename}`;
+  const promURL = `/api/prometheus?node=${nodename}&days=${daysValue}&query=${metricValue}`;
   const promFetcher = () =>
     fetch(promURL, {
       headers: {
@@ -39,15 +40,15 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
       },
     }).then((res) => res.json());
 
-  const {
-    data: promData,
-    error: promError,
-    isLoading: promIsLoading,
-  } = useSWR(open ? promURL : null, promFetcher, {
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    refreshInterval: 300000,
-  });
+  const { data: promData, error: promError, isLoading: promIsLoading } = useSWR(
+    open ? promURL : null,
+    promFetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 300000,
+    }
+  );
 
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);
@@ -97,9 +98,19 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
         className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
       >
         <div>
-          <DialogTitle className="text-2xl mb-2 font-extralight">
-            {nodename}
-          </DialogTitle>
+          <div className="flex justify-between items-center">
+            <DialogTitle className="text-2xl mb-2 font-extralight">
+              {nodename}
+            </DialogTitle>
+            <div className="mr-10">
+              <PromComboBox
+                metricValue={metricValue}
+                setMetricValue={setMetricValue}
+                daysValue={daysValue}
+                setDaysValue={setDaysValue}
+              />
+            </div>
+          </div>
           {promError || promIsLoading ? "" : <NodeCpuChart data={promData} />}
           <div className="mb-5">Current Jobs on System</div>
           <Table>
@@ -117,7 +128,6 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
             </TableHeader>
             <TableBody>
               {jobData?.jobs.map((job: any, index: any) => (
-                //TODO: Add onClick event to open job detail modal
                 <TableRow
                   key={index}
                   className="cursor-pointer"

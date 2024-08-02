@@ -27,7 +27,7 @@ export const NodeCpuChart = ({ data }: any) => {
     return (
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle className="text-lg font-light">7 Day CPU Load</CardTitle>
+          <CardTitle className="text-lg font-light">System Metrics</CardTitle>
         </CardHeader>
         <CardContent className="">
           <ChartContainer config={chartConfig} className="h-[200px] w-full">
