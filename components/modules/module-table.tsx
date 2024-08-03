@@ -23,26 +23,45 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 
-type Item = {
-  package: string;
-  versions: [
-    {
-      help: string;
-    }
-  ];
+type Version = {
+  versionName: string;
+  help: string;
 };
 
-export const ModuleTable = ({ results }: { results: Item[] }) => {
+type Module = {
+  package: string;
+  versions: Version[];
+};
+
+export const ModuleTable = ({ results }: { results: Module[] }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
 
   const itemsPerPage = 25;
 
+  // Flatten the results array to include each version as a separate item
+  const flattenedResults = results.flatMap((module) => {
+    if (!Array.isArray(module.versions)) {
+      console.error(
+        `module.versions is not an array for module: ${module.package}`,
+        module.versions
+      );
+      return [];
+    }
+
+    return module.versions.map((version) => ({
+      package: module.package,
+      version: version.versionName,
+      help: version.help,
+    }));
+  });
+
   // Filter results based on searchTerm
-  const filteredResults = results.filter(
+  const filteredResults = flattenedResults.filter(
     (item) =>
       item.package.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.versions[0]?.help?.toLowerCase().includes(searchTerm.toLowerCase())
+      item.version.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.help.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate the number of pages
@@ -170,7 +189,7 @@ export const ModuleTable = ({ results }: { results: Item[] }) => {
     <div className="mt-5 w-[90%] mx-auto max-w-[1200px]">
       <Input
         type="text"
-        placeholder="Search for Module"
+        placeholder="Search for Module or Version"
         value={searchTerm}
         onChange={(e) => {
           setSearchTerm(e.target.value);
@@ -181,29 +200,33 @@ export const ModuleTable = ({ results }: { results: Item[] }) => {
       <Table className="bg-black/30 rounded-md mx-auto">
         <TableHeader className="bg-card">
           <TableRow>
-            <TableHead className="w-[200px]">Module Name</TableHead>
-            <TableHead className="w-[500px]">Description</TableHead>
+            <TableHead className="w-[150px]">Module Name</TableHead>
+            <TableHead className="w-[100px]">Version</TableHead>
+            <TableHead className="w-[450px]">Description</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {currentItems.map((module, index) => (
+          {currentItems.map((item, index) => (
             <HoverCard key={index}>
               <HoverCardTrigger asChild>
                 <TableRow>
-                  <TableCell className="truncate max-w-[200px] uppercase">
-                    {module.package}
+                  <TableCell className="truncate max-w-[150px] uppercase">
+                    {item.package}
                   </TableCell>
-                  <TableCell className="truncate max-w-[500px]">
-                    {module?.versions[0]?.help}
+                  <TableCell className="truncate max-w-[100px]">
+                    {item.version}
+                  </TableCell>
+                  <TableCell className="truncate max-w-[450px]">
+                    {item.help}
                   </TableCell>
                 </TableRow>
               </HoverCardTrigger>
               <HoverCardContent className="w-80">
                 <div className="p-4">
                   <div className="text-lg font-medium mb-2">
-                    {module.package}
+                    {item.package} ({item.version})
                   </div>
-                  <div className="text-sm">{module?.versions[0]?.help}</div>
+                  <div className="text-sm">{item.help}</div>
                 </div>
               </HoverCardContent>
             </HoverCard>
@@ -211,8 +234,8 @@ export const ModuleTable = ({ results }: { results: Item[] }) => {
         </TableBody>
         <TableFooter className="bg-card">
           <TableRow>
-            <TableCell className="w-[200px]" colSpan={1}>
-              Total Number of Modules
+            <TableCell className="w-[200px]" colSpan={2}>
+              Total Number of Module Versions
             </TableCell>
             <TableCell className="text-right">
               {filteredResults.length}
