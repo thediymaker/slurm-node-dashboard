@@ -22,15 +22,16 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { Badge } from "@/components/ui/badge";
 
 type Version = {
-  versionName: string;
-  help: string;
+  versionName?: string;
+  help?: string;
 };
 
 type Module = {
-  package: string;
-  versions: Version[];
+  package?: string;
+  versions?: Version | Version[];
 };
 
 export const ModuleTable = ({ results }: { results: Module[] }) => {
@@ -39,30 +40,31 @@ export const ModuleTable = ({ results }: { results: Module[] }) => {
 
   const itemsPerPage = 25;
 
-  // Flatten the results array to include each version as a separate item
-  const flattenedResults = results.flatMap((module) => {
-    if (!Array.isArray(module.versions)) {
-      console.error(
-        `module.versions is not an array for module: ${module.package}`,
-        module.versions
-      );
-      return [];
-    }
-
-    return module.versions.map((version) => ({
-      package: module.package,
-      version: version.versionName,
-      help: version.help,
-    }));
-  });
+  // Helper function to ensure versions is always an array
+  const ensureVersionsArray = (
+    versions: Version | Version[] | undefined
+  ): Version[] => {
+    if (!versions) return [];
+    return Array.isArray(versions) ? versions : [versions];
+  };
 
   // Filter results based on searchTerm
-  const filteredResults = flattenedResults.filter(
-    (item) =>
-      item.package.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.version.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.help.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredResults = results.filter((module) => {
+    if (!module) return false;
+    const packageMatch =
+      module.package?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
+    const versions = ensureVersionsArray(module.versions);
+    const versionMatch = versions.some((version) => {
+      if (!version) return false;
+      const versionNameMatch =
+        version.versionName?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+        false;
+      const helpMatch =
+        version.help?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
+      return versionNameMatch || helpMatch;
+    });
+    return packageMatch || versionMatch;
+  });
 
   // Calculate the number of pages
   const pageCount = Math.ceil(filteredResults.length / itemsPerPage);
@@ -200,42 +202,69 @@ export const ModuleTable = ({ results }: { results: Module[] }) => {
       <Table className="bg-black/30 rounded-md mx-auto">
         <TableHeader className="bg-card">
           <TableRow>
-            <TableHead className="w-[150px]">Module Name</TableHead>
-            <TableHead className="w-[100px]">Version</TableHead>
-            <TableHead className="w-[450px]">Description</TableHead>
+            <TableHead className="w-[200px]">Module Name</TableHead>
+            <TableHead className="w-[150px]">Versions</TableHead>
+            <TableHead className="w-[400px]">Description</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {currentItems.map((item, index) => (
-            <HoverCard key={index}>
-              <HoverCardTrigger asChild>
-                <TableRow>
-                  <TableCell className="truncate max-w-[150px] uppercase">
-                    {item.package}
-                  </TableCell>
-                  <TableCell className="truncate max-w-[100px]">
-                    {item.version}
-                  </TableCell>
-                  <TableCell className="truncate max-w-[450px]">
-                    {item.help}
-                  </TableCell>
-                </TableRow>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-80">
-                <div className="p-4">
-                  <div className="text-lg font-medium mb-2">
-                    {item.package} ({item.version})
+          {currentItems.map((module, index) => {
+            const versions = ensureVersionsArray(module.versions);
+            return (
+              <HoverCard key={index}>
+                <HoverCardTrigger asChild>
+                  <TableRow>
+                    <TableCell className="font-medium uppercase">
+                      {module.package || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {versions.length > 0 ? (
+                          versions.map((version, vIndex) => (
+                            <Badge key={vIndex} variant="secondary">
+                              {version.versionName || ""}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span>No versions available</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="truncate max-w-[400px]">
+                      {versions[0]?.help || "No description available"}
+                    </TableCell>
+                  </TableRow>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-full max-w-[500px]">
+                  <div className="p-4">
+                    <div className="text-lg font-medium mb-2">
+                      {module.package || "N/A"}
+                    </div>
+                    <div className="text-sm mb-2">
+                      {versions[0]?.help || "No description available"}
+                    </div>
+                    <div className="text-sm font-medium mt-2">
+                      Available Versions:
+                    </div>
+                    <ul className="list-disc list-inside">
+                      {versions.length > 0 ? (
+                        versions.map((version, vIndex) => (
+                          <li key={vIndex}>{version.versionName || ""}</li>
+                        ))
+                      ) : (
+                        <li>No versions available</li>
+                      )}
+                    </ul>
                   </div>
-                  <div className="text-sm">{item.help}</div>
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-          ))}
+                </HoverCardContent>
+              </HoverCard>
+            );
+          })}
         </TableBody>
         <TableFooter className="bg-card">
           <TableRow>
             <TableCell className="w-[200px]" colSpan={2}>
-              Total Number of Module Versions
+              Total Number of Modules
             </TableCell>
             <TableCell className="text-right">
               {filteredResults.length}
