@@ -43,7 +43,7 @@ export const sendMessage = async (
   ]);
 
   const reply = await streamUI({
-    model: openai("gpt-3.5-turbo"),
+    model: openai("gpt-4o-mini"),
     messages: [
       { role: "system", content, toolInvocations: [] },
       ...history.get(),
@@ -179,5 +179,12 @@ export type UIState = Array<{
 export const AI = createAI({
   initialAIState: [] as AIState,
   initialUIState: [] as UIState,
-  actions: { sendMessage },
+  actions: {
+    sendMessage,
+    clearHistory: async () => {
+      const aiState = getMutableAIState<typeof AI>();
+      aiState.update([]);
+      return [];
+    },
+  },
 });

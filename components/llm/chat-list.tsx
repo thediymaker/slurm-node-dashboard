@@ -22,7 +22,7 @@ export function ChatList({ messages }: MessagesProps) {
     return (
       <div
         ref={chatContainerRef}
-        className="relative mx-auto max-w-[90%] h-full overflow-y-auto scrollbar-none"
+        className="relative mx-auto mr-[50px] w-full max-w-[1200px] h-full overflow-y-auto scrollbar-none"
       >
         {messages.map((message, index) => (
           <div key={message.id} className="pb-4">

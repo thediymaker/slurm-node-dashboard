@@ -24,7 +24,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
   const form = useForm<ChatInput>();
   const { formRef, onKeyDown } = useEnterSubmit();
   const [messages, setMessages] = useUIState<typeof AI>();
-  const { sendMessage } = useActions<typeof AI>();
+  const { sendMessage, clearHistory } = useActions<typeof AI>();
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +50,8 @@ export default function ChatModal({ showChat, setShowChat }: any) {
     }
   };
 
-  const clearChatHistory = () => {
+  const clearChatHistory = async () => {
+    await clearHistory();
     setMessages([
       {
         id: Date.now(),
@@ -96,23 +97,23 @@ export default function ChatModal({ showChat, setShowChat }: any) {
     <>
       {showChat && (
         <Dialog open={showChat} onOpenChange={setShowChat}>
-          <DialogContent className="border-4 shadow-xl w-[1200px] max-w-[80%] h-[1200px] max-h-[80%] flex flex-col p-0 border-gray">
-            <div className="p-3 px-5">
+          <DialogContent className="border-2 border-black shadow-xl w-[1200px] max-w-[80%] h-[1200px] max-h-[80%] flex flex-col p-0">
+            <div className="p-3 px-5 mx-5">
               <h1 className="text-2xl mb-2 font-extralight">Slurm Chat</h1>
               <Separator />
             </div>
             <div
               ref={chatContainerRef}
-              className="flex-grow overflow-y-auto scrollbar-none"
+              className="flex-grow overflow-y-auto scrollbar-none mx-auto"
             >
               <ChatList messages={messages} />
               <ChatScrollAnchor />
             </div>
-            <div className="bg-gradient-to-b from-muted/30 to-muted/30 to-50% pt-5">
+            <div className="bg-gradient-to-b from-background/0 to-black/60 to-50% pt-5">
               <div className="mx-auto sm:max-w-2xl sm:px-4">
                 <div className="flex gap-2 items-center justify-center">
                   <div
-                    className="text-xs border rounded-lg p-2 mb-2 w-[32%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105"
+                    className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
                     onClick={() => {
                       form.setValue("message", "Show me details about c001");
                     }}
@@ -120,7 +121,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                     Show me details about c001
                   </div>
                   <div
-                    className="text-xs border rounded-lg p-2 mb-2 w-[32%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105"
+                    className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
                     onClick={() => {
                       form.setValue("message", "Show me details for job 1234");
                     }}
@@ -128,7 +129,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                     Show me details for job 1234
                   </div>
                   <div
-                    className="text-xs border rounded-lg p-2 mb-2 w-[32%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105"
+                    className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
                     onClick={() => {
                       form.setValue(
                         "message",
@@ -139,13 +140,13 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                     Give me a basic sbatch example
                   </div>
                 </div>
-                <div className="px-3 flex justify-center flex-col py-2 space-y-4 border-t shadow-lg bg-background sm:rounded-xl sm:border md:py-4 mb-5">
+                <div className="px-3 flex justify-center flex-col py-2 space-y-4 border-black shadow-lg bg-card sm:rounded-xl sm:border md:py-4 mb-5">
                   <form
                     ref={formRef}
                     onSubmit={form.handleSubmit(onSubmit)}
                     action=""
                   >
-                    <div className="relative flex flex-col w-full overflow-hidden max-h-60 grow bg-background sm:rounded-md sm:border">
+                    <div className="relative flex flex-col w-full overflow-hidden max-h-60 grow bg-background sm:rounded-md sm:border border-black">
                       <TextareaAutosize
                         tabIndex={0}
                         onKeyDown={onKeyDown}
@@ -158,7 +159,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                         rows={1}
                         {...form.register("message")}
                       />
-                      <div className="absolute right-0 top-3 sm:right-4">
+                      <div className="absolute right-0 top-3 sm:right-4 bg-background">
                         <Button
                           type="submit"
                           size="icon"
@@ -174,7 +175,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                   <Button
                     variant={"outline"}
                     size={"lg"}
-                    className="p-4 mt-4 rounded-md bg-background"
+                    className="p-4 mt-4 rounded-md bg-background border-black"
                     onClick={(e) => {
                       e.preventDefault();
                       clearChatHistory();

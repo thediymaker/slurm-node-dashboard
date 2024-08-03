@@ -18,15 +18,15 @@ export function SlurmNodeDetails({ node }: SlurmJobDetailsProps) {
 
   console.log(nodeInfo);
   return (
-    <Card className="w-full mx-auto">
-      <div className="flex items-center gap-4 bg-muted/50 px-6 py-4 mx-auto">
+    <Card className="w-full mx-auto border-black">
+      <div className="flex items-center gap-4 p-6 mx-auto">
         <div className="grid gap-1">
-          <CardTitle className="font-extralight">
+          <CardTitle className="font-extralight p-0 m-0 text-foreground">
             Node: <span className="text-blue-500">{nodeInfo.name}</span>
           </CardTitle>
         </div>
       </div>
-      <Separator className="bg-gray-500 w-[95%] mx-auto" />
+      <Separator className="bg-gray-500 mx-auto" />
       <CardContent className="p-6 grid gap-2">
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="grid gap-1">

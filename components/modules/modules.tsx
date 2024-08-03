@@ -4,6 +4,7 @@ import { Separator } from "../ui/separator";
 import { ModuleTable } from "./module-table";
 import fs from "fs-extra";
 import path from "path";
+import Link from "next/link";
 
 type Item = {
   package: string;
@@ -22,7 +23,9 @@ export default async function Modules() {
   return (
     <div className="mx-auto items-center">
       <div className="flex justify-between items-center mb-3">
-        <h1 className="font-bold text-2xl">Modules</h1>
+        <h1 className="font-bold text-2xl cursor-pointer">
+          <Link href={"/"}>Modules</Link>
+        </h1>
         <ModuleHeader />
       </div>
       <Separator />

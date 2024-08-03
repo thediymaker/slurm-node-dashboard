@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -15,8 +15,13 @@ import {
   PaginationEllipsis,
   PaginationItem,
   PaginationLink,
-} from "../ui/pagination";
-import { Input } from "../ui/input";
+} from "@/components/ui/pagination";
+import { Input } from "@/components/ui/input";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 type Item = {
   package: string;
@@ -31,11 +36,13 @@ export const ModuleTable = ({ results }: { results: Item[] }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const itemsPerPage = 15;
+  const itemsPerPage = 25;
 
   // Filter results based on searchTerm
-  const filteredResults = results.filter((item) =>
-    item.package.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredResults = results.filter(
+    (item) =>
+      item.package.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.versions[0]?.help?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate the number of pages
@@ -47,14 +54,7 @@ export const ModuleTable = ({ results }: { results: Item[] }) => {
   const currentItems = filteredResults.slice(indexOfFirstItem, indexOfLastItem);
 
   // Change page handler
-  const paginate = (pageNumber: React.SetStateAction<number>) =>
-    setCurrentPage(pageNumber);
-
-  // Create pageNumbers Array
-  const pageNumbers = [];
-  for (let i = 1; i <= pageCount; i++) {
-    pageNumbers.push(i);
-  }
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const TablePagination = () => {
     const renderPageNumbers = () => {
@@ -179,26 +179,40 @@ export const ModuleTable = ({ results }: { results: Item[] }) => {
         className="mb-4 p-2 border rounded"
       />
       <Table className="bg-black/30 rounded-md mx-auto">
-        <TableHeader className="bg-gray-600/10">
+        <TableHeader className="bg-card">
           <TableRow>
-            <TableHead className="w-[250px]">Module Name</TableHead>
-            <TableHead className="">Description</TableHead>
+            <TableHead className="w-[200px]">Module Name</TableHead>
+            <TableHead className="w-[500px]">Description</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {currentItems.map((module, index) => (
-            <TableRow key={index}>
-              <TableCell className="font-medium uppercase w-[250px]">
-                {module.package}
-              </TableCell>
-              <TableCell className="">{module.versions[0].help}</TableCell>
-            </TableRow>
+            <HoverCard key={index}>
+              <HoverCardTrigger asChild>
+                <TableRow>
+                  <TableCell className="truncate max-w-[200px] uppercase">
+                    {module.package}
+                  </TableCell>
+                  <TableCell className="truncate max-w-[500px]">
+                    {module?.versions[0]?.help}
+                  </TableCell>
+                </TableRow>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80">
+                <div className="p-4">
+                  <div className="text-lg font-medium mb-2">
+                    {module.package}
+                  </div>
+                  <div className="text-sm">{module?.versions[0]?.help}</div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
           ))}
         </TableBody>
-        <TableFooter className="bg-gray-600/10">
+        <TableFooter className="bg-card">
           <TableRow>
-            <TableCell className="w-[250px]" colSpan={1}>
-              Total Number of Results
+            <TableCell className="w-[200px]" colSpan={1}>
+              Total Number of Modules
             </TableCell>
             <TableCell className="text-right">
               {filteredResults.length}
@@ -210,3 +224,5 @@ export const ModuleTable = ({ results }: { results: Item[] }) => {
     </div>
   );
 };
+
+export default ModuleTable;

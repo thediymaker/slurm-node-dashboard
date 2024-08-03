@@ -8,7 +8,7 @@ export function UserMessage({ children }: { children: ReactNode }) {
       <div className="flex h-8 shrink-0 select-none items-center justify-center rounded-md border shadow-sm bg-background w-8">
         <UserIcon />
       </div>
-      <div className="ml-4 flex-1 space-y-2 overflow-hidden px-1">
+      <div className="ml-4 w-full flex-1 text-sm space-y-2 overflow-hidden prose break-words dark:prose-invert prose-p:leading-relaxed prose-pre:p-4 px-1 text-gray-300">
         {children}
       </div>
     </div>
@@ -27,7 +27,7 @@ export function BotMessage({
       <div className="flex h-8 shrink-0 select-none items-center justify-center rounded-md border shadow-sm bg-background w-8">
         <SparklesIcon />
       </div>
-      <div className="ml-4 flex-1 space-y-2 overflow-hidden px-1 prose prose-neutral mx-auto dark:prose-invert w-full text-gray-400">
+      <div className="ml-4 flex-1 space-y-2 text-sm overflow-hidden px-1 prose break-words dark:prose-invert prose-p:leading-relaxed prose-pre:p-4 w-full text-gray-500">
         {children}
       </div>
     </div>
@@ -53,7 +53,7 @@ export function BotCard({
           <SparklesIcon />
         </div>
       )}
-      <div className="ml-4 flex-1 space-y-2 overflow-hidden px-1 text-gray-400">
+      <div className="ml-4 w-full flex-1 space-y-2 text-sm overflow-hidden px-1 prose break-words dark:prose-invert prose-p:leading-relaxed prose-pre:p-4 text-gray-400">
         {children}
       </div>
     </div>
@@ -62,8 +62,10 @@ export function BotCard({
 
 export function AssistantMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-2 flex items-center justify-center gap-2 text-xs text-gray-500">
-      <div className="max-w-[600px] flex-initial p-2">{children}</div>
+    <div className="mt-2 flex items-center justify-center gap-2 text-xs prose break-words text-gray-500">
+      <div className="w-full flex-initial p-2 text-sm dark:prose-invert prose-p:leading-relaxed prose-pre:p-4">
+        {children}
+      </div>
     </div>
   );
 }

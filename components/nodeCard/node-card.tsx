@@ -25,17 +25,17 @@ function MediumCardContent(props: any) {
   return (
     <div className="p-1">
       <div className="font-bold text-[12px] mb-.5">{props.name}</div>
-      <p className="font-extralight text-[9px]">
+      <p className="font-light text-[9px]">
         CPU: {props.coresUsed} / {props.coresTotal}
       </p>
-      <p className="font-extralight text-[9px]">
+      <p className="font-light text-[9px]">
         MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
         {(props.memoryTotal / 1024).toFixed(0)}
       </p>
       {props.gpuUsed !== undefined &&
         props.gpuTotal !== undefined &&
         props.gpuTotal !== 0 && (
-          <p className="font-extralight text-[9px]">
+          <p className="font-light text-[9px]">
             GPU: {props.gpuUsed} / {props.gpuTotal}
           </p>
         )}
@@ -47,14 +47,14 @@ function LargeCardContent(props: any) {
   return (
     <div className="p-1">
       <div className="font-bold text-[14px] mb-1">{props.name}</div>
-      <p className="font-extralight text-[10px]">
+      <p className="font-light text-[10px]">
         CPU: {props.coresUsed} / {props.coresTotal}
       </p>
-      <p className="font-extralight text-[10px]">
+      <p className="font-light text-[10px]">
         MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
         {(props.memoryTotal / 1024).toFixed(0)}
       </p>
-      <p className="font-extralight text-[10px]">
+      <p className="font-light text-[10px]">
         Load: {(props.nodeData.cpu_load / props.coresTotal).toFixed(2)}
       </p>
       <IconComponent num_used={props.gpuUsed} num_total={props.gpuTotal} />

@@ -26,6 +26,7 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-toast": "^1.1.5",
     "@radix-ui/react-visually-hidden": "^1.1.0",
+    "@tailwindcss/typography": "^0.5.13",
     "@types/fs-extra": "^11.0.4",
     "ai": "^3.3.0",
     "class-variance-authority": "^0.7.0",

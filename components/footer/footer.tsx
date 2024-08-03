@@ -16,7 +16,7 @@ const Footer = ({ cluster, logo }: any) => {
 
   if (!data && !error)
     return (
-      <div className="fixed inset-x-0 bottom-0 dark:bg-background border-t-2 border-b-2 text-card-foreground bg-gray-300">
+      <div className="fixed inset-x-0 bottom-0 border-t-2 border-b-2 text-card-foreground bg-background">
         <div className="text-sm font-bold flex justify-between items-center p-2 mx-auto">
           <div className="flex items-center space-x-5">
             <img src={logo} alt="Logo" className="w-8 h-8" />
@@ -38,7 +38,7 @@ const Footer = ({ cluster, logo }: any) => {
   const healthStatus = data.errors.length > 0 ? "unhealthy" : "healthy";
 
   return (
-    <div className="fixed inset-x-0 bottom-0 dark:bg-background border-t-2 border-b-2 text-card-foreground bg-gray-300">
+    <div className="fixed inset-x-0 bottom-0 border-t-2 border-b-2 text-card-foreground bg-background">
       <div className="text-sm font-bold flex justify-between items-center p-2 mx-auto">
         <div className="flex items-center space-x-5">
           <img src={logo} alt="Logo" className="w-8 h-8" />
