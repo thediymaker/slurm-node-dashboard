@@ -58,7 +58,6 @@ const DashboardHistory: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard History</h1>
       <div className="mb-6">
         <DateTimePicker
           date={selectedDate}
@@ -116,13 +115,6 @@ const DashboardHistory: React.FC = () => {
           </CardContent>
         </Card>
       )}
-      <Button
-        variant="outline"
-        className="mt-4"
-        onClick={() => window.history.back()}
-      >
-        Back to Current Dashboard
-      </Button>
     </div>
   );
 };
