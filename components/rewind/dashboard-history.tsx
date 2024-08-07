@@ -1,13 +1,23 @@
+// components/DashboardHistory.tsx
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { parseGpuInfo } from "@/utils/nodes";
+import { Button } from "@/components/ui/button";
+import { Node, parseGpuInfo } from "@/utils/nodes";
 import { NodeCard } from "@/components/nodeCard/node-card";
 import { DateTimePicker } from "@/components/date-time";
 
-const fetcher = async (url: string) => {
+interface HistoricalData {
+  nodes: Node[];
+  timestamp: string;
+  last_update: {
+    number: number;
+  };
+}
+
+const fetcher = async (url: string): Promise<HistoricalData> => {
   const res = await fetch(url);
   if (!res.ok) {
     const errorData = await res.json();
@@ -18,14 +28,22 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
-const DashboardHistory = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    new Date()
+const DashboardHistory: React.FC = () => {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState<string | undefined>(
+    undefined
   );
-  const [selectedTime, setSelectedTime] = useState<string | undefined>();
+  const [isMounted, setIsMounted] = useState(false);
 
-  const { data: historicalData, error } = useSWR(
-    selectedDate && selectedTime
+  useEffect(() => {
+    setIsMounted(true);
+    const now = new Date();
+    setSelectedDate(now);
+    setSelectedTime(format(now, "HH:00"));
+  }, []);
+
+  const { data: historicalData, error } = useSWR<HistoricalData, Error>(
+    isMounted && selectedDate && selectedTime
       ? `/api/rewind?date=${format(
           selectedDate,
           "yyyy-MM-dd"
@@ -33,31 +51,14 @@ const DashboardHistory = () => {
       : null,
     fetcher
   );
-  const systems: Node[] = historicalData?.nodes || [];
-  const totalCpuNodes = useMemo(
-    () => systems.filter((node: any) => !node.gres).length,
-    [systems]
-  );
-  const totalGpuNodes = useMemo(
-    () => systems.filter((node: any) => node.gres).length,
-    [systems]
-  );
-  const totalIdleNodes = useMemo(
-    () => systems.filter((node: any) => node.state[0] === "IDLE").length,
-    [systems]
-  );
-  const totalNodes = useMemo(() => systems.length, [systems]);
-  const totalAllocatedNodes = useMemo(
-    () => systems.filter((node: any) => node.state[0] === "ALLOCATED").length,
-    [systems]
-  );
-  const totalDownNodes = useMemo(
-    () => systems.filter((node: any) => node.state[0] === "DOWN").length,
-    [systems]
-  );
+
+  if (!isMounted) {
+    return <div>Loading...</div>; // or any other placeholder
+  }
 
   return (
     <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">Dashboard History</h1>
       <div className="mb-6">
         <DateTimePicker
           date={selectedDate}
@@ -76,36 +77,9 @@ const DashboardHistory = () => {
         <Card>
           <CardHeader>
             <CardTitle>
-              Historical Data: {format(selectedDate!, "yyyy-MM-dd")} at{" "}
+              Historical Data for{" "}
+              {selectedDate && format(selectedDate, "yyyy-MM-dd")} at{" "}
               {selectedTime}
-              <div className="text-sm">
-                <div className="flex justify-start w-full my-2 gap-2 items-center">
-                  <div className="flex items-center gap-2 font-extralight">
-                    GPU Nodes
-                    <span className="text-blue-400">{totalGpuNodes}</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight">
-                    CPU Nodes
-                    <span className="text-blue-400">{totalCpuNodes}</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight">
-                    IDLE Nodes
-                    <span className="text-blue-400">{totalIdleNodes}</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight">
-                    DOWN Nodes
-                    <span className="text-blue-400">{totalDownNodes}</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight">
-                    ALLOCATED Nodes
-                    <span className="text-blue-400">{totalAllocatedNodes}</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight">
-                    TOTAL Nodes
-                    <span className="text-blue-400">{totalNodes}</span>
-                  </div>
-                </div>
-              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -132,7 +106,6 @@ const DashboardHistory = () => {
                       nodeData={node}
                       dropdownOpenStatus={{}}
                       toggleDropdown={() => {}}
-                      historical={true}
                     />
                   );
                 })}
@@ -143,6 +116,13 @@ const DashboardHistory = () => {
           </CardContent>
         </Card>
       )}
+      <Button
+        variant="outline"
+        className="mt-4"
+        onClick={() => window.history.back()}
+      >
+        Back to Current Dashboard
+      </Button>
     </div>
   );
 };

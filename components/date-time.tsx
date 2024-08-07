@@ -1,5 +1,6 @@
 // components/DateTimePicker.tsx
-import React, { useState } from "react";
+"use client";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -32,6 +33,11 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   setTime,
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const generateTimeOptions = (): string[] => {
     const options: string[] = [];
@@ -40,6 +46,10 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     }
     return options;
   };
+
+  if (!isMounted) {
+    return <div>Loading...</div>; // or any other placeholder
+  }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
