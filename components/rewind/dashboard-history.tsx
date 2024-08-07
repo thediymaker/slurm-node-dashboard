@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseGpuInfo } from "@/utils/nodes";
 import { NodeCard } from "@/components/nodeCard/node-card";
 import dynamic from "next/dynamic";
+import { DNA } from "react-loader-spinner";
 
 const DateTimePicker = dynamic(
   () => import("@/components/date-time").then((mod) => mod.DateTimePicker),
@@ -71,7 +72,18 @@ const DashboardHistory = () => {
   );
 
   if (!isMounted) {
-    return <div>Loading...</div>; // or any other placeholder
+    return (
+      <div className="flex justify-center items-center w-full h-full">
+        <DNA
+          visible={true}
+          height="80"
+          width="80"
+          ariaLabel="dna-loading"
+          wrapperStyle={{}}
+          wrapperClass="dna-wrapper"
+        />
+      </div>
+    );
   }
 
   return (
