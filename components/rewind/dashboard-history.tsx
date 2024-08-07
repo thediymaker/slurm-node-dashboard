@@ -1,23 +1,18 @@
-// components/DashboardHistory.tsx
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Node, parseGpuInfo } from "@/utils/nodes";
+import { parseGpuInfo } from "@/utils/nodes";
 import { NodeCard } from "@/components/nodeCard/node-card";
-import { DateTimePicker } from "@/components/date-time";
+import dynamic from "next/dynamic";
 
-interface HistoricalData {
-  nodes: Node[];
-  timestamp: string;
-  last_update: {
-    number: number;
-  };
-}
+const DateTimePicker = dynamic(
+  () => import("@/components/date-time").then((mod) => mod.DateTimePicker),
+  { ssr: false }
+);
 
-const fetcher = async (url: string): Promise<HistoricalData> => {
+const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
     const errorData = await res.json();
@@ -28,7 +23,7 @@ const fetcher = async (url: string): Promise<HistoricalData> => {
   return res.json();
 };
 
-const DashboardHistory: React.FC = () => {
+const DashboardHistory = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(
     undefined
@@ -42,7 +37,7 @@ const DashboardHistory: React.FC = () => {
     setSelectedTime(format(now, "HH:00"));
   }, []);
 
-  const { data: historicalData, error } = useSWR<HistoricalData, Error>(
+  const { data: historicalData, error } = useSWR(
     isMounted && selectedDate && selectedTime
       ? `/api/rewind?date=${format(
           selectedDate,
@@ -52,12 +47,35 @@ const DashboardHistory: React.FC = () => {
     fetcher
   );
 
+  const systems: Node[] = historicalData?.nodes || [];
+  const totalCpuNodes = useMemo(
+    () => systems.filter((node: any) => !node.gres).length,
+    [systems]
+  );
+  const totalGpuNodes = useMemo(
+    () => systems.filter((node: any) => node.gres).length,
+    [systems]
+  );
+  const totalIdleNodes = useMemo(
+    () => systems.filter((node: any) => node.state[0] === "IDLE").length,
+    [systems]
+  );
+  const totalNodes = useMemo(() => systems.length, [systems]);
+  const totalAllocatedNodes = useMemo(
+    () => systems.filter((node: any) => node.state[0] === "ALLOCATED").length,
+    [systems]
+  );
+  const totalDownNodes = useMemo(
+    () => systems.filter((node: any) => node.state[0] === "DOWN").length,
+    [systems]
+  );
+
   if (!isMounted) {
     return <div>Loading...</div>; // or any other placeholder
   }
 
   return (
-    <div className="p-6">
+    <div className="py-6 w-[90%] mx-auto">
       <div className="mb-6">
         <DateTimePicker
           date={selectedDate}
@@ -76,9 +94,37 @@ const DashboardHistory: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>
-              Historical Data for{" "}
+              Historical Data:{" "}
               {selectedDate && format(selectedDate, "yyyy-MM-dd")} at{" "}
               {selectedTime}
+              <div className="text-sm">
+                <div className="flex justify-start w-full my-2 gap-2 items-center">
+                  <div className="flex items-center gap-2 font-extralight">
+                    GPU Nodes
+                    <span className="text-blue-400">{totalGpuNodes}</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-extralight">
+                    CPU Nodes
+                    <span className="text-blue-400">{totalCpuNodes}</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-extralight">
+                    IDLE Nodes
+                    <span className="text-blue-400">{totalIdleNodes}</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-extralight">
+                    DOWN Nodes
+                    <span className="text-blue-400">{totalDownNodes}</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-extralight">
+                    ALLOCATED Nodes
+                    <span className="text-blue-400">{totalAllocatedNodes}</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-extralight">
+                    TOTAL Nodes
+                    <span className="text-blue-400">{totalNodes}</span>
+                  </div>
+                </div>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -105,6 +151,7 @@ const DashboardHistory: React.FC = () => {
                       nodeData={node}
                       dropdownOpenStatus={{}}
                       toggleDropdown={() => {}}
+                      historical={true}
                     />
                   );
                 })}
