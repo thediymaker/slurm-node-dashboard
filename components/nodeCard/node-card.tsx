@@ -117,7 +117,7 @@ export const NodeCard = (props: any) => {
               ? "w-[130px] h-[130px]"
               : "w-[100px] h-[100px]"
           } ${cpuLoad > 125 ? "animate-pulse border-black" : ""}`}
-          onClick={openModal}
+          onClick={props.historical ? () => {} : openModal}
         >
           <div className="items-center justify-center h-full w-full">
             <div className="h-full w-full">

@@ -25,6 +25,9 @@ export default function HeaderMenu() {
           <Link href={"/modules"}>Modules</Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="font-light cursor-pointer" asChild>
+          <Link href={"/rewind"}>Historical</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="font-light cursor-pointer" asChild>
           <Link
             target="_blank"
             href={"https://github.com/thediymaker/slurm-node-dashboard"}

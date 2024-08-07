@@ -1,5 +1,5 @@
 "use server";
-import ModuleHeader from "./module-header";
+import BaseHeader from "../base-header";
 import { Separator } from "../ui/separator";
 import { ModuleTable } from "./module-table";
 import fs from "fs-extra";
@@ -26,7 +26,7 @@ export default async function Modules() {
         <h1 className="font-bold text-2xl cursor-pointer">
           <Link href={"/"}>Modules</Link>
         </h1>
-        <ModuleHeader />
+        <BaseHeader />
       </div>
       <Separator />
       <ModuleTable results={data} />

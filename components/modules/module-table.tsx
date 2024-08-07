@@ -197,7 +197,7 @@ export const ModuleTable = ({ results }: { results: Module[] }) => {
           setSearchTerm(e.target.value);
           setCurrentPage(1); // Reset to first page on search
         }}
-        className="mb-4 p-2 border rounded"
+        className="mb-4 p-2 border rounded-md"
       />
       <Table className="bg-black/30 rounded-md mx-auto">
         <TableHeader className="bg-card">
