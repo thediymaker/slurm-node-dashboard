@@ -1,10 +1,17 @@
+// app/api/rewind/route.ts
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import zlib from "zlib";
+import { promisify } from "util";
+
+const gunzip = promisify(zlib.gunzip);
 
 function parseFilename(filename: string): Date | null {
+  console.log("Parsing filename:", filename);
   try {
-    const [datePart, timePart] = filename.replace(".json", "").split("T");
+    // Remove the .json.gz extension and split the string
+    const [datePart, timePart] = filename.replace(".json.gz", "").split("T");
     const [year, month, day] = datePart.split("-");
     const [hour, minute, secondAndMillis] = timePart.split("-");
     const [second, millis] = secondAndMillis.split(".");
@@ -12,7 +19,7 @@ function parseFilename(filename: string): Date | null {
     const date = new Date(
       Date.UTC(
         parseInt(year),
-        parseInt(month) - 1,
+        parseInt(month) - 1, // month is 0-indexed in JavaScript
         parseInt(day),
         parseInt(hour),
         parseInt(minute),
@@ -22,6 +29,7 @@ function parseFilename(filename: string): Date | null {
     );
 
     if (!isNaN(date.getTime())) {
+      console.log("Successfully parsed date:", date.toISOString());
       return date;
     }
     console.log("Failed to parse date from filename");
@@ -52,6 +60,8 @@ export async function GET(request: Request) {
     console.log("Looking for files in:", dataDir);
 
     const files = await fs.readdir(dataDir);
+    console.log("Files found:", files);
+
     const [hour] = time.split(":");
     const targetStartTime = new Date(`${date}T${hour}:00:00.000Z`);
     const targetEndTime = new Date(`${date}T${hour}:59:59.999Z`);
@@ -67,7 +77,7 @@ export async function GET(request: Request) {
     let smallestDifference = Infinity;
 
     for (const file of files) {
-      if (file.endsWith(".json")) {
+      if (file.endsWith(".json.gz")) {
         const fileDate = parseFilename(file);
         if (fileDate) {
           console.log(
@@ -95,9 +105,15 @@ export async function GET(request: Request) {
 
     if (closestFile) {
       const filePath = path.join(dataDir, closestFile);
-      const fileContent = await fs.readFile(filePath, "utf-8");
+      const compressedContent = await fs.readFile(filePath);
+      const decompressedContent = await gunzip(compressedContent);
+      const fileContent = decompressedContent.toString("utf-8");
       try {
         const jsonContent = JSON.parse(fileContent);
+        console.log(
+          "File content (first 100 chars):",
+          fileContent.substring(0, 100)
+        );
         return NextResponse.json(jsonContent, { status: 200 });
       } catch (jsonError: any) {
         console.error("Error parsing JSON content:", jsonError);
