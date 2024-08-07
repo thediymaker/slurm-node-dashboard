@@ -23,6 +23,15 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 type Version = {
   versionName?: string;
@@ -37,8 +46,7 @@ type Module = {
 export const ModuleTable = ({ results }: { results: Module[] }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const itemsPerPage = 25;
+  const [resultsPerPage, setResultsPerPage] = useState(10);
 
   // Helper function to ensure versions is always an array
   const ensureVersionsArray = (
@@ -67,11 +75,11 @@ export const ModuleTable = ({ results }: { results: Module[] }) => {
   });
 
   // Calculate the number of pages
-  const pageCount = Math.ceil(filteredResults.length / itemsPerPage);
+  const pageCount = Math.ceil(filteredResults.length / resultsPerPage);
 
   // Calculate the slice of data to display
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const indexOfLastItem = currentPage * resultsPerPage;
+  const indexOfFirstItem = indexOfLastItem - resultsPerPage;
   const currentItems = filteredResults.slice(indexOfFirstItem, indexOfLastItem);
 
   // Change page handler
@@ -189,16 +197,35 @@ export const ModuleTable = ({ results }: { results: Module[] }) => {
 
   return (
     <div className="mt-5 w-[90%] mx-auto max-w-[1200px]">
-      <Input
-        type="text"
-        placeholder="Search for Module or Version"
-        value={searchTerm}
-        onChange={(e) => {
-          setSearchTerm(e.target.value);
-          setCurrentPage(1); // Reset to first page on search
-        }}
-        className="mb-4 p-2 border rounded-md"
-      />
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <Input
+          type="text"
+          placeholder="Search for Module or Version"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="border rounded-md"
+        />
+        <Select
+          onValueChange={(value: any) => {
+            setResultsPerPage(value);
+          }}
+        >
+          <SelectTrigger className="w-[100px]">
+            <SelectValue placeholder={resultsPerPage} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value={"10"}>10</SelectItem>
+              <SelectItem value={"25"}>25</SelectItem>
+              <SelectItem value={"50"}>50</SelectItem>
+              <SelectItem value={"100"}>100</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
       <Table className="bg-black/30 rounded-md mx-auto">
         <TableHeader className="bg-card">
           <TableRow>
