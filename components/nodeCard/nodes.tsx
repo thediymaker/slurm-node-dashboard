@@ -13,6 +13,7 @@ import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
 import ChatIcon from "../llm/chat-icon";
+import { FeatureEnabled } from "@/actions/env-enabled";
 
 // fetch data from the server
 const nodeURL = "/api/slurm/nodes";
@@ -63,10 +64,20 @@ const Nodes = () => {
   const [selectedNodeFeature, setSelectedNodeFeature] = useState<string>(
     "allFeatures"
   );
+  const [slurmChatEnabled, setSlurmChatEnabled] = useState(false);
   const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
   const systems: Node[] = nodeData?.nodes || [];
+
+  const checkEnabled = async (feature: string) => {
+    const response = await FeatureEnabled(feature);
+    setSlurmChatEnabled(response);
+  };
+
+  useEffect(() => {
+    checkEnabled("OPENAI_API_KEY");
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("cardSize", cardSize.toString());
@@ -275,7 +286,7 @@ const Nodes = () => {
         ))}
       </div>
       <LastUpdated data={nodeData?.last_update.number} />
-      <ChatIcon />
+      {slurmChatEnabled ? <ChatIcon /> : null}
     </div>
   );
 };
