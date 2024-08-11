@@ -15,6 +15,7 @@ import {
 } from "../ui/select";
 import { useForm } from "react-hook-form";
 import HeaderMenu from "@/components/header/header-menu";
+import { ThemeToggle } from "../theme-toggle";
 
 const NodeHeader = ({
   handleNodeStateChange,
@@ -169,6 +170,7 @@ const NodeHeader = ({
         </form>
       </Form>
       <div className="flex items-center h-full mr-4">
+        <ThemeToggle />
         <HeaderMenu />
       </div>
     </div>

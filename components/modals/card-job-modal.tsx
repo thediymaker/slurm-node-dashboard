@@ -102,16 +102,25 @@ const NodeCardModal = ({ open, setOpen, nodename }: any) => {
             <DialogTitle className="text-2xl mb-2 font-extralight">
               {nodename}
             </DialogTitle>
-            <div className="mr-10">
-              <PromComboBox
-                metricValue={metricValue}
-                setMetricValue={setMetricValue}
-                daysValue={daysValue}
-                setDaysValue={setDaysValue}
-              />
-            </div>
+
+            {promError || promIsLoading || promData?.status === 404 ? (
+              ""
+            ) : (
+              <div className="mr-10">
+                <PromComboBox
+                  metricValue={metricValue}
+                  setMetricValue={setMetricValue}
+                  daysValue={daysValue}
+                  setDaysValue={setDaysValue}
+                />
+              </div>
+            )}
           </div>
-          {promError || promIsLoading ? "" : <NodeCpuChart data={promData} />}
+          {promError || promIsLoading || promData?.status === 404 ? (
+            ""
+          ) : (
+            <NodeCpuChart data={promData} />
+          )}
           <div className="mb-5">Current Jobs on System</div>
           <Table>
             <TableHeader>
