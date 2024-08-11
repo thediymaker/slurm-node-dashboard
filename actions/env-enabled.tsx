@@ -1,9 +1,6 @@
 "use server";
 
-export async function FeatureEnabled(feature: string) {
-  if (process.env.feature === "" || process.env.feature === undefined) {
-    return false;
-  } else {
-    return true;
-  }
+export async function FeatureEnabled(feature: string): Promise<boolean> {
+  const envValue = process.env[feature];
+  return envValue !== "" && envValue !== undefined;
 }
