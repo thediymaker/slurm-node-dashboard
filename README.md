@@ -1,19 +1,26 @@
-
 # HPC Dashboard
 
-This repository contains the source code for the HPC Dashboard, a Next.js application designed to monitor the status of SLURM nodes. The dashboard provides total utilization metrics for CPU and GPU nodes, as well as detailed statuses for individual nodes. This is a small portion of a much larger, full HPC management project I am working on, which includes tasks such as managing LDAP users, SLURM associations, tracking services sold, and handling renewals.
+This repository contains the source code for the HPC Dashboard, a Next.js application designed to monitor the status of SLURM nodes. The dashboard provides total utilization metrics for CPU and GPU nodes, as well as detailed statuses for individual nodes. This application is built using well known packages, and styled with tailwindcss and Shadcn components
 
-## Features
+## Standard Features
 
 - View total utilization of CPU and GPU nodes.
 - Individual node status with details on CPU, GPU, and memory usage.
-- Styled with Shadcn and Tailwind CSS.
-- Built with Next.js and Docker for easy deployment and scalability.
+- View Slurm job details.
+
+## Optional Features
+
+The optional features will be enabled by adding the detailst to the environments file. If these are left blank, the intergration will not show up, but the rest of the application will continue to function correctly.
+
+- LMOD module details
+- Prometheus integration
+- InfluxDB intergration
+- OpenAI intergration
 
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
-- Docker
+
 - Node.js (v18 or later)
 - Yarn or npm
 - Slurm API enabled on your HPC cluster
@@ -30,16 +37,22 @@ git clone https://github.com/thediymaker/slurm-node-dashboard.git
 cd slurm-node-dashboard
 ```
 
-### Build the Docker image
+### Install dependencies
 
-```bash
-docker build -t slurm-node-dashboard .
+```
+npm install
 ```
 
-### Run the Docker container
+```
+dnf install pm2
+or
+apt install pm2
+```
 
-```bash
-docker run -p 3000:3000 slurm-node-dashboard
+### Run the application with PM2
+
+```
+pm2 start npm --name "slurm-node-dashboard" -- start
 ```
 
 The application should now be running on [http://localhost:3000](http://localhost:3000).
@@ -52,9 +65,17 @@ To run this project, you will need to add the following environment variables to
 COMPANY_NAME=""
 URL=""
 NEXT_PUBLIC_APP_URL=""
-VERSION="1.1.2"
 CLUSTER_NAME=""
-CLUSTER_LOGO="logo.png"
+CLUSTER_LOGO="/logo.png"
+
+NEXT_PUBLIC_CLUSTER_NAME=""
+
+PROMETHEUS_URL=""
+INFLUX_TOKEN=""
+INFLUX_URL=""
+INFLUX_ORG=""
+
+OPENAI_API_KEY=""
 
 NODE_ENV="production"
 REACT_EDITOR="code"
@@ -65,18 +86,6 @@ SLURM_API_TOKEN=""
 ```
 
 **You will also need to make sure you place your logo.png in the plublic directory, as well as replace the default favicon.ico with your own.**
-
-
-## Docker Configuration
-
-Here's a brief overview of the Docker setup:
-
-- **Base Image:** Uses `node:18-alpine` for a lightweight container.
-- **Dependencies:** Installs project dependencies selectively based on the presence of a lock file.
-- **Building:** Compiles the Next.js project.
-- **Running:** Uses a non-root user for improved security.
-
-Refer to the `Dockerfile` in the repository for detailed configuration.
 
 ## Contributing
 
@@ -90,7 +99,7 @@ Contributions are what make the open-source community such an amazing place to l
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the GNU License. See `LICENSE.md` for more information.
 
 ## Contact
 
@@ -100,23 +109,30 @@ Project Link: [https://github.com/thediymaker/slurm-node-dashboard](https://gith
 
 ## Screenshots
 
-###  Basic Dashboard
+### Basic Dashboard
+
 ![Dashboard Screenshot](/images/basic_screenshot.png "Basic Dashboard")
 
 ### Dashboard Features
+
 ![Dashboard Hover Screenshot](/images/features_screenshot.png "Features")
 
 ### Job Detail
+
 ![Dashboard Footer Screenshot](/images/job_detail_screenshot.png "Job Detail")
 
 ### Node Detail
+
 ![Dashboard Footer Screenshot](/images/node_job_details_screenshot.png "Basic Job Detail")
 
 ### Dashboard
+
 ![Dashboard Screenshot](/images/dashboard_screenshot_1.png "Dashboard Overview")
 
 ### Dashboard Hover
+
 ![Dashboard Hover Screenshot](/images/dashboard_screenshot_2.png "Hover Status")
 
 ### Dashboard Footer
+
 ![Dashboard Footer Screenshot](/images/dashboard_screenshot_3.png "Footer")
