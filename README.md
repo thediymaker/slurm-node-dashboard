@@ -151,9 +151,11 @@ Distributed under the GNU License. See `LICENSE.md` for more information.
 
 ## Contact
 
-Your Name – [john.lee@thediymaker.com](mailto:john.lee@thediymaker.com)
+Johnathan Lee
 
-Project Link: [https://github.com/thediymaker/slurm-node-dashboard](https://github.com/thediymaker/slurm-node-dashboard)
+[john.lee@thediymaker.com](mailto:john.lee@thediymaker.com)
+
+[https://github.com/thediymaker/slurm-node-dashboard](https://github.com/thediymaker/slurm-node-dashboard)
 
 ## Screenshots
 
