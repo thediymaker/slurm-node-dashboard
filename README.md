@@ -87,6 +87,54 @@ SLURM_API_TOKEN=""
 
 **You will also need to make sure you place your logo.png in the plublic directory, as well as replace the default favicon.ico with your own.**
 
+## Collecting node data in JSON format, for use with the "Historical" node status module.
+
+In order to capture the data for use with the historical module, you need to create a script that pulls down the node data on an hourly basis, here is an example script, that you would then call hourly via cron.
+
+```
+#!/bin/bash
+
+# Set the timezone
+export TZ='America/Phoenix'
+
+# Set the directory where you want to save the JSON files
+SAVE_DIR="/var/www/beta_dashboard/data"
+
+# Ensure the save directory exists
+mkdir -p "$SAVE_DIR"
+
+# Generate the filename with the current date and time
+FILENAME=$(date +"%Y-%m-%dT%H-%M-%S.000Z.json.gz")
+
+# Fetch the data and save it to the file
+curl -s "http://localhost:3000/api/slurm/nodes" | gzip > "$SAVE_DIR/$FILENAME"
+
+# Optional: Keep only the last 30 days of data
+find "$SAVE_DIR" -name "*.json.gz" -type f -mtime +30 -delete
+```
+
+## Collecting module data in JSON format, for use with the "Modules" module.
+
+In order to collect the JSON data for the modules page, you will need to create this script and call it on any cadence you see fit. This will overwrite the existing modules.json.
+
+```
+#!/bin/bash
+
+# Set output variables
+json_dir="/var/www/beta_dashboard/data"
+json_output="${json_dir}/modules.json"
+
+# Create json directory if it doesn't exist
+mkdir -p "$json_dir"
+
+# Set environment variables - this will likely change for you
+export MODULESHOME="/usr/share/lmod/lmod"
+export MODULEPATH="/packages/modulefiles/apps:/packages/modulefiles/spack"
+
+# Run the spider command and save JSON output
+$LMOD_DIR/spider -o jsonSoftwarePage $MODULEPATH | python -m json.tool > "$json_output"
+```
+
 ## Contributing
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
