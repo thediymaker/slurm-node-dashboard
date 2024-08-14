@@ -17,8 +17,19 @@ type Item = {
 
 export default async function Modules() {
   const filePath = path.join(process.cwd(), "public", "modules.json");
-  const jsonData = fs.readFileSync(filePath, "utf-8");
-  const data: Item[] = await JSON.parse(jsonData);
+  let data: Item[] = [];
+  let error = null;
+
+  try {
+    const jsonData = fs.readFileSync(filePath, "utf-8");
+    data = await JSON.parse(jsonData);
+
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error("No valid data");
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "An error occurred";
+  }
 
   return (
     <div className="mx-auto items-center">
@@ -29,7 +40,11 @@ export default async function Modules() {
         <BaseHeader />
       </div>
       <Separator />
-      <ModuleTable results={data} />
+      {error ? (
+        <p className="text-red-500">No valid data found</p>
+      ) : (
+        <ModuleTable results={data} />
+      )}
     </div>
   );
 }

@@ -18,6 +18,8 @@ package-lock.json
 # production
 /build
 
+/public/modules.json
+
 # misc
 .DS_Store
 *.pem
