@@ -121,7 +121,7 @@ In order to collect the JSON data for the modules page, you will need to create 
 #!/bin/bash
 
 # Set output variables
-json_dir="/var/www/beta_dashboard/data"
+json_dir="/var/www/beta_dashboard/public"
 json_output="${json_dir}/modules.json"
 
 # Create json directory if it doesn't exist
