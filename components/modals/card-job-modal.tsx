@@ -14,6 +14,9 @@ import { DNA } from "react-loader-spinner";
 import { NodeCpuChart } from "../nodeCard/node-mon-chart";
 import PromComboBox from "../prom-metric";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface Job {
   job_id: string;
@@ -154,7 +157,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[90%] max-h-[90%] overflow-y-auto scrollbar-none">
         <div>
           <div className="flex justify-between items-center">
             <DialogTitle className="text-2xl mb-2 font-extralight">
@@ -244,40 +247,93 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
                             Error loading job details
                           </div>
                         ) : jobDetails && jobDetails.jobs[0] ? (
-                          <div className="py-4 px-6 bg-background">
-                            <h4 className="font-semibold mb-2">Job Details</h4>
-                            <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-                              <dt className="font-medium">Nodes</dt>
-                              <dd>{jobDetails.jobs[0].nodes}</dd>
-                              <dt className="font-medium">Command</dt>
-                              <dd>{jobDetails.jobs[0].command}</dd>
-                              <dt className="font-medium">State</dt>
-                              <dd>{jobDetails.jobs[0].job_state.join(", ")}</dd>
-                              <dt className="font-medium">CPUs Per Task</dt>
-                              <dd>{jobDetails.jobs[0].cpus_per_task.number}</dd>
-                              <dt className="font-medium">
-                                Memory per Node (GB)
-                              </dt>
-                              <dd>
-                                {jobDetails.jobs[0].memory_per_node.number /
-                                  1024}
-                              </dd>
-                              <dt className="font-medium">Gres Detail</dt>
-                              <dd>
-                                {jobDetails.jobs[0].gres_detail.join(", ")}
-                              </dd>
-                              <dt className="font-medium">Output Path</dt>
-                              <dd>{jobDetails.jobs[0].standard_output}</dd>
-                              <dt className="font-medium">Error Path</dt>
-                              <dd>{jobDetails.jobs[0].standard_error}</dd>
-                              <dt className="font-medium">Input Path</dt>
-                              <dd>{jobDetails.jobs[0].standard_input}</dd>
-                              <dt className="font-medium">Time Limit (mins)</dt>
-                              <dd>{jobDetails.jobs[0].time_limit.number}</dd>
-                              <dt className="font-medium">Priority</dt>
-                              <dd>{jobDetails.jobs[0].priority.number}</dd>
-                            </dl>
-                          </div>
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Job Details</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="font-semibold">Nodes</p>
+                                  <p>{jobDetails.jobs[0].nodes}</p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">Command</p>
+                                  <p className="truncate">
+                                    {jobDetails.jobs[0].command}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">State</p>
+                                  <p>
+                                    {jobDetails.jobs[0].job_state.join(", ")}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">CPUs Per Task</p>
+                                  <p>
+                                    {jobDetails.jobs[0].cpus_per_task.number}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">
+                                    Memory per Node (GB)
+                                  </p>
+                                  <p>
+                                    {jobDetails.jobs[0].memory_per_node.number /
+                                      1024}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">Gres Detail</p>
+                                  <p>
+                                    {jobDetails.jobs[0].gres_detail.join(", ")}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">Output Path</p>
+                                  <p className="truncate">
+                                    {jobDetails.jobs[0].standard_output}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">Error Path</p>
+                                  <p className="truncate">
+                                    {jobDetails.jobs[0].standard_error}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">Input Path</p>
+                                  <p className="truncate">
+                                    {jobDetails.jobs[0].standard_input}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">
+                                    Time Limit (mins)
+                                  </p>
+                                  <p>{jobDetails.jobs[0].time_limit.number}</p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">Priority</p>
+                                  <p>{jobDetails.jobs[0].priority.number}</p>
+                                </div>
+                              </div>
+                              <Separator className="my-4" />
+                              <div>
+                                <p className="font-semibold mb-2">Flags</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {jobDetails.jobs[0].flags.map(
+                                    (flag, index) => (
+                                      <Badge key={index} variant="secondary">
+                                        {flag}
+                                      </Badge>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
                         ) : (
                           <div className="py-4 text-center">
                             No job details available
