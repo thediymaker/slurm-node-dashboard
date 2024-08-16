@@ -129,7 +129,11 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTitle>Error</DialogTitle>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
+          <DialogTitle></DialogTitle>
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
       </Dialog>
@@ -139,7 +143,11 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
   if (jobIsLoading) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
+          <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
             <DNA
               visible={true}
@@ -157,7 +165,10 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[90%] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl w-[1200px] max-w-[90%] min-h-[90%] max-h-[90%] overflow-y-auto scrollbar-none"
+      >
         <div>
           <div className="flex justify-between items-center">
             <DialogTitle className="text-2xl mb-2 font-extralight">

@@ -31,11 +31,10 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
 
   const itemsPerPage = 20;
 
-  const {
-    data: jobData,
-    error: jobError,
-    isLoading: jobIsLoading,
-  } = useSWR(open ? `/api/slurm/jobs/user/${searchID}` : null, jobFetcher);
+  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR(
+    open ? `/api/slurm/jobs/user/${searchID}` : null,
+    jobFetcher
+  );
 
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);
@@ -172,7 +171,11 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTitle>Error</DialogTitle>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
+          <DialogTitle></DialogTitle>
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
       </Dialog>
@@ -181,7 +184,10 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
   if (jobIsLoading)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
           <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
             <DNA
@@ -199,7 +205,10 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+      >
         {jobData &&
         jobData?.errors?.length === 0 &&
         jobData?.jobs?.length > 0 ? (
