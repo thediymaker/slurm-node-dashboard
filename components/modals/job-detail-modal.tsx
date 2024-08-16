@@ -1,9 +1,55 @@
+import React from "react";
 import useSWR from "swr";
-import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
-import { Table, TableBody, TableCell, TableRow } from "../ui/table";
-import { DNA } from "react-loader-spinner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Clock, Cpu, HardDrive, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
-const JobDetailModal = ({ open, setOpen, searchID }: any) => {
+interface JobDetailModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  searchID: string;
+}
+
+interface Job {
+  job_id: string;
+  name: string;
+  nodes: string;
+  command?: string;
+  job_state?: string[];
+  start_time?: { number: number };
+  end_time?: { number: number };
+  cpus_per_task?: { number: number };
+  memory_per_node?: { number: number };
+  gres_detail?: string[];
+  standard_output?: string;
+  user_name?: string;
+  group_name?: string;
+  partition?: string;
+  job_resources?: {
+    allocated_cores: number;
+    allocated_nodes: { nodename: string }[];
+  };
+  flags?: string[];
+  standard_error?: string;
+  standard_input?: string;
+  time_limit?: { number: number };
+  priority?: { number: number };
+}
+
+const JobDetailModal: React.FC<JobDetailModalProps> = ({
+  open,
+  setOpen,
+  searchID,
+}) => {
   const jobFetcher = () =>
     fetch(`/api/slurm/job/${searchID}`, {
       headers: {
@@ -11,26 +57,23 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
       },
     }).then((res) => res.json());
 
-  const {
-    data: jobData,
-    error: jobError,
-    isLoading: jobIsLoading,
-  } = useSWR(open ? `/api/slurm/job/${searchID}` : null, jobFetcher);
+  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR<{
+    jobs: Job[];
+  }>(open ? `/api/slurm/job/${searchID}` : null, jobFetcher);
 
-  function convertUnixToHumanReadable(unixTimestamp: any) {
+  function convertUnixToHumanReadable(unixTimestamp: number) {
     const date = new Date(unixTimestamp * 1000);
-    const formattedDate = date.toLocaleString();
-    return formattedDate;
+    return date.toLocaleString();
   }
 
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTitle>Error</DialogTitle>
         <DialogContent
           aria-describedby={undefined}
           className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
         >
+          <DialogTitle>Error</DialogTitle>
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
       </Dialog>
@@ -45,14 +88,7 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
         >
           <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <DNA
-              visible={true}
-              height="80"
-              width="80"
-              ariaLabel="dna-loading"
-              wrapperStyle={{}}
-              wrapperClass="dna-wrapper"
-            />
+            <Skeleton className="h-8 w-8 rounded-full" />
           </div>
         </DialogContent>
       </Dialog>
@@ -82,119 +118,166 @@ const JobDetailModal = ({ open, setOpen, searchID }: any) => {
 
   const job = jobData?.jobs[0];
 
+  const renderJobOverview = (job: Job) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Job ID</CardTitle>
+          <Cpu className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{job.job_id}</div>
+          <p className="text-xs text-muted-foreground">{job.name}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">User / Group</CardTitle>
+          <User className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{job.user_name}</div>
+          <p className="text-xs text-muted-foreground">{job.group_name}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">CPUs / Memory</CardTitle>
+          <Clock className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {job.cpus_per_task?.number || "N/A"} CPUs
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {job.memory_per_node?.number
+              ? `${(job.memory_per_node.number / 1024).toFixed(2)} GB RAM`
+              : "N/A"}
+          </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Time Limit</CardTitle>
+          <HardDrive className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {job.time_limit?.number ? `${job.time_limit.number} mins` : "N/A"}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Priority: {job.priority?.number || "N/A"}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderJobDetails = (job: Job) => (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Job Details</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-extralight">
+          <div>
+            <p className="font-semibold">Nodes</p>
+            <p>{job.nodes}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Command</p>
+            <p className="truncate">{job.command}</p>
+          </div>
+          <div>
+            <p className="font-semibold">State</p>
+            <p>{job.job_state?.join(", ")}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Start Time</p>
+            <p>
+              {job.start_time
+                ? convertUnixToHumanReadable(job.start_time.number)
+                : "N/A"}
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold">End Time</p>
+            <p>
+              {job.end_time
+                ? convertUnixToHumanReadable(job.end_time.number)
+                : "N/A"}
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold">Partition</p>
+            <p>{job.partition}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Gres Detail</p>
+            <p>{job.gres_detail?.join(", ")}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Output Path</p>
+            <p className="truncate">{job.standard_output}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Error Path</p>
+            <p className="truncate">{job.standard_error}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Input Path</p>
+            <p className="truncate">{job.standard_input}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Allocated Cores</p>
+            <p>{job.job_resources?.allocated_cores}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Allocated Nodes</p>
+            <p>
+              {job.job_resources?.allocated_nodes
+                .map((node) => node.nodename)
+                .join(", ")}
+            </p>
+          </div>
+        </div>
+        <Separator className="my-4" />
+        <div>
+          <p className="font-semibold mb-2">Flags</p>
+          <div className="flex flex-wrap gap-2">
+            {job.flags?.map((flag, index) => (
+              <Badge key={index} variant="secondary">
+                {flag}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         aria-describedby={undefined}
-        className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        className="border shadow-xl w-[900px] max-w-[90%] h-[750px] max-h-[90%] overflow-y-auto scrollbar-none"
       >
-        <div>
-          <DialogTitle className="text-2xl mb-2 font-extralight">
-            {searchID}
+        <DialogHeader>
+          <DialogTitle className="text-2xl mb-2 font-extralight flex items-center gap-2">
+            Active Job Details: {searchID}
+            <Badge
+              variant={
+                job.job_state?.includes("RUNNING") ? "default" : "secondary"
+              }
+            >
+              {job.job_state?.[0] || "UNKNOWN"}
+            </Badge>
           </DialogTitle>
-          <div className="mb-5">Job Details</div>
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell>Job ID</TableCell>
-                <TableCell>{job?.job_id}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Job Name</TableCell>
-                <TableCell>{job?.name}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Nodes</TableCell>
-                <TableCell>{job?.nodes}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Command</TableCell>
-                <TableCell>{job?.command}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>State</TableCell>
-                <TableCell>{job?.job_state?.join(", ")}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Start Time</TableCell>
-                <TableCell>
-                  {job?.start_time?.number
-                    ? convertUnixToHumanReadable(job?.start_time?.number)
-                    : "N/A"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>End Time</TableCell>
-                <TableCell>
-                  {job?.end_time?.number
-                    ? convertUnixToHumanReadable(job?.end_time?.number)
-                    : "N/A"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>CPUs Per Task</TableCell>
-                <TableCell>{job?.cpus_per_task?.number}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Memory per Node (GB)</TableCell>
-                <TableCell>
-                  {job?.memory_per_node?.number
-                    ? job?.memory_per_node?.number / 1024
-                    : "N/A"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Gres Detail</TableCell>
-                <TableCell>{job?.gres_detail?.join(", ")}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Output Path</TableCell>
-                <TableCell>{job?.standard_output}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>User</TableCell>
-                <TableCell>{job?.user_name}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Group Name</TableCell>
-                <TableCell>{job?.group_name}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Partition</TableCell>
-                <TableCell>{job?.partition}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Job Resources</TableCell>
-                <TableCell>
-                  Cores: {job?.job_resources?.allocated_cores}, Nodes:{" "}
-                  {job?.job_resources?.allocated_nodes
-                    ?.map((node: any) => node.nodename)
-                    ?.join(", ")}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Flags</TableCell>
-                <TableCell>{job?.flags?.join(", ")}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Standard Error Path</TableCell>
-                <TableCell>{job?.standard_error}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Standard Input Path</TableCell>
-                <TableCell>{job?.standard_input}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Time Limit (mins)</TableCell>
-                <TableCell>{job?.time_limit?.number}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Priority</TableCell>
-                <TableCell>{job?.priority?.number}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
+        </DialogHeader>
+        <ScrollArea className="pr-4">
+          {renderJobOverview(job)}
+          {renderJobDetails(job)}
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

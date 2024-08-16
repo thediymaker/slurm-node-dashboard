@@ -1,10 +1,12 @@
 "use client";
+
 import { useState, useEffect } from "react";
-import { Input } from "./ui/input";
-import { Form, FormField, FormItem } from "./ui/form";
+import { Input } from "@/components/ui/input";
+import { Form, FormField, FormItem } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import JobDetailModal from "./modals/job-detail-modal";
+import HistoricalJobDetailModal from "./modals/historical-job-detail-modal";
 import UserJobModal from "./modals/user-job-modal";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,23 +26,81 @@ const JobSearch = () => {
     resolver: zodResolver(searchSchema),
     defaultValues: { searchID: "" },
   });
+
   const [jobOpen, setJobOpen] = useState(false);
+  const [historicalJobOpen, setHistoricalJobOpen] = useState(false);
   const [userJobOpen, setUserJobOpen] = useState(false);
   const [maintOpen, setMaintOpen] = useState(false);
   const [maintenanceData, setMaintenanceData] = useState({});
   const [searchID, setSearchID] = useState("");
   const { errors } = form.formState;
 
-  const handleSearch = (data: SearchFormData) => {
+  const handleSearch = async (data: SearchFormData) => {
     const trimmedSearchID = data.searchID.trim();
     setSearchID(trimmedSearchID);
+
     if (/^\d+$/.test(trimmedSearchID)) {
-      setJobOpen(true);
-      setUserJobOpen(false);
+      // Check for active job
+      try {
+        const activeJobResponse = await fetch(
+          `/api/slurm/job/${trimmedSearchID}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const activeJobData = await activeJobResponse.json();
+
+        if (
+          activeJobData &&
+          activeJobData.jobs &&
+          activeJobData.jobs.length > 0
+        ) {
+          setJobOpen(true);
+          setHistoricalJobOpen(false);
+          setUserJobOpen(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching active job:", error);
+      }
+
+      // Check for completed job
+      try {
+        const completedJobResponse = await fetch(
+          `/api/slurm/job/completed/${trimmedSearchID}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const completedJobData = await completedJobResponse.json();
+
+        if (
+          completedJobData &&
+          completedJobData.jobs &&
+          completedJobData.jobs.length > 0
+        ) {
+          setHistoricalJobOpen(true);
+          setJobOpen(false);
+          setUserJobOpen(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching completed job:", error);
+      }
+
+      // If neither active nor completed job is found
+      alert("No job found with the given ID.");
     } else {
-      setJobOpen(false);
+      // Search by username
       setUserJobOpen(true);
+      setJobOpen(false);
+      setHistoricalJobOpen(false);
     }
+
     form.reset();
   };
 
@@ -116,7 +176,7 @@ const JobSearch = () => {
               </FormItem>
             )}
           />
-          <Button className="px-5" variant={"outline"} type="submit">
+          <Button className="px-5" variant="outline" type="submit">
             Search
           </Button>
         </form>
@@ -125,6 +185,13 @@ const JobSearch = () => {
         <JobDetailModal
           open={jobOpen}
           setOpen={setJobOpen}
+          searchID={searchID}
+        />
+      )}
+      {historicalJobOpen && (
+        <HistoricalJobDetailModal
+          open={historicalJobOpen}
+          setOpen={setHistoricalJobOpen}
           searchID={searchID}
         />
       )}

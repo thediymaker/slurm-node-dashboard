@@ -97,7 +97,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
     <>
       {showChat && (
         <Dialog open={showChat} onOpenChange={setShowChat}>
-          <DialogContent className="border-2 border-black shadow-xl w-[1200px] max-w-[80%] h-[1200px] max-h-[80%] flex flex-col p-0">
+          <DialogContent aria-describedby={undefined} className="border-2 border-black shadow-xl w-[1200px] max-w-[80%] h-[1200px] max-h-[80%] flex flex-col p-0">
             <div className="p-3 px-5 mx-5">
               <h1 className="text-2xl mb-2 font-extralight">Slurm Chat</h1>
               <Separator />

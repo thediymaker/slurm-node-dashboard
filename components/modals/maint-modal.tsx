@@ -49,7 +49,10 @@ const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl w-[1200px] max-w-[90%] max-h-[90%] overflow-y-auto scrollbar-none"
+      >
         {maintenanceData && (
           <div className="m-auto">
             <DialogTitle className="text-2xl font-bold mb-2">
