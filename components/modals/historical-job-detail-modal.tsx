@@ -73,20 +73,37 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     const totalRequestedMemoryKB = requestedMemoryKB * allocationNodes;
 
     // Calculate the sum of memory consumed across all steps
-    const consumedMemoryKB = job.steps.reduce((sum, step) => {
+    let consumedMemoryKB = 0;
+
+    job.steps.forEach((step) => {
       if (step.tres && Array.isArray(step.tres.consumed)) {
         const stepMemoryConsumedKB =
           step.tres.consumed.find((res) => res.type === "mem")?.count || 0;
-        return sum + stepMemoryConsumedKB;
+
+        // Debugging output to verify memory consumption values
+        console.log(
+          "Step:",
+          step.step.id,
+          "Memory Consumed (KB):",
+          stepMemoryConsumedKB
+        );
+
+        consumedMemoryKB += stepMemoryConsumedKB;
       }
-      return sum;
-    }, 0);
+    });
+
+    // Debugging output to verify total requested memory and consumed memory
+    console.log("Total Requested Memory (KB):", totalRequestedMemoryKB);
+    console.log("Total Consumed Memory (KB):", consumedMemoryKB);
 
     // Guard against division by zero
     if (totalRequestedMemoryKB === 0) return "N/A";
 
     // Calculate memory efficiency
     const memoryEfficiency = (consumedMemoryKB / totalRequestedMemoryKB) * 100;
+
+    // Debugging output to verify calculated efficiency
+    console.log("Memory Efficiency:", memoryEfficiency.toFixed(2));
 
     return `${memoryEfficiency.toFixed(2)}%`;
   }
