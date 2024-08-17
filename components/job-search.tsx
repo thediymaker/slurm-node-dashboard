@@ -51,16 +51,22 @@ const JobSearch = () => {
           }
         );
         const activeJobData = await activeJobResponse.json();
-
         if (
           activeJobData &&
           activeJobData.jobs &&
           activeJobData.jobs.length > 0
         ) {
-          setJobOpen(true);
-          setHistoricalJobOpen(false);
-          setUserJobOpen(false);
-          return;
+          const jobState = activeJobData.jobs[0].job_state[0];
+          if (jobState === "RUNNING") {
+            setJobOpen(true);
+            setHistoricalJobOpen(false);
+            setUserJobOpen(false);
+            return;
+          } else if (jobState === "PENDING") {
+            // Handle pending or suspended states here if needed
+            alert("Job is currently pending");
+            return;
+          }
         }
       } catch (error) {
         console.error("Error fetching active job:", error);
