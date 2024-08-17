@@ -75,9 +75,13 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
 
     // Sum the memory consumed across all steps (in KB)
     const consumedMemoryKB = job.steps.reduce((sum, step) => {
-      const stepMemoryConsumedKB =
-        step.tres.consumed?.find((res: any) => res.type === "mem")?.count || 0;
-      return sum + stepMemoryConsumedKB;
+      // Check if step.tres.consumed is an array before using .find
+      if (Array.isArray(step.tres.consumed)) {
+        const stepMemoryConsumedKB =
+          step.tres.consumed.find((res) => res.type === "mem")?.count || 0;
+        return sum + stepMemoryConsumedKB;
+      }
+      return sum;
     }, 0);
 
     if (totalRequestedMemoryKB === 0) return "N/A";
