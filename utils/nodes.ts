@@ -199,7 +199,11 @@ export interface HistoricalJob {
       count: number;
     };
     time: {
-      total: {
+      system: {
+        seconds: number;
+        microseconds: number;
+      };
+      user: {
         seconds: number;
         microseconds: number;
       };
