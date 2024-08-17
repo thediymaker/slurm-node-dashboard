@@ -65,43 +65,6 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     return `${efficiency.toFixed(2)}%`;
   }
 
-  function calculateMemoryEfficiency(job: HistoricalJob) {
-    const requestedMemoryKB = job.required.memory_per_node.number; // Requested memory per node
-    const allocationNodes = job.allocation_nodes;
-
-    // Total requested memory in KB for all nodes
-    const totalRequestedMemoryKB = requestedMemoryKB * allocationNodes;
-
-    let maxConsumedMemoryKB = 0;
-    let ntasks = 1; // Default to 1 if not specified
-
-    job.steps.forEach((step) => {
-      if (step.stats && step.stats.tres_usage_in_max) {
-        const stepMemoryConsumedKB =
-          step.stats.tres_usage_in_max.find((res) => res.type === "mem")
-            ?.count || 0;
-
-        // Take the maximum consumed memory across all steps
-        if (stepMemoryConsumedKB > maxConsumedMemoryKB) {
-          maxConsumedMemoryKB = stepMemoryConsumedKB;
-          ntasks = step.tasks.count || 1; // Use the number of tasks in this step
-        }
-      }
-    });
-
-    // Total consumed memory in KB (adjusted by the number of tasks)
-    const totalConsumedMemoryKB = maxConsumedMemoryKB * ntasks;
-
-    // Guard against division by zero
-    if (totalRequestedMemoryKB === 0) return "N/A";
-
-    // Calculate memory efficiency
-    const memoryEfficiency =
-      (totalConsumedMemoryKB / totalRequestedMemoryKB) * 100;
-
-    return `${memoryEfficiency.toFixed(2)}%`;
-  }
-
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
@@ -193,17 +156,15 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Memory Efficiency
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Exit Status</CardTitle>
           <AlertCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {calculateMemoryEfficiency(job)}
+            {job.exit_code.status.join(", ")}
           </div>
           <p className="text-xs text-muted-foreground">
-            Requested: {job.required.memory_per_node.number / 1024} GB
+            Code: {job.exit_code.return_code.number}
           </p>
         </CardContent>
       </Card>
