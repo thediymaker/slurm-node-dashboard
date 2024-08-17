@@ -34,6 +34,198 @@ export interface GpuAllocation {
   indexRange?: string;
 }
 
+export interface Job {
+  job_id: string;
+  array?: {
+    task_id: {
+      set: boolean;
+      number: number;
+    };
+    job_id: string;
+  };
+  user: string;
+  name: string;
+  partition: string;
+  group: string;
+  qos: string;
+  time: {
+    start: number;
+  };
+  state: {
+    current: string[];
+  };
+}
+
+export interface JobDetails extends Job {
+  nodes: string;
+  command: string;
+  job_state: string[];
+  start_time: { number: number };
+  end_time: { number: number };
+  cpus_per_task: { number: number };
+  memory_per_node: { number: number };
+  gres_detail: string[];
+  standard_output: string;
+  user_name: string;
+  group_name: string;
+  job_resources: {
+    allocated_cores: number;
+    allocated_nodes: { nodename: string }[];
+  };
+  flags: string[];
+  standard_error: string;
+  standard_input: string;
+  time_limit: { number: number };
+  priority: { number: number };
+}
+
+export interface NodeCardModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  nodename: string;
+}
+
+export interface HistoricalJobDetailModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  searchID: string;
+}
+
+export interface JobDetailModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  searchID: string;
+}
+
+export interface RunningJob {
+  job_id: string;
+  name: string;
+  nodes: string;
+  command?: string;
+  job_state?: string[];
+  start_time?: { number: number };
+  end_time?: { number: number };
+  cpus_per_task?: { number: number };
+  memory_per_node?: { number: number };
+  gres_detail?: string[];
+  standard_output?: string;
+  user_name?: string;
+  group_name?: string;
+  partition?: string;
+  job_resources?: {
+    allocated_cores: number;
+    allocated_nodes: { nodename: string }[];
+  };
+  flags?: string[];
+  standard_error?: string;
+  standard_input?: string;
+  time_limit?: { number: number };
+  priority?: { number: number };
+}
+
+export interface HistoricalJob {
+  job_id: number;
+  name: string;
+  account: string;
+  user: string;
+  group: string;
+  state: {
+    current: string[];
+    reason: string;
+  };
+  partition: string;
+  qos: string;
+  priority: {
+    set: boolean;
+    infinite: boolean;
+    number: number;
+  };
+  time: {
+    eligible: number;
+    start: number;
+    end: number;
+    suspended: number;
+    elapsed: number;
+    limit: {
+      set: boolean;
+      infinite: boolean;
+      number: number;
+    };
+    user: number;
+    system: number;
+  };
+  nodes: string;
+  required: {
+    CPUs: number;
+    memory_per_node: {
+      set: boolean;
+      infinite: boolean;
+      number: number;
+    };
+  };
+  tres: {
+    allocated: {
+      type: string;
+      name: string;
+      id: number;
+      count: number;
+    }[];
+    requested: {
+      type: string;
+      name: string;
+      id: number;
+      count: number;
+    }[];
+  };
+  exit_code: {
+    status: string[];
+    return_code: {
+      set: boolean;
+      infinite: boolean;
+      number: number;
+    };
+  };
+  steps: {
+    step: {
+      id: string;
+      name: string;
+    };
+    nodes: {
+      count: number;
+      range: string;
+      list: string[];
+    };
+    tasks: {
+      count: number;
+    };
+    time: {
+      total: {
+        seconds: number;
+        microseconds: number;
+      };
+      start: {
+        set: boolean;
+        infinite: boolean;
+        number: number;
+      };
+      end: {
+        set: boolean;
+        infinite: boolean;
+        number: number;
+      };
+    };
+  }[];
+  flags: string[];
+  working_directory: string;
+  submit_line: string;
+  stats: {
+    tres_usage_in_max: {
+      type: string;
+      count: number;
+    }[];
+  };
+}
+
 export function getStatusDef(status: string): string {
   const statusLevel = status[1] || status[0];
   switch (statusLevel) {
