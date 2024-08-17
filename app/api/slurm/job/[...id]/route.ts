@@ -13,7 +13,7 @@ export async function GET(
         "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
       },
       next: {
-        revalidate: 30,
+        revalidate: 0,
       },
     }
   );
