@@ -155,6 +155,7 @@ export interface HistoricalJob {
     system: number;
   };
   nodes: string;
+  allocation_nodes: number;
   required: {
     CPUs: number;
     memory_per_node: {
@@ -197,6 +198,9 @@ export interface HistoricalJob {
     };
     tasks: {
       count: number;
+    };
+    tres: {
+      consumed: any;
     };
     time: {
       system: {
