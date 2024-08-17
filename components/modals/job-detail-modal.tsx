@@ -12,38 +12,7 @@ import { Clock, Cpu, HardDrive, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-
-interface JobDetailModalProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  searchID: string;
-}
-
-interface Job {
-  job_id: string;
-  name: string;
-  nodes: string;
-  command?: string;
-  job_state?: string[];
-  start_time?: { number: number };
-  end_time?: { number: number };
-  cpus_per_task?: { number: number };
-  memory_per_node?: { number: number };
-  gres_detail?: string[];
-  standard_output?: string;
-  user_name?: string;
-  group_name?: string;
-  partition?: string;
-  job_resources?: {
-    allocated_cores: number;
-    allocated_nodes: { nodename: string }[];
-  };
-  flags?: string[];
-  standard_error?: string;
-  standard_input?: string;
-  time_limit?: { number: number };
-  priority?: { number: number };
-}
+import { RunningJob, JobDetailModalProps } from "@/utils/nodes";
 
 const JobDetailModal: React.FC<JobDetailModalProps> = ({
   open,
@@ -58,7 +27,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
     }).then((res) => res.json());
 
   const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR<{
-    jobs: Job[];
+    jobs: RunningJob[];
   }>(open ? `/api/slurm/job/${searchID}` : null, jobFetcher);
 
   function convertUnixToHumanReadable(unixTimestamp: number) {
@@ -118,7 +87,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
 
   const job = jobData?.jobs[0];
 
-  const renderJobOverview = (job: Job) => (
+  const renderJobOverview = (job: RunningJob) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -173,7 +142,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
     </div>
   );
 
-  const renderJobDetails = (job: Job) => (
+  const renderJobDetails = (job: RunningJob) => (
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>Job Details</CardTitle>

@@ -6,109 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Clock, Cpu, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-
-interface HistoricalJobDetailModalProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  searchID: string;
-}
-
-interface Job {
-  job_id: number;
-  name: string;
-  account: string;
-  user: string;
-  group: string;
-  state: {
-    current: string[];
-    reason: string;
-  };
-  partition: string;
-  qos: string;
-  priority: {
-    set: boolean;
-    infinite: boolean;
-    number: number;
-  };
-  time: {
-    eligible: number;
-    start: number;
-    end: number;
-    suspended: number;
-    elapsed: number;
-    limit: {
-      set: boolean;
-      infinite: boolean;
-      number: number;
-    };
-  };
-  nodes: string;
-  required: {
-    CPUs: number;
-    memory_per_node: {
-      set: boolean;
-      infinite: boolean;
-      number: number;
-    };
-  };
-  tres: {
-    allocated: {
-      type: string;
-      name: string;
-      id: number;
-      count: number;
-    }[];
-    requested: {
-      type: string;
-      name: string;
-      id: number;
-      count: number;
-    }[];
-  };
-  exit_code: {
-    status: string[];
-    return_code: {
-      set: boolean;
-      infinite: boolean;
-      number: number;
-    };
-  };
-  steps: {
-    step: {
-      id: string;
-      name: string;
-    };
-    nodes: {
-      count: number;
-      range: string;
-      list: string[];
-    };
-    tasks: {
-      count: number;
-    };
-    time: {
-      start: {
-        set: boolean;
-        infinite: boolean;
-        number: number;
-      };
-      end: {
-        set: boolean;
-        infinite: boolean;
-        number: number;
-      };
-    };
-  }[];
-  flags: string[];
-  working_directory: string;
-  submit_line: string;
-}
+import { HistoricalJobDetailModalProps, HistoricalJob } from "@/utils/nodes";
 
 const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   open,
@@ -123,7 +26,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     }).then((res) => res.json());
 
   const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR<{
-    jobs: Job[];
+    jobs: HistoricalJob[];
   }>(open ? `/api/slurm/job/completed/${searchID}` : null, jobFetcher);
 
   function convertUnixToHumanReadable(unixTimestamp: number) {
@@ -138,16 +41,39 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     return `${hours}h ${minutes}m ${remainingSeconds}s`;
   }
 
-  function calculateEfficiency(job: Job) {
-    const requestedCPUs = job.required.CPUs;
-    const elapsedTime = job.time.elapsed;
+  function calculateEfficiency(job: HistoricalJob) {
     const allocatedCPUs =
       job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
+    const elapsedTime = job.time.elapsed;
 
-    if (requestedCPUs === 0 || elapsedTime === 0) return "N/A";
+    // Aggregate total CPU time (in seconds) from all steps using user and system time
+    const totalCPUTime = job.steps.reduce((sum, step) => {
+      const stepUserTime =
+        step.time.user.seconds + step.time.user.microseconds / 1e6;
+      const stepSystemTime =
+        step.time.system.seconds + step.time.system.microseconds / 1e6;
+      const stepTotalSeconds = stepUserTime + stepSystemTime;
 
-    const efficiency =
-      ((allocatedCPUs * elapsedTime) / (requestedCPUs * elapsedTime)) * 100;
+      console.log(`Step User Time: ${stepUserTime} seconds`);
+      console.log(`Step System Time: ${stepSystemTime} seconds`);
+      console.log(`Step Total CPU Time: ${stepTotalSeconds} seconds`);
+
+      return sum + stepTotalSeconds;
+    }, 0);
+
+    console.log(`Allocated CPUs: ${allocatedCPUs}`);
+    console.log(`Elapsed Time: ${elapsedTime} seconds`);
+    console.log(`Total CPU Time: ${totalCPUTime} seconds`);
+
+    if (allocatedCPUs === 0 || elapsedTime === 0) return "N/A";
+    if (totalCPUTime === 0) return "No CPU usage recorded";
+
+    // Calculate the core wall time
+    const coreWallTime = allocatedCPUs * elapsedTime;
+    const efficiency = (totalCPUTime / coreWallTime) * 100;
+
+    console.log(`Efficiency: ${efficiency}%`);
+
     return `${efficiency.toFixed(2)}%`;
   }
 
@@ -202,7 +128,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
 
   const job = jobData?.jobs[0];
 
-  const renderJobOverview = (job: Job) => (
+  const renderJobOverview = (job: HistoricalJob) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -257,7 +183,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     </div>
   );
 
-  const renderJobDetails = (job: Job) => (
+  const renderJobDetails = (job: HistoricalJob) => (
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>Job Details</CardTitle>
@@ -404,10 +330,10 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
             </Badge>
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="pr-4">
+        <div>
           {renderJobOverview(job)}
           {renderJobDetails(job)}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

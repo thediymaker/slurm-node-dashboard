@@ -17,57 +17,8 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-
-interface Job {
-  job_id: string;
-  array?: {
-    task_id: {
-      set: boolean;
-      number: number;
-    };
-    job_id: string;
-  };
-  user: string;
-  name: string;
-  partition: string;
-  group: string;
-  qos: string;
-  time: {
-    start: number;
-  };
-  state: {
-    current: string[];
-  };
-}
-
-interface JobDetails extends Job {
-  nodes: string;
-  command: string;
-  job_state: string[];
-  start_time: { number: number };
-  end_time: { number: number };
-  cpus_per_task: { number: number };
-  memory_per_node: { number: number };
-  gres_detail: string[];
-  standard_output: string;
-  user_name: string;
-  group_name: string;
-  job_resources: {
-    allocated_cores: number;
-    allocated_nodes: { nodename: string }[];
-  };
-  flags: string[];
-  standard_error: string;
-  standard_input: string;
-  time_limit: { number: number };
-  priority: { number: number };
-}
-
-interface NodeCardModalProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  nodename: string;
-}
+import React from "react";
+import { Job, JobDetails, NodeCardModalProps } from "@/utils/nodes";
 
 const NodeCardModal: React.FC<NodeCardModalProps> = ({
   open,
@@ -206,7 +157,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
             </TableHeader>
             <TableBody>
               {jobData?.jobs.map((job: Job) => (
-                <>
+                <React.Fragment key={job.job_id}>
                   <TableRow
                     key={job.job_id}
                     className="cursor-pointer"
@@ -353,7 +304,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               ))}
             </TableBody>
             <TableFooter>
