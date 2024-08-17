@@ -191,6 +191,12 @@ export interface HistoricalJob {
       id: string;
       name: string;
     };
+    stats: {
+      tres_usage_in_max: {
+        type: string;
+        count: number;
+      }[];
+    };
     nodes: {
       count: number;
       range: string;

@@ -66,44 +66,38 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   }
 
   function calculateMemoryEfficiency(job: HistoricalJob) {
-    const requestedMemoryKB = job.required.memory_per_node.number;
+    const requestedMemoryKB = job.required.memory_per_node.number; // Requested memory per node
     const allocationNodes = job.allocation_nodes;
 
-    // Calculate the total memory requested for all nodes
+    // Total requested memory in KB for all nodes
     const totalRequestedMemoryKB = requestedMemoryKB * allocationNodes;
 
-    // Calculate the sum of memory consumed across all steps
-    let consumedMemoryKB = 0;
+    let maxConsumedMemoryKB = 0;
+    let ntasks = 1; // Default to 1 if not specified
 
     job.steps.forEach((step) => {
-      if (step.tres && Array.isArray(step.tres.consumed)) {
+      if (step.stats && step.stats.tres_usage_in_max) {
         const stepMemoryConsumedKB =
-          step.tres.consumed.find((res) => res.type === "mem")?.count || 0;
+          step.stats.tres_usage_in_max.find((res) => res.type === "mem")
+            ?.count || 0;
 
-        // Debugging output to verify memory consumption values
-        console.log(
-          "Step:",
-          step.step.id,
-          "Memory Consumed (KB):",
-          stepMemoryConsumedKB
-        );
-
-        consumedMemoryKB += stepMemoryConsumedKB;
+        // Take the maximum consumed memory across all steps
+        if (stepMemoryConsumedKB > maxConsumedMemoryKB) {
+          maxConsumedMemoryKB = stepMemoryConsumedKB;
+          ntasks = step.tasks.count || 1; // Use the number of tasks in this step
+        }
       }
     });
 
-    // Debugging output to verify total requested memory and consumed memory
-    console.log("Total Requested Memory (KB):", totalRequestedMemoryKB);
-    console.log("Total Consumed Memory (KB):", consumedMemoryKB);
+    // Total consumed memory in KB (adjusted by the number of tasks)
+    const totalConsumedMemoryKB = maxConsumedMemoryKB * ntasks;
 
     // Guard against division by zero
     if (totalRequestedMemoryKB === 0) return "N/A";
 
     // Calculate memory efficiency
-    const memoryEfficiency = (consumedMemoryKB / totalRequestedMemoryKB) * 100;
-
-    // Debugging output to verify calculated efficiency
-    console.log("Memory Efficiency:", memoryEfficiency.toFixed(2));
+    const memoryEfficiency =
+      (totalConsumedMemoryKB / totalRequestedMemoryKB) * 100;
 
     return `${memoryEfficiency.toFixed(2)}%`;
   }
