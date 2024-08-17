@@ -66,22 +66,20 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   }
 
   function calculateMemoryEfficiency(job: HistoricalJob) {
-    // Total memory requested per node (in KB) multiplied by the number of nodes
-    const requestedMemory =
-      job.required.memory_per_node.number * job.allocation_nodes;
-
-    // Total memory consumed by the job (in KB)
-    const consumedMemory = job.steps.reduce((sum, step) => {
-      const stepConsumedMemory = Array.isArray(step.tres.consumed)
-        ? step.tres.consumed.find((t: any) => t.type === "mem")?.count || 0
+    const requestedMemoryKB = job.required.memory_per_node.number;
+    const allocationNodes = job.allocation_nodes;
+    const totalRequestedMemory = requestedMemoryKB * allocationNodes;
+    const consumedMemoryKB = job.steps.reduce((sum, step) => {
+      const stepMemoryConsumed = Array.isArray(step.tres.consumed)
+        ? step.tres.consumed.find((res) => res.type === "mem")?.count || 0
         : 0;
 
-      return sum + stepConsumedMemory;
+      return sum + stepMemoryConsumed;
     }, 0);
 
-    if (requestedMemory === 0) return "N/A";
-    const memoryEfficiency = (consumedMemory / requestedMemory) * 100;
+    if (totalRequestedMemory === 0) return "N/A";
 
+    const memoryEfficiency = (consumedMemoryKB / totalRequestedMemory) * 100;
     return `${memoryEfficiency.toFixed(2)}%`;
   }
 
