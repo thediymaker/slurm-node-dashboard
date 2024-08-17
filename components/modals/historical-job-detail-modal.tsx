@@ -46,7 +46,6 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
     const elapsedTime = job.time.elapsed;
 
-    // Aggregate total CPU time (in seconds) from all steps using user and system time
     const totalCPUTime = job.steps.reduce((sum, step) => {
       const stepUserTime =
         step.time.user.seconds + step.time.user.microseconds / 1e6;
@@ -54,27 +53,36 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
         step.time.system.seconds + step.time.system.microseconds / 1e6;
       const stepTotalSeconds = stepUserTime + stepSystemTime;
 
-      console.log(`Step User Time: ${stepUserTime} seconds`);
-      console.log(`Step System Time: ${stepSystemTime} seconds`);
-      console.log(`Step Total CPU Time: ${stepTotalSeconds} seconds`);
-
       return sum + stepTotalSeconds;
     }, 0);
-
-    console.log(`Allocated CPUs: ${allocatedCPUs}`);
-    console.log(`Elapsed Time: ${elapsedTime} seconds`);
-    console.log(`Total CPU Time: ${totalCPUTime} seconds`);
 
     if (allocatedCPUs === 0 || elapsedTime === 0) return "N/A";
     if (totalCPUTime === 0) return "No CPU usage recorded";
 
-    // Calculate the core wall time
     const coreWallTime = allocatedCPUs * elapsedTime;
     const efficiency = (totalCPUTime / coreWallTime) * 100;
 
-    console.log(`Efficiency: ${efficiency}%`);
-
     return `${efficiency.toFixed(2)}%`;
+  }
+
+  function calculateMemoryEfficiency(job: HistoricalJob) {
+    // Total memory requested per node (in KB) multiplied by the number of nodes
+    const requestedMemory =
+      job.required.memory_per_node.number * job.allocation_nodes;
+
+    // Total memory consumed by the job (in KB)
+    const consumedMemory = job.steps.reduce((sum, step) => {
+      const stepConsumedMemory = Array.isArray(step.tres.consumed)
+        ? step.tres.consumed.find((t: any) => t.type === "mem")?.count || 0
+        : 0;
+
+      return sum + stepConsumedMemory;
+    }, 0);
+
+    if (requestedMemory === 0) return "N/A";
+    const memoryEfficiency = (consumedMemory / requestedMemory) * 100;
+
+    return `${memoryEfficiency.toFixed(2)}%`;
   }
 
   if (jobError)
@@ -168,15 +176,17 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Exit Status</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            Memory Efficiency
+          </CardTitle>
           <AlertCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {job.exit_code.status.join(", ")}
+            {calculateMemoryEfficiency(job)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Code: {job.exit_code.return_code.number}
+            Requested: {job.required.memory_per_node.number / 1024} GB
           </p>
         </CardContent>
       </Card>
