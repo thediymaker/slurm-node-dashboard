@@ -64,7 +64,10 @@ const JobSearch = () => {
             return;
           } else if (jobState === "PENDING") {
             // Handle pending or suspended states here if needed
-            alert("Job is currently pending");
+            alert(
+              "Job is currently pending, Reason: " +
+                activeJobData.jobs[0].state_reason
+            );
             return;
           }
         }
