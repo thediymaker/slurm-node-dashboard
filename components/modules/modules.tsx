@@ -1,4 +1,4 @@
-"use server";
+import { Suspense } from "react";
 import BaseHeader from "../base-header";
 import { Separator } from "../ui/separator";
 import { ModuleTable } from "./module-table";
@@ -8,28 +8,40 @@ import Link from "next/link";
 
 type Item = {
   package: string;
-  versions: [
-    {
-      help: string;
-    }
-  ];
+  versions: {
+    help: string;
+  }[];
 };
 
-export default async function Modules() {
+async function fetchData(): Promise<Item[]> {
   const filePath = path.join(process.cwd(), "public", "modules.json");
-  let data: Item[] = [];
-  let error = null;
-
   try {
-    const jsonData = fs.readFileSync(filePath, "utf-8");
-    data = await JSON.parse(jsonData);
-
+    const jsonData = await fs.readFile(filePath, "utf-8");
+    const data: Item[] = JSON.parse(jsonData);
     if (!Array.isArray(data) || data.length === 0) {
       throw new Error("No valid data");
     }
+    return data;
   } catch (err) {
-    error = err instanceof Error ? err.message : "An error occurred";
+    console.error("Error reading or parsing modules.json:", err);
+    return [];
   }
+}
+
+function ModuleContent({ data }: { data: Item[] }) {
+  return (
+    <>
+      {data.length === 0 ? (
+        <p className="text-red-500">No valid data found</p>
+      ) : (
+        <ModuleTable results={data} />
+      )}
+    </>
+  );
+}
+
+export default async function Modules() {
+  const data = await fetchData();
 
   return (
     <div className="mx-auto items-center">
@@ -40,11 +52,9 @@ export default async function Modules() {
         <BaseHeader />
       </div>
       <Separator />
-      {error ? (
-        <p className="text-red-500">No valid data found</p>
-      ) : (
-        <ModuleTable results={data} />
-      )}
+      <Suspense fallback={<p>Loading modules...</p>}>
+        <ModuleContent data={data} />
+      </Suspense>
     </div>
   );
 }
