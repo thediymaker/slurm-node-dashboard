@@ -302,7 +302,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         aria-describedby={undefined}
-        className="border shadow-xl w-[1200px] max-w-[90%] h-[90%] overflow-y-auto scrollbar-none"
+        className="border shadow-xl w-[1200px] max-w-[90%] overflow-y-auto scrollbar-none"
       >
         <DialogHeader>
           <DialogTitle className="text-2xl mb-2 font-extralight flex items-center gap-2">
