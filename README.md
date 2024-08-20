@@ -26,7 +26,7 @@ Before you begin, ensure you have the following installed:
 - Slurm API enabled on your HPC cluster
 - Slurm API token for authentication
 
-## Enabling the Slurm API 
+## Enabling the Slurm API
 
 Start by viewing the Schedmd quickstart guide
 https://slurm.schedmd.com/rest_quickstart.html
@@ -76,21 +76,14 @@ The application should now be running on [http://localhost:3000](http://localhos
 
 ## Environment Variables
 
-To run this project, you will need to add the following environment variables to your `.env` file.
+To run this project, you can start by adding the following environment variables to your `.env` file.
 
 ```plaintext
-COMPANY_NAME=""
-URL=""
-NEXT_PUBLIC_APP_URL=""
-CLUSTER_NAME=""
+COMPANY_NAME="ACME INC"
+CLUSTER_NAME="SUPERCOMPUTER"
 CLUSTER_LOGO="/logo.png"
 
-NEXT_PUBLIC_CLUSTER_NAME=""
-
-PROMETHEUS_URL=""
-INFLUX_TOKEN=""
-INFLUX_URL=""
-INFLUX_ORG=""
+PROMETHEUS_URL="http://1.2.3.4:9090" # EXAMPLE Keep blank if not using (placeholder to show proper format)
 
 OPENAI_API_KEY=""
 
@@ -101,6 +94,8 @@ SLURM_API_VERSION="v0.0.40"
 SLURM_SERVER=""
 SLURM_API_TOKEN=""
 ```
+
+The only required env variables are the "SLURM" ones. You will also want to update teh cluster and company details. The OPENAI and PROMETHEUS varaiables are only required if you want to use those features.
 
 **You will also need to make sure you place your logo.png in the plublic directory, as well as replace the default favicon.ico with your own.**
 

@@ -5,13 +5,8 @@ import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseGpuInfo } from "@/utils/nodes";
 import { NodeCard } from "@/components/nodeCard/node-card";
-import dynamic from "next/dynamic";
 import { DNA } from "react-loader-spinner";
-
-const DateTimePicker = dynamic(
-  () => import("@/components/date-time").then((mod) => mod.DateTimePicker),
-  { ssr: false }
-);
+import { DateTimePicker } from "@/components/date-time";
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
