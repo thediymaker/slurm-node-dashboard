@@ -3,18 +3,23 @@ import SystemHealth from "@/components/footer/systemHealth";
 import useSWR from "swr";
 import { Skeleton } from "../ui/skeleton";
 
-// Separate fetching logic into a dedicated function.
-const fetcher = () =>
-  fetch("/api/slurm/diag", {
+// Updated fetcher function with error handling
+const fetcher = async () => {
+  const response = await fetch("/api/slurm/diag", {
     headers: { "Content-Type": "application/json" },
-  }).then((res) => res.json());
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.json();
+};
 
 const Footer = ({ cluster, logo }: any) => {
-  const { data, error } = useSWR("/api/slurm/diag", fetcher, {
+  const { data, error, isLoading } = useSWR("/api/slurm/diag", fetcher, {
     refreshInterval: 15000,
   });
 
-  if (!data && !error)
+  if (isLoading) {
     return (
       <div className="fixed inset-x-0 bottom-0 border-t-2 border-b-2 text-card-foreground bg-background">
         <div className="text-sm font-bold flex justify-between items-center p-2 mx-auto">
@@ -33,9 +38,29 @@ const Footer = ({ cluster, logo }: any) => {
         </div>
       </div>
     );
-  if (error) return <div>Something went wrong.</div>;
+  }
 
-  const healthStatus = data.errors.length > 0 ? "unhealthy" : "healthy";
+  if (error || !data) {
+    return (
+      <div className="fixed inset-x-0 bottom-0 border-t-2 border-b-2 text-card-foreground bg-background">
+        <div className="text-sm font-bold flex justify-between items-center p-2 mx-auto text-red-500">
+          <div className="flex items-center space-x-5">
+            <img src={logo} alt="Logo" className="w-8 h-8" />
+            <span className="text-blue-400 uppercase">{cluster}</span>
+            <span>
+              Error: Unable to fetch system status. Please try again later.
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const healthStatus =
+    data.errors && data.errors.length > 0 ? "unhealthy" : "healthy";
+  const jobsRunning = data.statistics?.jobs_running ?? "N/A";
+  const jobsPending = data.statistics?.jobs_pending ?? "N/A";
+  const slurmRelease = data.meta?.slurm?.release ?? "Unknown";
 
   return (
     <div className="fixed inset-x-0 bottom-0 border-t-2 border-b-2 text-card-foreground bg-background">
@@ -45,11 +70,10 @@ const Footer = ({ cluster, logo }: any) => {
           <span className="text-blue-400 uppercase">{cluster}</span>
           <span>Current System Status:</span>
           <SystemHealth status={healthStatus} />
-          <span>Slurm Release: {data.meta.slurm.release}</span>
+          <span>Slurm Release: {slurmRelease}</span>
         </div>
         <div>
-          Running Jobs: {data.statistics.jobs_running} | Pending Jobs:{" "}
-          {data.statistics.jobs_pending}
+          Running Jobs: {jobsRunning} | Pending Jobs: {jobsPending}
         </div>
       </div>
     </div>
