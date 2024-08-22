@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 
-const prom = new PrometheusDriver({
-  endpoint: `${process.env.PROMETHEUS_URL}` || "",
-  baseURL: "/api/v1",
-});
+const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
+
+let prom: PrometheusDriver | null = null;
+
+if (PROMETHEUS_URL) {
+  prom = new PrometheusDriver({
+    endpoint: PROMETHEUS_URL,
+    baseURL: "/api/v1",
+  });
+}
 
 interface SampleValue {
   time: Date;
@@ -28,7 +34,9 @@ export async function GET(req: Request) {
   const days = parseInt(url.searchParams.get("days") || "3");
   const query = url.searchParams.get("query") || "node_load15";
 
-  console.log("Node:", node, "Days:", days, "Query:", query);
+  if (!prom) {
+    return NextResponse.json({ status: 404 });
+  }
 
   const end = new Date();
   const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
@@ -42,7 +50,6 @@ export async function GET(req: Request) {
       end,
       step
     );
-    console.log("Node Info Response:", unameRes);
 
     const instance = unameRes.result[0]?.metric?.labels["instance"];
 
@@ -54,7 +61,6 @@ export async function GET(req: Request) {
     }
 
     const prometheusQuery = `${query}{instance="${instance}"}`;
-    console.log("Constructed Query:", prometheusQuery);
 
     const loadRes: PrometheusQueryResponse = await prom.rangeQuery(
       prometheusQuery,
@@ -62,12 +68,10 @@ export async function GET(req: Request) {
       end,
       step
     );
-    console.log("Load Query Response:", loadRes);
 
     const series = loadRes.result;
 
     if (series.length === 0) {
-      console.log("No data returned for the query.");
       return NextResponse.json({
         status: 404,
         message: "No data found for the specified instance.",

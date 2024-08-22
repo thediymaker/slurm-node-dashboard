@@ -14,6 +14,7 @@ import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
 import ChatIcon from "../llm/chat-icon";
 import { FeatureEnabled } from "@/actions/env-enabled";
+import { useToast } from "@/components/ui/use-toast";
 
 // fetch data from the server
 const nodeURL = "/api/slurm/nodes";
@@ -185,6 +186,7 @@ const Nodes = () => {
       </div>
     );
   }
+
   if (nodeIsLoading) {
     return (
       <div>
@@ -193,8 +195,8 @@ const Nodes = () => {
           handleNodeTypeChange={handleNodeTypeChange}
           handleNodePartitionsChange={handleNodePartitionsChange}
           handleNodeFeatureChange={handleNodeFeatureChange}
-          partitions={uniquePartitions}
-          features={uniqueFeatures}
+          partitions={[]}
+          features={[]}
         />
         <div className="flex justify-between">
           <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -228,14 +230,14 @@ const Nodes = () => {
         handleNodePartitionsChange={handleNodePartitionsChange}
         handleNodeFeatureChange={handleNodeFeatureChange}
         partitions={uniquePartitions}
-        features={uniqueFeatures} // Pass unique features to the header
+        features={uniqueFeatures}
       />
       <div className="flex justify-between">
         <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
           <div className="font-extralight">Card Size</div>
           <Slider
             className="w-[100px]"
-            value={[cardSize]} // Change from defaultValue to value if the component supports controlled mode
+            value={[cardSize]}
             min={50}
             max={150}
             step={50}
@@ -243,7 +245,7 @@ const Nodes = () => {
           />
           <div className="font-extralight">Show Detail</div>
           <Checkbox
-            defaultChecked={showStats}
+            checked={showStats}
             onCheckedChange={() => {
               setShowStats(!showStats);
             }}
@@ -260,15 +262,15 @@ const Nodes = () => {
           </div>
         </div>
       </div>
-      {showStats ? <Stats data={nodeData} /> : null}
+      {showStats && nodeData ? <Stats data={nodeData} /> : null}
       <Separator />
       <div className="flex flex-wrap p-3 uppercase mb-20">
         {filteredNodes.map((node: any, index: number) => (
           <NodeCard
-            size={cardSize} // Pass the card size based on the checkbox state
+            size={cardSize}
             key={node.hostname}
             name={node.name}
-            load={node.cpu_load.number}
+            load={node.cpu_load?.number}
             partitions={node.partitions}
             features={node.features}
             coresTotal={node.cpus}
@@ -285,7 +287,7 @@ const Nodes = () => {
           />
         ))}
       </div>
-      <LastUpdated data={nodeData?.last_update.number} />
+      <LastUpdated data={nodeData?.last_update?.number} />
       {slurmChatEnabled ? <ChatIcon /> : null}
     </div>
   );
