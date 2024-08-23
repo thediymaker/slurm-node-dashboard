@@ -75,7 +75,7 @@ function MediumCardContent(props: any) {
           )}
       </div>
       {gpuTotal !== 0 && (
-        <div className="mt-auto">
+        <div className="mt-auto mb-1">
           <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
         </div>
       )}

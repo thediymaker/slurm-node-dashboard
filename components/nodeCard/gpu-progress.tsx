@@ -10,7 +10,7 @@ const GPUUsageDisplay: React.FC<GPUUsageProps> = ({ gpuUsed, gpuTotal }) => {
   const usagePercentage = (gpuUsed / gpuTotal) * 100;
 
   return (
-    <div className="w-full items-end">
+    <div className="w-[90%] mx-auto">
       <Progress value={usagePercentage} className="w-full h-2" />
     </div>
   );
