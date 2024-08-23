@@ -5,13 +5,42 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import NodeCardModal from "@/components/modals/card-job-modal";
-import {
-  getStatusDef,
-  parseGpuAllocations,
-  parseUsedGpuAllocations,
-} from "@/utils/nodes";
+import { getStatusDef } from "@/utils/nodes";
 import CardHover from "./card-hover";
-import IconComponent from "./gpu-icon";
+import GPUUsageDisplay from "./gpu-progress";
+
+const calculateTotalGPUUsage = (gres: string, gresUsed: string) => {
+  let totalGPU = 0;
+  let usedGPU = 0;
+
+  // Parse GRES for total GPUs
+  const gresMatches = gres.match(/gpu:[\w.]+:(\d+)/g);
+  if (gresMatches) {
+    gresMatches.forEach((match) => {
+      const [, , total] = match.split(":");
+      totalGPU += parseInt(total);
+    });
+  }
+
+  // Parse GRES Used for used GPUs
+  const gresUsedMatches = gresUsed.match(/gpu:[\w.]+:(\d+)/g);
+  if (gresUsedMatches) {
+    gresUsedMatches.forEach((match) => {
+      const [, , used] = match.split(":");
+      usedGPU += parseInt(used);
+    });
+  }
+
+  // Parse Shards
+  const shardMatch = gres.match(/shard:(\d+)/);
+  const shardUsedMatch = gresUsed.match(/shard:\(null\):(\d+)/);
+  if (shardMatch && shardUsedMatch) {
+    totalGPU += parseInt(shardMatch[1]);
+    usedGPU += parseInt(shardUsedMatch[1]);
+  }
+
+  return { gpuUsed: usedGPU, gpuTotal: totalGPU };
+};
 
 function SmallCardContent(props: any) {
   return (
@@ -24,7 +53,7 @@ function SmallCardContent(props: any) {
 function MediumCardContent(props: any) {
   return (
     <div className="p-1">
-      <div className="font-bold text-[12px] mb-.5">{props.name}</div>
+      <div className="font-bold text-[10px] mb-.5">{props.name}</div>
       <p className="font-light text-[9px]">
         CPU: {props.coresUsed} / {props.coresTotal}
       </p>
@@ -44,20 +73,33 @@ function MediumCardContent(props: any) {
 }
 
 function LargeCardContent(props: any) {
+  const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
+    props.nodeData.gres,
+    props.nodeData.gres_used
+  );
+
   return (
-    <div className="p-1">
-      <div className="font-bold text-[14px] mb-1">{props.name}</div>
-      <p className="font-light text-[10px]">
-        CPU: {props.coresUsed} / {props.coresTotal}
-      </p>
-      <p className="font-light text-[10px]">
-        MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
-        {(props.memoryTotal / 1024).toFixed(0)}
-      </p>
-      <p className="font-light text-[10px]">
-        Load: {(props.nodeData.cpu_load / props.coresTotal).toFixed(2)}
-      </p>
-      <IconComponent num_used={props.gpuUsed} num_total={props.gpuTotal} />
+    <div className="flex flex-col h-full p-1">
+      <div className="flex-grow">
+        <div className="font-bold text-[12px] mb-1 truncate max-w-[140px]">
+          {props.name}
+        </div>
+        <p className="font-light text-[10px]">
+          CPU: {props.coresUsed} / {props.coresTotal}
+        </p>
+        <p className="font-light text-[10px]">
+          MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
+          {(props.memoryTotal / 1024).toFixed(0)}
+        </p>
+        <p className="font-light text-[10px]">
+          Load: {(props.nodeData.cpu_load / props.coresTotal).toFixed(2)}
+        </p>
+      </div>
+      {gpuTotal !== 0 && (
+        <div className="mt-auto">
+          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+        </div>
+      )}
     </div>
   );
 }
@@ -94,8 +136,6 @@ export const NodeCard = (props: any) => {
   const [open, setOpen] = useState(false);
   const color = getStatusColor(props.status);
   const statusDef = getStatusDef(props.status);
-  const gpuAllocations = parseGpuAllocations(props.nodeData.gres);
-  const usedGpuAllocations = parseUsedGpuAllocations(props.nodeData.gres_used);
   const openModal = () => {
     setOpen(!open);
   };
@@ -114,7 +154,7 @@ export const NodeCard = (props: any) => {
               : props.size === 100
               ? "w-[90px] h-[90px]"
               : props.size === 150
-              ? "w-[130px] h-[130px]"
+              ? "w-[130px] h-[100px]"
               : "w-[100px] h-[100px]"
           } ${cpuLoad > 125 ? "animate-pulse border-black" : ""}`}
           onClick={props.historical ? () => {} : openModal}
@@ -138,8 +178,6 @@ export const NodeCard = (props: any) => {
         <CardHover
           nodeData={props.nodeData}
           cpuLoad={cpuLoad}
-          gpuAllocations={gpuAllocations}
-          usedGpuAllocations={usedGpuAllocations}
           statusDef={statusDef}
         />
       </HoverCardContent>

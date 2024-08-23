@@ -268,25 +268,6 @@ export function getStatusDef(status: string): string {
   }
 }
 
-export function parseGpuAllocations(gresString: string): GpuAllocation[] {
-  return gresString.split(",").map((item) => {
-    const parts = item.split(":");
-    const count = parseInt(parts[2], 10);
-    return { type: parts[0] + ":" + parts[1], count };
-  });
-}
-
-export function parseUsedGpuAllocations(
-  gresUsedString: string
-): GpuAllocation[] {
-  return gresUsedString.split(",").map((item) => {
-    const [typeAndCount, indexRange] = item.split("(");
-    const parts = typeAndCount.split(":");
-    const count = parseInt(parts[2], 10);
-    return { type: parts[0] + ":" + parts[1], count, indexRange };
-  });
-}
-
 export function convertUnixToHumanReadable(unixTimestamp: any) {
   const date = new Date(unixTimestamp * 1000);
   const formattedDate = date.toLocaleString();
@@ -295,26 +276,3 @@ export function convertUnixToHumanReadable(unixTimestamp: any) {
 
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
-
-export function parseGpuInfo(node: Node): {
-  gpuUsed: number;
-  gpuTotal: number;
-} {
-  const gpuRegex = /gpu:([^:]+):(\d+)/g;
-
-  const gresMatches = [...node.gres.matchAll(gpuRegex)];
-  const gresUsedMatches = [...node.gres_used.matchAll(gpuRegex)];
-
-  const gpuUsed = gresUsedMatches.reduce((acc, match) => {
-    const type = match[1];
-    const quantity = parseInt(match[2], 10);
-    const matchingGres = gresMatches.find((m) => m[1] === type);
-    return acc + (matchingGres ? quantity : 0);
-  }, 0);
-
-  const gpuTotal = gresMatches.reduce((acc, match) => {
-    return acc + parseInt(match[2], 10);
-  }, 0);
-
-  return { gpuUsed, gpuTotal };
-}

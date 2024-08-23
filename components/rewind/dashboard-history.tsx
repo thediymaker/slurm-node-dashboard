@@ -3,7 +3,6 @@ import React, { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { parseGpuInfo } from "@/utils/nodes";
 import { NodeCard } from "@/components/nodeCard/node-card";
 import { DNA } from "react-loader-spinner";
 import { DateTimePicker } from "@/components/date-time";
@@ -138,7 +137,6 @@ const DashboardHistory = () => {
             {historicalData.nodes ? (
               <div className="flex flex-wrap">
                 {historicalData.nodes.map((node: any, index: number) => {
-                  const { gpuUsed, gpuTotal } = parseGpuInfo(node);
                   return (
                     <NodeCard
                       key={node.hostname}
@@ -152,8 +150,6 @@ const DashboardHistory = () => {
                       memoryTotal={node.real_memory}
                       memoryUsed={node.alloc_memory}
                       status={node.state}
-                      gpuUsed={gpuUsed}
-                      gpuTotal={gpuTotal}
                       index={index}
                       nodeData={node}
                       dropdownOpenStatus={{}}

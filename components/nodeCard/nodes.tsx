@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import NodeHeader from "./node-header";
 import CardSkeleton from "./card-skeleton";
 import { Node } from "@/utils/nodes";
-import { parseGpuInfo } from "@/utils/nodes";
 import { Slider } from "../ui/slider";
 import Stats from "./stats";
 import { Checkbox } from "../ui/checkbox";
@@ -14,9 +13,7 @@ import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
 import ChatIcon from "../llm/chat-icon";
 import { FeatureEnabled } from "@/actions/env-enabled";
-import { useToast } from "@/components/ui/use-toast";
 
-// fetch data from the server
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
   const res = await fetch(nodeURL, {
@@ -30,7 +27,6 @@ const nodeFetcher = async () => {
   return res.json();
 };
 
-//main card component
 const Nodes = () => {
   const { data: nodeData, error: nodeError, isLoading: nodeIsLoading } = useSWR(
     nodeURL,
@@ -278,8 +274,6 @@ const Nodes = () => {
             memoryTotal={node.real_memory}
             memoryUsed={node.alloc_memory}
             status={node.state}
-            gpuUsed={parseGpuInfo(node).gpuUsed}
-            gpuTotal={parseGpuInfo(node).gpuTotal}
             index={index}
             nodeData={node}
             dropdownOpenStatus={dropdownOpenStatus}
