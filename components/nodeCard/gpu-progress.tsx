@@ -1,5 +1,5 @@
 import React from "react";
-import { Progress } from "@/components/ui/progress";
+import { Progress } from "@/components/ui/progress-green";
 
 interface GPUUsageProps {
   gpuUsed: number;
