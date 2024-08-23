@@ -51,23 +51,34 @@ function SmallCardContent(props: any) {
 }
 
 function MediumCardContent(props: any) {
+  const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
+    props.nodeData.gres,
+    props.nodeData.gres_used
+  );
   return (
-    <div className="p-1">
-      <div className="font-bold text-[10px] mb-.5">{props.name}</div>
-      <p className="font-light text-[9px]">
-        CPU: {props.coresUsed} / {props.coresTotal}
-      </p>
-      <p className="font-light text-[9px]">
-        MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
-        {(props.memoryTotal / 1024).toFixed(0)}
-      </p>
-      {props.gpuUsed !== undefined &&
-        props.gpuTotal !== undefined &&
-        props.gpuTotal !== 0 && (
-          <p className="font-light text-[9px]">
-            GPU: {props.gpuUsed} / {props.gpuTotal}
-          </p>
-        )}
+    <div className="flex flex-col h-full">
+      <div className="p-1">
+        <div className="font-bold text-[10px] mb-.5">{props.name}</div>
+        <p className="font-light text-[9px]">
+          CPU: {props.coresUsed} / {props.coresTotal}
+        </p>
+        <p className="font-light text-[9px]">
+          MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
+          {(props.memoryTotal / 1024).toFixed(0)}
+        </p>
+        {props.gpuUsed !== undefined &&
+          props.gpuTotal !== undefined &&
+          props.gpuTotal !== 0 && (
+            <p className="font-light text-[9px]">
+              GPU: {props.gpuUsed} / {props.gpuTotal}
+            </p>
+          )}
+      </div>
+      {gpuTotal !== 0 && (
+        <div className="mt-auto">
+          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+        </div>
+      )}
     </div>
   );
 }

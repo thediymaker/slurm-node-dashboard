@@ -11,7 +11,7 @@ const GPUUsageDisplay: React.FC<GPUUsageProps> = ({ gpuUsed, gpuTotal }) => {
 
   return (
     <div className="w-full items-end">
-      <Progress value={usagePercentage} className="w-full h-1" />
+      <Progress value={usagePercentage} className="w-full h-2" />
     </div>
   );
 };
