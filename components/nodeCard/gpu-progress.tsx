@@ -7,7 +7,7 @@ interface GPUUsageProps {
 }
 
 const GPUUsageDisplay: React.FC<GPUUsageProps> = ({ gpuUsed, gpuTotal }) => {
-  const usagePercentage = (gpuUsed / gpuTotal) * 100;
+  const usagePercentage = Math.min((gpuUsed / gpuTotal) * 100, 100);
 
   return (
     <div className="w-[90%] mx-auto">

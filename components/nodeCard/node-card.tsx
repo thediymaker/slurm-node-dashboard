@@ -8,38 +8,20 @@ import NodeCardModal from "@/components/modals/card-job-modal";
 import { getStatusDef } from "@/utils/nodes";
 import CardHover from "./card-hover";
 import GPUUsageDisplay from "./gpu-progress";
+import { parseGPUResources } from "@/utils/gpu-parse";
 
 const calculateTotalGPUUsage = (gres: string, gresUsed: string) => {
-  let totalGPU = 0;
-  let usedGPU = 0;
+  const { resources, gpuUsed, gpuTotal, isMIG } = parseGPUResources(
+    gres,
+    gresUsed
+  );
 
-  // Parse GRES for total GPUs
-  const gresMatches = gres.match(/gpu:[\w.]+:(\d+)/g);
-  if (gresMatches) {
-    gresMatches.forEach((match) => {
-      const [, , total] = match.split(":");
-      totalGPU += parseInt(total);
-    });
-  }
-
-  // Parse GRES Used for used GPUs
-  const gresUsedMatches = gresUsed.match(/gpu:[\w.]+:(\d+)/g);
-  if (gresUsedMatches) {
-    gresUsedMatches.forEach((match) => {
-      const [, , used] = match.split(":");
-      usedGPU += parseInt(used);
-    });
-  }
-
-  // Parse Shards
-  const shardMatch = gres.match(/shard:(\d+)/);
-  const shardUsedMatch = gresUsed.match(/shard:\(null\):(\d+)/);
-  if (shardMatch && shardUsedMatch) {
-    totalGPU += parseInt(shardMatch[1]);
-    usedGPU += parseInt(shardUsedMatch[1]);
-  }
-
-  return { gpuUsed: usedGPU, gpuTotal: totalGPU };
+  return {
+    resources,
+    gpuUsed,
+    gpuTotal,
+    isMIG,
+  };
 };
 
 function SmallCardContent(props: any) {
@@ -55,6 +37,7 @@ function MediumCardContent(props: any) {
     props.nodeData.gres,
     props.nodeData.gres_used
   );
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-1">
@@ -66,15 +49,8 @@ function MediumCardContent(props: any) {
           MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
           {(props.memoryTotal / 1024).toFixed(0)}
         </p>
-        {props.gpuUsed !== undefined &&
-          props.gpuTotal !== undefined &&
-          props.gpuTotal !== 0 && (
-            <p className="font-light text-[9px]">
-              GPU: {props.gpuUsed} / {props.gpuTotal}
-            </p>
-          )}
       </div>
-      {gpuTotal !== 0 && (
+      {gpuTotal > 0 && (
         <div className="mt-auto mb-1">
           <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
         </div>
@@ -84,7 +60,7 @@ function MediumCardContent(props: any) {
 }
 
 function LargeCardContent(props: any) {
-  const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
+  const { resources, gpuUsed, gpuTotal, isMIG } = calculateTotalGPUUsage(
     props.nodeData.gres,
     props.nodeData.gres_used
   );
@@ -105,8 +81,18 @@ function LargeCardContent(props: any) {
         <p className="font-light text-[10px]">
           Load: {(props.nodeData.cpu_load / props.coresTotal).toFixed(2)}
         </p>
+        {resources.map((resource, index) => (
+          <p key={index} className="font-light text-[10px]">
+            {isMIG
+              ? `${resource.type} Slices`
+              : resource.type === "shard"
+              ? "Shards"
+              : "GPU"}
+            : {resource.used}/{resource.total}
+          </p>
+        ))}
       </div>
-      {gpuTotal !== 0 && (
+      {gpuTotal > 0 && (
         <div className="mt-auto">
           <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
         </div>

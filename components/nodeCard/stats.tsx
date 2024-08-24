@@ -1,6 +1,7 @@
 "use client";
 import { RadialChart } from "../radialChart";
 import React from "react";
+import { parseGPUResources } from "@/utils/gpu-parse";
 
 interface Node {
   alloc_memory: number;
@@ -11,7 +12,7 @@ interface Node {
   gres_used: string;
 }
 
-export default function Stats({ data }: any) {
+export default function Stats({ data }: { data: { nodes: Node[] } }) {
   const systems: Node[] = data?.nodes || [];
 
   const stats = React.useMemo(() => {
@@ -31,11 +32,10 @@ export default function Stats({ data }: any) {
       totalCoresUsed += node.alloc_cpus;
       totalCores += node.cpus;
       if (node.gres) {
-        const gpuUsed = parseInt(
-          node.gres_used.match(/:(\d+)/)?.[1] || "0",
-          10
+        const { gpuTotal, gpuUsed } = parseGPUResources(
+          node.gres,
+          node.gres_used
         );
-        const gpuTotal = parseInt(node.gres.match(/:(\d+)/)?.[1] || "0", 10);
         totalGpuUsed += gpuUsed;
         totalGpu += gpuTotal;
         totalGpuNodes++;
@@ -58,28 +58,39 @@ export default function Stats({ data }: any) {
     };
   }, [systems]);
 
+  const cpuPercentage =
+    stats.totalCores > 0
+      ? Math.round((stats.totalCoresUsed / stats.totalCores) * 100)
+      : 0;
+  const gpuPercentage =
+    stats.totalGpu > 0
+      ? Math.round((stats.totalGpuUsed / stats.totalGpu) * 100)
+      : 0;
+  const memoryPercentage =
+    stats.totalMemory > 0
+      ? Math.round((stats.totalMemoryUsed / stats.totalMemory) * 100)
+      : 0;
+
   return (
     <div>
       <div className="flex gap-2 mx-auto justify-center items-center mb-10">
         <div className="w-[250px] h-[200px]">
           <RadialChart
-            value={Math.round((stats.totalCoresUsed / stats.totalCores) * 100)}
+            value={cpuPercentage}
             maxValue={100}
             label="CPU % Allocated"
           />
         </div>
         <div className="w-[250px] h-[200px]">
           <RadialChart
-            value={Math.round((stats.totalGpuUsed / stats.totalGpu) * 100)}
+            value={gpuPercentage}
             maxValue={100}
             label="GPU % Allocated"
           />
         </div>
         <div className="w-[250px] h-[200px]">
           <RadialChart
-            value={Math.round(
-              (stats.totalMemoryUsed / stats.totalMemory) * 100
-            )}
+            value={memoryPercentage}
             maxValue={100}
             label="Memory % Allocated"
           />
