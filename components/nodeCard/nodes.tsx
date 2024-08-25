@@ -258,15 +258,7 @@ const Nodes = () => {
           </div>
         </div>
       </div>
-      {showStats && nodeData ? (
-        <div className="">
-          <Stats data={nodeData} />
-        </div>
-      ) : (
-        <div className="hidden">
-          <Stats data={nodeData} />
-        </div>
-      )}
+      {showStats && nodeData ? <Stats data={nodeData} /> : null}
       <Separator />
       <div className="flex flex-wrap p-3 uppercase mb-20">
         {filteredNodes.map((node: any, index: number) => (
