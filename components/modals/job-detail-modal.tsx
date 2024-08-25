@@ -12,7 +12,7 @@ import { Clock, Cpu, HardDrive, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { RunningJob, JobDetailModalProps } from "@/utils/nodes";
+import { RunningJob, JobDetailModalProps } from "@/types/types";
 
 const JobDetailModal: React.FC<JobDetailModalProps> = ({
   open,

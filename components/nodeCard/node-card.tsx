@@ -8,152 +8,135 @@ import NodeCardModal from "@/components/modals/card-job-modal";
 import { getStatusDef } from "@/utils/nodes";
 import CardHover from "./card-hover";
 import GPUUsageDisplay from "./gpu-progress";
+import { parseGPUResources } from "@/utils/gpu-parse";
+import { GPUUsageData, NodeCardProps } from "@/types/types";
 
-const calculateTotalGPUUsage = (gres: string, gresUsed: string) => {
-  let totalGPU = 0;
-  let usedGPU = 0;
-
-  // Parse GRES for total GPUs
-  const gresMatches = gres.match(/gpu:[\w.]+:(\d+)/g);
-  if (gresMatches) {
-    gresMatches.forEach((match) => {
-      const [, , total] = match.split(":");
-      totalGPU += parseInt(total);
-    });
-  }
-
-  // Parse GRES Used for used GPUs
-  const gresUsedMatches = gresUsed.match(/gpu:[\w.]+:(\d+)/g);
-  if (gresUsedMatches) {
-    gresUsedMatches.forEach((match) => {
-      const [, , used] = match.split(":");
-      usedGPU += parseInt(used);
-    });
-  }
-
-  // Parse Shards
-  const shardMatch = gres.match(/shard:(\d+)/);
-  const shardUsedMatch = gresUsed.match(/shard:\(null\):(\d+)/);
-  if (shardMatch && shardUsedMatch) {
-    totalGPU += parseInt(shardMatch[1]);
-    usedGPU += parseInt(shardUsedMatch[1]);
-  }
-
-  return { gpuUsed: usedGPU, gpuTotal: totalGPU };
+const calculateTotalGPUUsage = (
+  gres: string,
+  gresUsed: string
+): GPUUsageData => {
+  return parseGPUResources(gres, gresUsed);
 };
 
-function SmallCardContent(props: any) {
-  return (
-    <div className="flex m-auto items-center justify-center w-full h-full">
-      <div className="text-[12px]">{props.name}</div>
-    </div>
-  );
-}
+const SmallCardContent: React.FC<{ name: string }> = ({ name }) => (
+  <div className="flex m-auto items-center justify-center w-full h-full">
+    <div className="text-[12px]">{name}</div>
+  </div>
+);
 
-function MediumCardContent(props: any) {
+const MediumCardContent = ({
+  name,
+  coresUsed,
+  coresTotal,
+  memoryUsed,
+  memoryTotal,
+  nodeData,
+}: NodeCardProps) => {
   const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
-    props.nodeData.gres,
-    props.nodeData.gres_used
+    nodeData.gres,
+    nodeData.gres_used
   );
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-1">
-        <div className="font-bold text-[10px] mb-.5">{props.name}</div>
+        <div className="font-bold text-[10px] mb-.5">{name}</div>
         <p className="font-light text-[9px]">
-          CPU: {props.coresUsed} / {props.coresTotal}
+          CPU: {coresUsed} / {coresTotal}
         </p>
         <p className="font-light text-[9px]">
-          MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
-          {(props.memoryTotal / 1024).toFixed(0)}
+          MEM: {(memoryUsed / 1024).toFixed(0)} /{" "}
+          {(memoryTotal / 1024).toFixed(0)}
         </p>
-        {props.gpuUsed !== undefined &&
-          props.gpuTotal !== undefined &&
-          props.gpuTotal !== 0 && (
-            <p className="font-light text-[9px]">
-              GPU: {props.gpuUsed} / {props.gpuTotal}
-            </p>
-          )}
       </div>
-      {gpuTotal !== 0 && (
+      {gpuTotal > 0 && (
         <div className="mt-auto mb-1">
           <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
         </div>
       )}
     </div>
   );
-}
+};
 
-function LargeCardContent(props: any) {
+const LargeCardContent = ({
+  name,
+  coresUsed,
+  coresTotal,
+  memoryUsed,
+  memoryTotal,
+  nodeData,
+}: NodeCardProps) => {
   const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
-    props.nodeData.gres,
-    props.nodeData.gres_used
+    nodeData.gres,
+    nodeData.gres_used
   );
 
   return (
     <div className="flex flex-col h-full p-1">
       <div className="flex-grow">
         <div className="font-bold text-[12px] mb-1 truncate max-w-[140px]">
-          {props.name}
+          {name}
         </div>
         <p className="font-light text-[10px]">
-          CPU: {props.coresUsed} / {props.coresTotal}
+          CPU: {coresUsed} / {coresTotal}
         </p>
         <p className="font-light text-[10px]">
-          MEM: {(props.memoryUsed / 1024).toFixed(0)} /{" "}
-          {(props.memoryTotal / 1024).toFixed(0)}
+          MEM: {(memoryUsed / 1024).toFixed(0)} /{" "}
+          {(memoryTotal / 1024).toFixed(0)}
         </p>
         <p className="font-light text-[10px]">
-          Load: {(props.nodeData.cpu_load / props.coresTotal).toFixed(2)}
+          Load: {(nodeData.cpu_load / coresTotal).toFixed(2)}
         </p>
       </div>
-      {gpuTotal !== 0 && (
+      {gpuTotal > 0 && (
         <div className="mt-auto">
           <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
         </div>
       )}
     </div>
   );
-}
+};
 
-export function getStatusColor(status: string): string {
+const getStatusColor = (status: string): string => {
   const statusLevel = status[1] || status[0];
-  switch (statusLevel) {
-    case "DRAIN":
-    case "NOT_RESPONDING":
-    case "DOWN":
-      return "bg-blue-400";
-    case "IDLE":
-      return "bg-green-700";
-    case "MIXED":
-      return "bg-orange-800";
-    case "PLANNED":
-      return "bg-indigo-500";
-    case "ALLOCATED":
-      return "bg-red-900";
-    case "COMPLETING":
-      return "bg-yellow-500";
-    case "RESERVED":
-      return "bg-indigo-800";
-    case "FUTURE":
-      return "bg-emerald-500";
-    case "REBOOT_REQUESTED":
-      return "bg-stone-500";
-    default:
-      return "bg-gray-900";
-  }
-}
+  const colorMap: { [key: string]: string } = {
+    DRAIN: "bg-blue-400",
+    NOT_RESPONDING: "bg-blue-400",
+    DOWN: "bg-blue-400",
+    IDLE: "bg-green-700",
+    MIXED: "bg-orange-800",
+    PLANNED: "bg-indigo-500",
+    ALLOCATED: "bg-red-900",
+    COMPLETING: "bg-yellow-500",
+    RESERVED: "bg-indigo-800",
+    FUTURE: "bg-emerald-500",
+    REBOOT_REQUESTED: "bg-stone-500",
+  };
+  return colorMap[statusLevel] || "bg-gray-900";
+};
 
-export const NodeCard = (props: any) => {
+export const NodeCard = (props: NodeCardProps) => {
   const [open, setOpen] = useState(false);
   const color = getStatusColor(props.status);
   const statusDef = getStatusDef(props.status);
-  const openModal = () => {
-    setOpen(!open);
-  };
-
   const cpuLoad = parseFloat(
     (props.nodeData.cpu_load / props.coresTotal).toFixed(2)
   );
+
+  const openModal = () => setOpen(!open);
+
+  const cardContent = () => {
+    switch (props.size) {
+      case 50:
+        return <SmallCardContent name={props.name} />;
+      case 100:
+        return <MediumCardContent {...props} />;
+      case 150:
+        return <LargeCardContent {...props} />;
+      default:
+        return <MediumCardContent {...props} />;
+    }
+  };
 
   return (
     <HoverCard>
@@ -168,20 +151,10 @@ export const NodeCard = (props: any) => {
               ? "w-[130px] h-[100px]"
               : "w-[100px] h-[100px]"
           } ${cpuLoad > 125 ? "animate-pulse border-black" : ""}`}
-          onClick={props.historical ? () => {} : openModal}
+          onClick={props.historical ? undefined : openModal}
         >
           <div className="items-center justify-center h-full w-full">
-            <div className="h-full w-full">
-              {props.size === 50 ? (
-                <SmallCardContent {...props} />
-              ) : props.size === 100 ? (
-                <MediumCardContent {...props} />
-              ) : props.size === 150 ? (
-                <LargeCardContent {...props} />
-              ) : (
-                <MediumCardContent {...props} />
-              )}
-            </div>
+            <div className="h-full w-full">{cardContent()}</div>
           </div>
         </div>
       </HoverCardTrigger>

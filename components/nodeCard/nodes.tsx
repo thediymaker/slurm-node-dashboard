@@ -5,7 +5,6 @@ import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
 import NodeHeader from "./node-header";
 import CardSkeleton from "./card-skeleton";
-import { Node } from "@/utils/nodes";
 import { Slider } from "../ui/slider";
 import Stats from "./stats";
 import { Checkbox } from "../ui/checkbox";
@@ -13,6 +12,7 @@ import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
 import ChatIcon from "../llm/chat-icon";
 import { FeatureEnabled } from "@/actions/env-enabled";
+import { Node } from "@/types/types";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
@@ -199,7 +199,7 @@ const Nodes = () => {
             <div className="font-extralight">Card Size</div>
             <Slider className="w-[100px]" />
             <div className="font-extralight">Show Detail</div>
-            <Checkbox defaultChecked={showStats} />
+            <Skeleton className="w-6 h-6" />
           </div>
           <div className="flex justify-end w-full mb-4 gap-2 items-center">
             <div className="flex items-center gap-2 font-extralight">
@@ -274,10 +274,7 @@ const Nodes = () => {
             memoryTotal={node.real_memory}
             memoryUsed={node.alloc_memory}
             status={node.state}
-            index={index}
             nodeData={node}
-            dropdownOpenStatus={dropdownOpenStatus}
-            toggleDropdown={toggleDropdown}
           />
         ))}
       </div>

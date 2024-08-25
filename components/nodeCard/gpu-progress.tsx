@@ -1,13 +1,9 @@
 import React from "react";
 import { Progress } from "@/components/ui/progress-green";
+import { GPUUsageProps } from "@/types/types";
 
-interface GPUUsageProps {
-  gpuUsed: number;
-  gpuTotal: number;
-}
-
-const GPUUsageDisplay: React.FC<GPUUsageProps> = ({ gpuUsed, gpuTotal }) => {
-  const usagePercentage = (gpuUsed / gpuTotal) * 100;
+const GPUUsageDisplay = ({ gpuUsed, gpuTotal }: GPUUsageProps) => {
+  const usagePercentage = Math.min((gpuUsed / gpuTotal) * 100, 100);
 
   return (
     <div className="w-[90%] mx-auto">
