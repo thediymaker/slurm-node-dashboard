@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PromComboBoxProps } from "@/types/types";
 
 const metricArray = [
   {
@@ -43,13 +44,6 @@ const dayArray = [
     label: "7 days",
   },
 ];
-
-interface PromComboBoxProps {
-  metricValue: string;
-  setMetricValue: (value: string) => void;
-  daysValue: string;
-  setDaysValue: (value: string) => void;
-}
 
 export default function PromComboBox({
   metricValue,

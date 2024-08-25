@@ -2,11 +2,7 @@ import { CardTitle, CardContent, Card } from "@/components/ui/card";
 import { convertUnixToHumanReadable } from "@/utils/nodes";
 import { Separator } from "../ui/separator";
 
-interface SlurmJobDetailsProps {
-  job: any;
-}
-
-export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
+export function SlurmJobDetails({ job }: any) {
   if (!job.jobs.length)
     return (
       <div>

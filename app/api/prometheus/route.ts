@@ -1,3 +1,4 @@
+import { PrometheusQueryResponse } from "@/types/types";
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 
@@ -10,22 +11,6 @@ if (PROMETHEUS_URL) {
     endpoint: PROMETHEUS_URL,
     baseURL: "/api/v1",
   });
-}
-
-interface SampleValue {
-  time: Date;
-  value: number;
-}
-
-interface PrometheusQueryResponse {
-  resultType: string;
-  result: Array<{
-    metric: {
-      name: string;
-      labels: Record<string, string>;
-    };
-    values: SampleValue[];
-  }>;
 }
 
 export async function GET(req: Request) {

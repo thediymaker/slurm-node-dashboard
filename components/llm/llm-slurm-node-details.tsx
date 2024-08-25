@@ -1,12 +1,7 @@
 import { CardTitle, CardContent, Card } from "@/components/ui/card";
-import { Computer } from "lucide-react";
 import { Separator } from "../ui/separator";
 
-interface SlurmJobDetailsProps {
-  node: any;
-}
-
-export function SlurmNodeDetails({ node }: SlurmJobDetailsProps) {
+export function SlurmNodeDetails({ node }: any) {
   if (!node.nodes)
     return (
       <div>

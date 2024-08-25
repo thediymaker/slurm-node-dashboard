@@ -1,11 +1,6 @@
 "use client";
-interface GPUResource {
-  type: string;
-  total: number;
-  used: number;
-  shardsTotal: number;
-  shardsUsed: number;
-}
+
+import { GPUResource } from "@/types/types";
 
 export const parseGPUResources = (
   gres: string | null,

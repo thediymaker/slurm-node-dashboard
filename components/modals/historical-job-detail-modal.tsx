@@ -11,7 +11,7 @@ import { AlertCircle, Clock, Cpu, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { HistoricalJobDetailModalProps, HistoricalJob } from "@/utils/nodes";
+import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 
 const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   open,

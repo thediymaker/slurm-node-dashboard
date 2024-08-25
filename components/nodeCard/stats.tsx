@@ -2,15 +2,7 @@
 import { RadialChart } from "../radialChart";
 import React from "react";
 import { parseGPUResources } from "@/utils/gpu-parse";
-
-interface Node {
-  alloc_memory: number;
-  real_memory: number;
-  alloc_cpus: number;
-  cpus: number;
-  gres: string | null;
-  gres_used: string;
-}
+import { Node } from "@/types/types";
 
 export default function Stats({ data }: { data: { nodes: Node[] } }) {
   const systems: Node[] = data?.nodes || [];

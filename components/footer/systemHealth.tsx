@@ -1,8 +1,5 @@
+import { SystemHealthProps } from "@/types/types";
 import React from "react";
-
-interface SystemHealthProps {
-  status: string;
-}
 
 const SystemHealth = ({ status }: SystemHealthProps) => {
   if (status === "healthy") {

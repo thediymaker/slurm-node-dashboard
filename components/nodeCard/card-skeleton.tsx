@@ -1,9 +1,5 @@
+import { CardSkeletonProps } from "@/types/types";
 import { Skeleton } from "../ui/skeleton";
-
-interface CardSkeletonProps {
-  qty: number;
-  size: number;
-}
 
 export function CardSkeleton({ qty, size }: CardSkeletonProps) {
   return (
