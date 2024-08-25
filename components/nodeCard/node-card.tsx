@@ -81,16 +81,6 @@ function LargeCardContent(props: any) {
         <p className="font-light text-[10px]">
           Load: {(props.nodeData.cpu_load / props.coresTotal).toFixed(2)}
         </p>
-        {resources.map((resource, index) => (
-          <p key={index} className="font-light text-[10px]">
-            {isMIG
-              ? `${resource.type} Slices`
-              : resource.type === "shard"
-              ? "Shards"
-              : "GPU"}
-            : {resource.used}/{resource.total}
-          </p>
-        ))}
       </div>
       {gpuTotal > 0 && (
         <div className="mt-auto">

@@ -239,13 +239,13 @@ const Nodes = () => {
             step={50}
             onValueChange={(values) => setCardSize(values[0])}
           />
-          <div className="font-extralight">Show Detail</div>
+          {/* <div className="font-extralight">Show Detail</div>
           <Checkbox
             checked={showStats}
             onCheckedChange={() => {
               setShowStats(!showStats);
             }}
-          />
+          /> */}
         </div>
         <div className="flex justify-end w-full mb-4 gap-2 items-center">
           <div className="flex items-center gap-2 font-extralight">
@@ -258,7 +258,7 @@ const Nodes = () => {
           </div>
         </div>
       </div>
-      {showStats && nodeData ? <Stats data={nodeData} /> : null}
+      {/* {showStats && nodeData ? <Stats data={nodeData} /> : null} */}
       <Separator />
       <div className="flex flex-wrap p-3 uppercase mb-20">
         {filteredNodes.map((node: any, index: number) => (

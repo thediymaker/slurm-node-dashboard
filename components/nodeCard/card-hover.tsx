@@ -16,46 +16,49 @@ const parseGPUResources = (gres: string, gresUsed: string): GPUResources => {
     sliceType: "NOSLICE",
   };
 
-  if (gres.includes("g.20gb")) {
-    resources.sliceType = "MIG";
-    const migTypes = ["2g.20gb", "1g.20gb"];
-
-    migTypes.forEach((type) => {
-      const totalMatch = gres.match(new RegExp(`gpu:${type}:(\\d+)`));
-      if (totalMatch) {
-        resources.slices.total[type] = parseInt(totalMatch[1]);
-      }
-
-      const usedMatch = gresUsed.match(new RegExp(`gpu:${type}:(\\d+)`));
-      if (usedMatch) {
-        resources.slices.used[type] = parseInt(usedMatch[1]);
-      } else {
-        resources.slices.used[type] = 0;
-      }
-    });
-  } else if (gres.includes("shard")) {
+  if (gres.includes("shard")) {
     resources.sliceType = "SHARD";
-    const gresGPUMatch = gres.match(/gpu:(\d+)/i);
-    const gresShardMatch = gres.match(/shard:(\d+)/i);
-    if (gresGPUMatch) resources.slices.total["GPU"] = parseInt(gresGPUMatch[1]);
-    if (gresShardMatch)
-      resources.slices.total["SHARD"] = parseInt(gresShardMatch[1]);
+    const gpuTotalMatch = gres.match(/gpu:(\w+):(\d+)/i);
+    const shardTotalMatch = gres.match(/shard:(\w+):(\d+)/i);
 
-    const gresUsedGPUMatch = gresUsed.match(/gpu:\(null\):(\d+)/i);
-    const gresUsedShardMatch = gresUsed.match(/shard:\(null\):(\d+)/i);
-    if (gresUsedGPUMatch)
-      resources.slices.used["GPU"] = parseInt(gresUsedGPUMatch[1]);
-    if (gresUsedShardMatch) {
-      resources.slices.used["SHARD"] = parseInt(gresUsedShardMatch[1]);
+    if (gpuTotalMatch)
+      resources.slices.total["GPU"] = parseInt(gpuTotalMatch[2]);
+    if (shardTotalMatch)
+      resources.slices.total["SHARD"] = parseInt(shardTotalMatch[2]);
+
+    const gpuUsedMatch = gresUsed.match(/gpu:\w+:(\d+)/i);
+    const shardUsedMatch = gresUsed.match(/shard:\w+:(\d+)/i);
+
+    if (gpuUsedMatch) resources.slices.used["GPU"] = parseInt(gpuUsedMatch[1]);
+    if (shardUsedMatch) {
+      const shardUsage = shardUsedMatch[1].split(/[(,)]/).filter(Boolean);
+      resources.slices.used["SHARD"] = shardUsage.reduce(
+        (acc, usage) => acc + parseInt(usage.split("/")[0]),
+        0
+      );
     } else {
       resources.slices.used["SHARD"] = 0;
     }
 
-    // Ensure both GPU and SHARD have values
     resources.slices.total["GPU"] = resources.slices.total["GPU"] || 0;
     resources.slices.total["SHARD"] = resources.slices.total["SHARD"] || 0;
     resources.slices.used["GPU"] = resources.slices.used["GPU"] || 0;
     resources.slices.used["SHARD"] = resources.slices.used["SHARD"] || 0;
+  } else if (gres.match(/gpu:\w+\.\w+:\d+/)) {
+    // MIG handling
+    resources.sliceType = "MIG";
+    const sliceMatches = gres.match(/gpu:(\w+\.\w+):(\d+)/g);
+    if (sliceMatches) {
+      sliceMatches.forEach((match) => {
+        const [_, sliceType, count] = match.split(/[:]/);
+        resources.slices.total[sliceType] = parseInt(count);
+
+        const usedMatch = gresUsed.match(new RegExp(`gpu:${sliceType}:(\\d+)`));
+        resources.slices.used[sliceType] = usedMatch
+          ? parseInt(usedMatch[1])
+          : 0;
+      });
+    }
   } else {
     // No Slice GPU case
     const gpuMatch = gres.match(/gpu:(\w+):(\d+)/);

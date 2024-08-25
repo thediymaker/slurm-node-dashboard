@@ -1,103 +1,105 @@
+"use client";
 interface GPUResource {
   type: string;
   total: number;
   used: number;
+  shardsTotal: number;
+  shardsUsed: number;
 }
 
 export const parseGPUResources = (
   gres: string | null,
   gresUsed: string
-): {
-  resources: GPUResource[];
-  gpuUsed: number;
-  gpuTotal: number;
-  isMIG: boolean;
-} => {
+): any => {
   const resources: GPUResource[] = [];
   let isMIG = false;
 
-  const parseResourceString = (str: string, isUsed: boolean) => {
-    const parts = str.split(":");
-    if (parts.length < 2) return null;
-
-    const resourceType = parts[0];
-    const details = parts.slice(1).join(":");
-
-    if (resourceType === "gpu" && details.includes("g.")) {
-      isMIG = true;
-      const [type, countOrUsed] = details.split(":");
-      const value = parseInt(isUsed ? countOrUsed.split("(")[0] : countOrUsed);
-      return { type, value, resourceType };
-    } else if (resourceType === "gpu" && details.includes("mi25")) {
-      const value = parseInt(isUsed ? parts[2].split("(")[0] : parts[2]);
-      return { type: resourceType, value, resourceType };
-    } else if (resourceType === "gpu" || resourceType === "shard") {
-      let value;
-      if (isUsed) {
-        const match = details.match(/(\d+)/);
-        value = match ? parseInt(match[1]) : 0;
-      } else {
-        value = parseInt(details);
-      }
-      return { type: resourceType, value, resourceType };
-    }
-    return null;
-  };
-
-  const parseAndAddResource = (match: string, isUsed: boolean) => {
-    const parsed = parseResourceString(match, isUsed);
-    if (parsed) {
-      const existingResource = resources.find((r) => r.type === parsed.type);
-      if (existingResource) {
-        if (isUsed) {
-          existingResource.used += parsed.value;
-        } else {
-          existingResource.total += parsed.value;
-        }
-      } else {
-        resources.push({
-          type: parsed.type,
-          total: isUsed ? 0 : parsed.value,
-          used: isUsed ? parsed.value : 0,
-        });
-      }
+  const addResource = (
+    type: string,
+    gpuTotal: number,
+    gpuUsed: number,
+    shardTotal: number = 0,
+    shardUsed: number = 0
+  ) => {
+    const resource = resources.find((r) => r.type === type);
+    if (resource) {
+      // If this resource already exists, only add the new totals
+      resource.total += gpuTotal;
+      resource.used += gpuUsed;
+      resource.shardsTotal = Math.max(resource.shardsTotal, shardTotal);
+      resource.shardsUsed += shardUsed;
+    } else {
+      // If this is a new resource, add it
+      resources.push({
+        type,
+        total: gpuTotal,
+        used: gpuUsed,
+        shardsTotal: shardTotal,
+        shardsUsed: shardUsed,
+      });
     }
   };
 
-  (gres?.match(/(?:gpu|shard):[^,]+/g) || []).forEach((match) =>
-    parseAndAddResource(match, false)
-  );
-  (gresUsed?.match(/(?:gpu|shard):[^,]+/g) || []).forEach((match) =>
-    parseAndAddResource(match, true)
-  );
+  const parseGRES = (gresString: string | null, isUsed: boolean) => {
+    if (!gresString) return;
+
+    const regex = /(gpu|shard):([\w.]+|\(null\)):(\d+)(?:\((.*?)\))?/g;
+    let match;
+    while ((match = regex.exec(gresString)) !== null) {
+      const [, type, gpuType, valueStr, shardDetails] = match;
+      const value = parseInt(valueStr, 10);
+
+      if (type === "gpu" && gpuType.includes("g.")) {
+        isMIG = true;
+      }
+
+      const resourceType = gpuType === "(null)" ? type.toUpperCase() : gpuType;
+
+      if (type === "shard") {
+        const shardTotal = value;
+        const shardUsed = isUsed ? shardTotal : 0;
+        addResource(resourceType, 0, 0, shardTotal, shardUsed);
+      } else {
+        addResource(resourceType, isUsed ? 0 : value, isUsed ? value : 0);
+      }
+    }
+  };
+
+  parseGRES(gres, false);
+  parseGRES(gresUsed, true);
 
   let gpuTotal = 0;
   let gpuUsed = 0;
+  let gpuUtilizationPercentage = 0;
 
-  if (isMIG) {
-    const migResources = resources.filter((r) => r.type.includes("g."));
-    migResources.forEach((resource) => {
-      gpuTotal += resource.total;
+  resources.forEach((resource) => {
+    gpuTotal += resource.total;
+
+    // Only perform shard calculations if shards exist
+    if (resource.shardsTotal > 0) {
+      const shardsPerGPU =
+        resource.total > 0 ? resource.shardsTotal / resource.total : 0;
+
+      // Calculate remaining shards after full GPU usage
+      const remainingShardsTotal =
+        resource.shardsTotal - resource.used * shardsPerGPU;
+      const remainingShardsUsed = Math.min(
+        resource.shardsUsed,
+        remainingShardsTotal
+      );
+
+      const adjustedGpuUsed =
+        resource.used +
+        (shardsPerGPU > 0 ? remainingShardsUsed / shardsPerGPU : 0);
+      gpuUsed += adjustedGpuUsed;
+
+      gpuUtilizationPercentage += (adjustedGpuUsed / resource.total) * 100;
+    } else {
+      // Handle non-shard cases
       gpuUsed += resource.used;
-    });
-  } else {
-    const gpuResource = resources.find((r) => r.type === "gpu");
-    const shardResource = resources.find((r) => r.type === "shard");
-
-    if (gpuResource && shardResource) {
-      gpuTotal = gpuResource.total;
-      const shardsPerGPU = shardResource.total / gpuResource.total || 1;
-      const fullGPUsUsed = Math.floor(gpuResource.used);
-      const additionalShardsUsed = shardResource.used % shardsPerGPU;
-      gpuUsed = fullGPUsUsed + additionalShardsUsed / shardsPerGPU;
-    } else if (shardResource) {
-      gpuTotal = shardResource.total / 4; // Assuming 4 shards per GPU
-      gpuUsed = shardResource.used / 4;
-    } else if (gpuResource) {
-      gpuTotal = gpuResource.total;
-      gpuUsed = gpuResource.used;
+      gpuUtilizationPercentage += (resource.used / resource.total) * 100;
     }
-  }
+  });
 
   return { resources, gpuUsed, gpuTotal, isMIG };
 };
