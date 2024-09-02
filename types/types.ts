@@ -176,6 +176,9 @@ export interface HistoricalJob {
       count: number;
     };
     tres: {
+      requested: {
+        max: any;
+      };
       consumed: any;
     };
     time: {
