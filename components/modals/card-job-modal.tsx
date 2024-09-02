@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DNA } from "react-loader-spinner";
+import { ThreeCircles } from "react-loader-spinner";
 import { NodeCpuChart } from "../nodeCard/node-mon-chart";
 import PromComboBox from "../prom-metric";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -100,13 +100,14 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
         >
           <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <DNA
+            <ThreeCircles
               visible={true}
-              height="80"
-              width="80"
-              ariaLabel="dna-loading"
+              height="64"
+              width="64"
+              color="white"
+              ariaLabel="three-circles-loading"
               wrapperStyle={{}}
-              wrapperClass="dna-wrapper"
+              wrapperClass=""
             />
           </div>
         </DialogContent>
