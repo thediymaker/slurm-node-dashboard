@@ -13,6 +13,30 @@ import { Separator } from "@/components/ui/separator";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 import { ThreeCircles } from "react-loader-spinner";
 
+const rubric = {
+  A : {
+    threshold : 90,
+    color     : "#0f0"
+  },
+  B : {
+    threshold : 80,
+    color     : "#cf0"
+  },
+  C : {
+    threshold : 70,
+    color     : "#ff0"
+  },
+  D : {
+    threshold : 60,
+    color     : "#f70"
+  },
+  E : {
+    threshold : 0,
+    color     : "#f00"
+  }
+};
+
+
 const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   open,
   setOpen,
@@ -41,9 +65,26 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     return `${hours}h ${minutes}m ${remainingSeconds}s`;
   }
 
-  function calculateEfficiency(job: HistoricalJob) {
-    const allocatedCPUs =
-      job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
+  function calculateMemEfficiency(job: HistoricalJob) {
+    const maxUsedMem_Bytes = 
+      job.steps.reduce((max, step)=>{
+        const maxRAM = step.tres.requested.max.find(
+          (t)=>t.type==="mem"
+        )?.count || 0; 
+        return (maxRAM>max?maxRAM:max);
+      },0);
+    const allocMem_MiB = job.tres.requested.find(
+      (t)=>t.type==="mem"
+    )?.count || 0;
+    // compute percent ratio by converting denominator to bytes
+    const efficiency = (maxUsedMem_Bytes / (allocMem_MiB*1048576))*100;
+    return `${efficiency.toFixed(2)}%`;
+  }
+
+  function calculateCPUEfficiency(job: HistoricalJob) {
+    const allocatedCPUs = job.tres.allocated.find(
+      (t) => t.type === "cpu"
+    )?.count || 0;
     const elapsedTime = job.time.elapsed;
 
     const totalCPUTime = job.steps.reduce((sum, step) => {
@@ -63,6 +104,23 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     const efficiency = (totalCPUTime / coreWallTime) * 100;
 
     return `${efficiency.toFixed(2)}%`;
+  }
+
+  function get_letter_grade(score: Number) {
+    var letter = 'E';
+    for ( var [key,subobj] of Object.entries(rubric)) {
+      if ( score >= subobj.threshold ) {
+        letter = key;
+        break;
+      }
+    }
+    return letter;
+  }
+
+  function grade_efficiency(efficiencyStr: string) {
+    const eff = Number(efficiencyStr.replace('%',''));
+    const letter = get_letter_grade(eff);
+    return letter;
   }
 
   if (jobError)
@@ -124,6 +182,12 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
 
   const job = jobData?.jobs[0];
 
+  const CPUEfficiency = calculateCPUEfficiency(job);
+  const MemEfficiency = calculateMemEfficiency(job);
+  const CPUEffLetter  = grade_efficiency(CPUEfficiency);
+  const MemEffLetter  = grade_efficiency(MemEfficiency);
+
+
   const renderJobOverview = (job: HistoricalJob) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Card>
@@ -158,7 +222,20 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
             {formatDuration(job.time.elapsed)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Efficiency: {calculateEfficiency(job)}
+            CPU Efficiency: {calculateCPUEfficiency(job)} 
+            (
+            <span style={{color: rubric[CPUEffLetter].color}}>
+              {CPUEffLetter}
+            </span>
+            )
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Memory Efficiency: {calculateMemEfficiency(job)}
+            (
+            <span style={{color: rubric[MemEffLetter].color}}>
+              {MemEffLetter}
+            </span>
+            )
           </p>
         </CardContent>
       </Card>
@@ -244,18 +321,18 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
           <p className="font-semibold mb-2">Resources</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-extralight">
             <div>
-              <p className="font-semibold">Allocated Resources</p>
-              {job.tres.allocated.map((res, index) => (
+              <p className="font-semibold">Requested Resources</p>
+              {job.tres.requested.map((res, index) => (
                 <p key={index}>
-                  {res.type}: {res.count}
+                  {res.type}: {res.count} {res.type === "mem" ? " MiB" : ""}
                 </p>
               ))}
             </div>
             <div>
-              <p className="font-semibold">Requested Resources</p>
-              {job.tres.requested.map((res, index) => (
+              <p className="font-semibold">Allocated Resources</p>
+              {job.tres.allocated.map((res, index) => (
                 <p key={index}>
-                  {res.type}: {res.count}
+                  {res.type}: {res.count} {res.type === "mem" ? " MiB" : ""}
                 </p>
               ))}
             </div>
@@ -289,6 +366,25 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
               </p>
               <p>
                 End Time: {convertUnixToHumanReadable(step.time.end.number)}
+              </p>
+              <p>
+                Memory Used/Allocated: {
+                  (
+                    (
+                      step.tres.requested.max.find(
+                        (t)=>t.type==="mem"
+                      )?.count || 0
+                    ) / 1073741824
+                  ).toFixed(3)
+                } / {
+                  (
+                    (
+                      job.tres.requested.find(
+                        (t)=>t.type==="mem"
+                      )?.count || 0
+                    ) / 1024
+                  ).toFixed(3)
+                } GiB
               </p>
             </div>
           ))}
