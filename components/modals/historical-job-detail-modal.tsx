@@ -6,12 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Clock, Cpu, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
+import { ThreeCircles } from "react-loader-spinner";
 
 const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   open,
@@ -87,7 +87,15 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
         >
           <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <Skeleton className="h-8 w-8 rounded-full" />
+            <ThreeCircles
+              visible={true}
+              height="64"
+              width="64"
+              color="white"
+              ariaLabel="three-circles-loading"
+              wrapperStyle={{}}
+              wrapperClass=""
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -302,7 +310,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         aria-describedby={undefined}
-        className="border shadow-xl w-[1200px] max-w-[90%] overflow-y-auto scrollbar-none"
+        className="border shadow-xl w-[1200px] max-w-[90%] max-h-[90%] overflow-y-auto scrollbar-none"
       >
         <DialogHeader>
           <DialogTitle className="text-2xl mb-2 font-extralight flex items-center gap-2">

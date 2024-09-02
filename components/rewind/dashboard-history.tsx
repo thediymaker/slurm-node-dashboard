@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NodeCard } from "@/components/nodeCard/node-card";
-import { DNA } from "react-loader-spinner";
+import { ThreeCircles } from "react-loader-spinner";
 import { DateTimePicker } from "@/components/date-time";
 
 const fetcher = async (url: string) => {
@@ -68,13 +68,14 @@ const DashboardHistory = () => {
   if (!isMounted) {
     return (
       <div className="flex justify-center items-center w-full h-full">
-        <DNA
+        <ThreeCircles
           visible={true}
-          height="80"
-          width="80"
-          ariaLabel="dna-loading"
+          height="64"
+          width="64"
+          color="white"
+          ariaLabel="three-circles-loading"
           wrapperStyle={{}}
-          wrapperClass="dna-wrapper"
+          wrapperClass=""
         />
       </div>
     );
@@ -150,10 +151,7 @@ const DashboardHistory = () => {
                       memoryTotal={node.real_memory}
                       memoryUsed={node.alloc_memory}
                       status={node.state}
-                      index={index}
                       nodeData={node}
-                      dropdownOpenStatus={{}}
-                      toggleDropdown={() => {}}
                       historical={true}
                     />
                   );
