@@ -171,30 +171,26 @@ Johnathan Lee
 
 ## Screenshots
 
-### Basic Dashboard
+### Dashboard image displaying refresh countdown and footer
 
-![Dashboard Screenshot](/images/basic_screenshot.png "Basic Dashboard")
+![Dashboard Screenshot](/images/dashboard_screenshot_1.png "Basic Dashboard")
 
-### Dashboard Features
+### Dashboard features
 
 ![Dashboard Hover Screenshot](/images/features_screenshot.png "Features")
 
-### Job Detail
+### Node detail with job view
 
 ![Dashboard Footer Screenshot](/images/job_detail_screenshot.png "Job Detail")
 
-### Node Detail
+### Running job detail
 
-![Dashboard Footer Screenshot](/images/node_job_details_screenshot.png "Basic Job Detail")
+![Dashboard Footer Screenshot](/images/running_job_screenshot.png "Basic Job Detail")
 
-### Dashboard
+### Completed job detail
 
-![Dashboard Screenshot](/images/dashboard_screenshot_1.png "Dashboard Overview")
+![Dashboard Screenshot](/images/completed_job_screenshot.png "Dashboard Overview")
 
 ### Dashboard Hover
 
 ![Dashboard Hover Screenshot](/images/dashboard_screenshot_2.png "Hover Status")
-
-### Dashboard Footer
-
-![Dashboard Footer Screenshot](/images/dashboard_screenshot_3.png "Footer")
