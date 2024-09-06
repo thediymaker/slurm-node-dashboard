@@ -60,6 +60,31 @@ Visit `http://localhost:3000` to see your dashboard in action.
 
 </details>
 
+## Slurm API Configuration
+
+<details>
+<summary><strong>Enabling the Slurm API</strong></summary>
+
+To use this dashboard, you need to have the Slurm API enabled on your HPC cluster. Follow these steps to set it up:
+
+1. Start by reviewing the [Schedmd quickstart guide](https://slurm.schedmd.com/rest_quickstart.html).
+
+2. Ensure that `slurmrestd` is running on your cluster.
+
+3. Once the Slurm API is running, you need to generate an API key for authentication.
+
+### Generating an API Key
+
+The API key needs permissions to read all data. Here's an example of generating a key for the slurm user with a lifespan of 1 year:
+
+```bash
+scontrol token username=slurm lifespan=31536000
+```
+
+Note: This generates a JWT token. You can view the expiration date on the token and set up a reminder to renew it, or automate the renewal process (even with a shorter timeframe). The expiration of this token will be added to the future admin section on the dashboard.
+
+</details>
+
 <details>
 <summary><strong>Configuration</strong></summary>
 
