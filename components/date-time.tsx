@@ -18,13 +18,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, Clock } from "lucide-react";
-
-interface DateTimePickerProps {
-  date: Date | undefined;
-  setDate: (date: Date | undefined) => void;
-  time: string | undefined;
-  setTime: (time: string | undefined) => void;
-}
+import { DateTimePickerProps } from "@/types/types";
 
 export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   date,

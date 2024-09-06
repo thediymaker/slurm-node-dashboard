@@ -1,196 +1,213 @@
 # HPC Dashboard
 
-This repository contains the source code for the HPC Dashboard, a Next.js application designed to monitor the status of SLURM nodes. The dashboard provides total utilization metrics for CPU and GPU nodes, as well as detailed statuses for individual nodes. This application is built using well known packages, and styled with tailwindcss and Shadcn components
+[![License: GNU](https://img.shields.io/badge/License-GNU-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Node.js](https://img.shields.io/badge/Node.js-v18%2B-green)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-latest-lightgrey)](https://nextjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-latest-38B2AC)](https://tailwindcss.com/)
+[![Shadcn](https://img.shields.io/badge/Shadcn-components-8B5CF6)](https://ui.shadcn.com/)
 
-## Standard Features
+> Powerful monitoring for your SLURM-based HPC cluster
 
-- View total utilization of CPU and GPU nodes.
-- Individual node status with details on CPU, GPU, and memory usage.
-- View Slurm job details.
+The HPC Dashboard is a Next.js application designed to provide comprehensive monitoring of SLURM nodes. With a focus on performance and usability, this dashboard offers real-time insights into your HPC resources.
 
-## Optional Features
+![Dashboard Screenshot](/images/new_dashboard_screenshot_1.png "HPC Dashboard Overview")
 
-The optional features will be enabled by adding the detailst to the environments file. If these are left blank, the intergration will not show up, but the rest of the application will continue to function correctly.
+## Key Features
 
-- LMOD module details
-- Prometheus integration
-- InfluxDB intergration
-- OpenAI intergration
+<details>
+<summary><strong>Core Functionality</strong></summary>
 
-## Prerequisites
+- Real-time monitoring of CPU and GPU node utilization
+- Detailed individual node status
+- Comprehensive Slurm job details and history
+- Dynamic data updates with refresh countdown
 
-Before you begin, ensure you have the following installed:
+</details>
 
-- Node.js (v18 or later)
-- Yarn or npm
-- Slurm API enabled on your HPC cluster
-- Slurm API token for authentication
+<details>
+<summary><strong>Advanced Integrations</strong></summary>
 
-## Enabling the Slurm API
+Enable these features by configuring your environment file:
 
-Start by viewing the Schedmd quickstart guide
-https://slurm.schedmd.com/rest_quickstart.html
+- LMOD module display and details
+- Prometheus metrics integration
+- OpenAI-powered insights
 
-You will need to make slurmrestd is running.
+</details>
 
-Once you have the slurm API running, you will need to generate an API key for use with the API.
-
-This API key will need access to read all data, here is an example using the slurm user, with a lifespan of 1 year:
-
-```
-scontrol token username=slurm lifespan=31536000
-```
-
-Since this is a JWT token, you can view the expiration date on the token, and set up a reminder to renew, or automate the renewal of the token (even with a shorter time frame). Note: The expiration of this token will be added to the future admin section on the dashboard.
-
-## Getting Started
-
-To get a local copy of the dashboard up and running, follow these steps.
-
-### Clone the repository
+## Quick Start
 
 ```bash
 git clone https://github.com/thediymaker/slurm-node-dashboard.git
 cd slurm-node-dashboard
-```
-
-### Install dependencies
-
-```
 npm install
+# Set up your .env file (see Configuration section)
+npm run dev
 ```
 
-```
-dnf install pm2
-or
-apt install pm2
-```
+Visit `http://localhost:3000` to see your dashboard in action.
 
-### Run the application with PM2
+## Detailed Setup
 
-```
-pm2 start npm --name "slurm-node-dashboard" -- start
-```
+<details>
+<summary><strong>Prerequisites</strong></summary>
 
-The application should now be running on [http://localhost:3000](http://localhost:3000).
+- Node.js (v18 or later)
+- npm or Yarn
+- PM2 (for production deployment)
+- Slurm API (enabled and configured)
+- Slurm API token
 
-## Environment Variables
+</details>
 
-To run this project, you can start by adding the following environment variables to your `.env` file.
+<details>
+<summary><strong>Configuration</strong></summary>
 
-```plaintext
-COMPANY_NAME="ACME INC"
-CLUSTER_NAME="SUPERCOMPUTER"
-CLUSTER_LOGO="/logo.png"
+Create a `.env` file in the root directory:
 
-PROMETHEUS_URL="http://1.2.3.4:9090" # EXAMPLE Keep blank if not using (placeholder to show proper format)
+```env
+COMPANY_NAME="Your Company"
+CLUSTER_NAME="Your Cluster"
+CLUSTER_LOGO="/path/to/logo.png"
+NEXT_PUBLIC_BASE_URL="http://your-domain.com"
 
+# Optional integrations
+PROMETHEUS_URL=""
 OPENAI_API_KEY=""
 
+# Slurm configuration
+SLURM_API_VERSION="v0.0.40"
+SLURM_SERVER="http://your-slurm-server:port"
+SLURM_API_TOKEN="your-slurm-api-token"
+
+# Development settings
 NODE_ENV="production"
 REACT_EDITOR="code"
-
-SLURM_API_VERSION="v0.0.40"
-SLURM_SERVER=""
-SLURM_API_TOKEN=""
 ```
 
-The only required env variables are the "SLURM" ones. You will also want to update teh cluster and company details. The OPENAI and PROMETHEUS varaiables are only required if you want to use those features.
+</details>
 
-**You will also need to make sure you place your logo.png in the plublic directory, as well as replace the default favicon.ico with your own.**
+<details>
+<summary><strong>Production Deployment</strong></summary>
 
-## Collecting node data in JSON format, for use with the "Historical" node status module.
+For production environments, we recommend using PM2:
 
-In order to capture the data for use with the historical module, you need to create a script that pulls down the node data on an hourly basis, here is an example script, that you would then call hourly via cron.
-
+```bash
+npm install -g pm2
+pm2 start npm --name "hpc-dashboard" -- start
+pm2 save
 ```
+
+This ensures your dashboard runs continuously and restarts automatically if the server reboots.
+
+</details>
+
+## Advanced Usage
+
+<details>
+<summary><strong>Custom Data Collection</strong></summary>
+
+### Historical Node Data
+
+Collect historical node data with this script (run hourly via cron):
+
+```bash
 #!/bin/bash
-
-# Set the timezone
-export TZ='America/Phoenix'
-
-# Set the directory where you want to save the JSON files
-SAVE_DIR="/var/www/beta_dashboard/data"
-
-# Ensure the save directory exists
+SAVE_DIR="/path/to/data/directory"
 mkdir -p "$SAVE_DIR"
-
-# Generate the filename with the current date and time
 FILENAME=$(date +"%Y-%m-%dT%H-%M-%S.000Z.json.gz")
-
-# Fetch the data and save it to the file
 curl -s "http://localhost:3000/api/slurm/nodes" | gzip > "$SAVE_DIR/$FILENAME"
-
-# Optional: Keep only the last 30 days of data
 find "$SAVE_DIR" -name "*.json.gz" -type f -mtime +30 -delete
 ```
 
-## Collecting module data in JSON format, for use with the "Modules" module.
+### Module Data
 
-In order to collect the JSON data for the modules page, you will need to create this script and call it on any cadence you see fit. This will overwrite the existing modules.json.
+Collect module data with this script (run daily via cron):
 
-```
+```bash
 #!/bin/bash
-
-# Set output variables
-json_dir="/var/www/beta_dashboard/public"
+json_dir="/path/to/public/directory"
 json_output="${json_dir}/modules.json"
-
-# Create json directory if it doesn't exist
 mkdir -p "$json_dir"
-
-# Set environment variables - this will likely change for you
 export MODULESHOME="/usr/share/lmod/lmod"
-export MODULEPATH="/packages/modulefiles/apps:/packages/modulefiles/spack"
-
-# Run the spider command and save JSON output
+export MODULEPATH="/your/module/path"
 $LMOD_DIR/spider -o jsonSoftwarePage $MODULEPATH | python -m json.tool > "$json_output"
 ```
 
+</details>
+
+<details>
+<summary><strong>Open OnDemand Integration</strong></summary>
+
+To integrate this dashboard with Open OnDemand:
+
+Clone the generic Ruby app template:
+
+```
+git clone https://github.com/thediymaker/ood-status-iframe.git
+```
+
+Navigate to the cloned repository:
+
+```
+cd ood-status-iframe
+```
+
+Open the views/layout.erb file in your preferred text editor.
+Update the URL in the views/layout.erb file to point to your deployed HPC Dashboard:
+erb
+
+```
+<iframe src="https://your-hpc-dashboard-url.com" ...>
+```
+
+Follow Open OnDemand's documentation to deploy this app within your Open OnDemand environment.
+
+This integration allows you to embed the HPC Dashboard within your Open OnDemand interface, providing users with easy access to cluster status information.
+
+</details>
+
 ## Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+We welcome contributions! Here's how you can help:
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Fork the repository
+2. Create a feature branch: `git checkout -b new-feature`
+3. Make your changes and commit: `git commit -am 'Add new feature'`
+4. Push to the branch: `git push origin new-feature`
+5. Submit a pull request
 
 ## License
 
-Distributed under the GNU License. See `LICENSE.md` for more information.
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE.md) file for details.
 
-## Contact
+## Support and Contact
 
-Johnathan Lee
+For support, please open an issue on our [GitHub repository](https://github.com/thediymaker/slurm-node-dashboard/issues).
 
-[john.lee@thediymaker.com](mailto:john.lee@thediymaker.com)
+For direct inquiries, contact Johnathan Lee at [john.lee@thediymaker.com](mailto:john.lee@thediymaker.com).
 
-[https://github.com/thediymaker/slurm-node-dashboard](https://github.com/thediymaker/slurm-node-dashboard)
+## Gallery
 
-## Screenshots
+<details>
+<summary><strong>Additional Screenshots</strong></summary>
 
-### Dashboard image displaying refresh countdown and footer
+|                 Feature Overview                 |                     Job Details                      |
+| :----------------------------------------------: | :--------------------------------------------------: |
+| ![Features](/images/new_features_screenshot.png) | ![Job Detail](/images/new_job_detail_screenshot.png) |
 
-![Dashboard Screenshot](/images/new_dashboard_screenshot_1.png "Basic Dashboard")
+|                      Running Job                       |                       Completed Job                        |
+| :----------------------------------------------------: | :--------------------------------------------------------: |
+| ![Running Job](/images/new_running_job_screenshot.png) | ![Completed Job](/images/new_completed_job_screenshot.png) |
 
-### Dashboard features
+|                   Node Hover Details                    |
+| :-----------------------------------------------------: |
+| ![Hover Status](/images/new_dashboard_screenshot_2.png) |
 
-![Dashboard Hover Screenshot](/images/new_features_screenshot.png "Features")
+</details>
 
-### Node detail with job view
+---
 
-![Dashboard Footer Screenshot](/images/new_job_detail_screenshot.png "Job Detail")
-
-### Running job detail
-
-![Dashboard Footer Screenshot](/images/new_running_job_screenshot.png "Basic Job Detail")
-
-### Completed job detail
-
-![Dashboard Screenshot](/images/new_completed_job_screenshot.png "Dashboard Overview")
-
-### Dashboard Hover
-
-![Dashboard Hover Screenshot](/images/new_dashboard_screenshot_2.png "Hover Status")
+<p align="center">
+  Made with ❤️ for HPC
+</p>

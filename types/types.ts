@@ -313,3 +313,10 @@ export interface PrometheusQueryResponse {
     values: SampleValue[];
   }>;
 }
+
+export interface DateTimePickerProps {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+  time: string | undefined;
+  setTime: (time: string | undefined) => void;
+}
