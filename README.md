@@ -60,8 +60,6 @@ Visit `http://localhost:3000` to see your dashboard in action.
 
 </details>
 
-## Slurm API Configuration
-
 <details>
 <summary><strong>Enabling the Slurm API</strong></summary>
 
