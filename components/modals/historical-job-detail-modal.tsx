@@ -13,29 +13,28 @@ import { Separator } from "@/components/ui/separator";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 import { ThreeCircles } from "react-loader-spinner";
 
-const rubric = {
-  A : {
-    threshold : 90,
-    color     : "#0f0"
+const rubric: { [key: string]: { threshold: number; color: string } } = {
+  A: {
+    threshold: 90,
+    color: "#0f0",
   },
-  B : {
-    threshold : 80,
-    color     : "#cf0"
+  B: {
+    threshold: 80,
+    color: "#cf0",
   },
-  C : {
-    threshold : 70,
-    color     : "#ff0"
+  C: {
+    threshold: 70,
+    color: "#ff0",
   },
-  D : {
-    threshold : 60,
-    color     : "#f70"
+  D: {
+    threshold: 60,
+    color: "#f70",
   },
-  E : {
-    threshold : 0,
-    color     : "#f00"
-  }
+  E: {
+    threshold: 0,
+    color: "#f00",
+  },
 };
-
 
 const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   open,
@@ -49,7 +48,11 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       },
     }).then((res) => res.json());
 
-  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR<{
+  const {
+    data: jobData,
+    error: jobError,
+    isLoading: jobIsLoading,
+  } = useSWR<{
     jobs: HistoricalJob[];
   }>(open ? `/api/slurm/job/completed/${searchID}` : null, jobFetcher);
 
@@ -66,25 +69,21 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   }
 
   function calculateMemEfficiency(job: HistoricalJob) {
-    const maxUsedMem_Bytes = 
-      job.steps.reduce((max, step)=>{
-        const maxRAM = step.tres.requested.max.find(
-          (t)=>t.type==="mem"
-        )?.count || 0; 
-        return (maxRAM>max?maxRAM:max);
-      },0);
-    const allocMem_MiB = job.tres.requested.find(
-      (t)=>t.type==="mem"
-    )?.count || 0;
+    const maxUsedMem_Bytes = job.steps.reduce((max, step) => {
+      const maxRAM =
+        step.tres.requested.max.find((t: any) => t.type === "mem")?.count || 0;
+      return maxRAM > max ? maxRAM : max;
+    }, 0);
+    const allocMem_MiB =
+      job.tres.requested.find((t) => t.type === "mem")?.count || 0;
     // compute percent ratio by converting denominator to bytes
-    const efficiency = (maxUsedMem_Bytes / (allocMem_MiB*1048576))*100;
+    const efficiency = (maxUsedMem_Bytes / (allocMem_MiB * 1048576)) * 100;
     return `${efficiency.toFixed(2)}%`;
   }
 
   function calculateCPUEfficiency(job: HistoricalJob) {
-    const allocatedCPUs = job.tres.allocated.find(
-      (t) => t.type === "cpu"
-    )?.count || 0;
+    const allocatedCPUs =
+      job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
     const elapsedTime = job.time.elapsed;
 
     const totalCPUTime = job.steps.reduce((sum, step) => {
@@ -106,10 +105,10 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     return `${efficiency.toFixed(2)}%`;
   }
 
-  function get_letter_grade(score: Number) {
-    var letter = 'E';
-    for ( var [key,subobj] of Object.entries(rubric)) {
-      if ( score >= subobj.threshold ) {
+  function get_letter_grade(score: number) {
+    var letter = "E";
+    for (var [key, subobj] of Object.entries(rubric)) {
+      if (score >= subobj.threshold) {
         letter = key;
         break;
       }
@@ -118,7 +117,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   }
 
   function grade_efficiency(efficiencyStr: string) {
-    const eff = Number(efficiencyStr.replace('%',''));
+    const eff = Number(efficiencyStr.replace("%", ""));
     const letter = get_letter_grade(eff);
     return letter;
   }
@@ -184,9 +183,8 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
 
   const CPUEfficiency = calculateCPUEfficiency(job);
   const MemEfficiency = calculateMemEfficiency(job);
-  const CPUEffLetter  = grade_efficiency(CPUEfficiency);
-  const MemEffLetter  = grade_efficiency(MemEfficiency);
-
+  const CPUEffLetter = grade_efficiency(CPUEfficiency);
+  const MemEffLetter = grade_efficiency(MemEfficiency);
 
   const renderJobOverview = (job: HistoricalJob) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -222,17 +220,19 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
             {formatDuration(job.time.elapsed)}
           </div>
           <p className="text-xs text-muted-foreground">
-            CPU Efficiency: {calculateCPUEfficiency(job)} 
-            (
-            <span style={{color: rubric[CPUEffLetter].color}}>
+            CPU Efficiency: {calculateCPUEfficiency(job)}(
+            <span style={{ color: rubric[CPUEffLetter].color }}>
               {CPUEffLetter}
             </span>
             )
           </p>
           <p className="text-xs text-muted-foreground">
-            Memory Efficiency: {calculateMemEfficiency(job)}
-            (
-            <span style={{color: rubric[MemEffLetter].color}}>
+            Memory Efficiency: {calculateMemEfficiency(job)}(
+            <span
+              style={{
+                color: rubric[MemEffLetter as keyof typeof rubric].color,
+              }}
+            >
               {MemEffLetter}
             </span>
             )
@@ -368,23 +368,17 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
                 End Time: {convertUnixToHumanReadable(step.time.end.number)}
               </p>
               <p>
-                Memory Used/Allocated: {
-                  (
-                    (
-                      step.tres.requested.max.find(
-                        (t)=>t.type==="mem"
-                      )?.count || 0
-                    ) / 1073741824
-                  ).toFixed(3)
-                } / {
-                  (
-                    (
-                      job.tres.requested.find(
-                        (t)=>t.type==="mem"
-                      )?.count || 0
-                    ) / 1024
-                  ).toFixed(3)
-                } GiB
+                Memory Used/Allocated:{" "}
+                {(
+                  (step.tres.requested.max.find((t: any) => t.type === "mem")
+                    ?.count || 0) / 1073741824
+                ).toFixed(3)}{" "}
+                /{" "}
+                {(
+                  (job.tres.requested.find((t) => t.type === "mem")?.count ||
+                    0) / 1024
+                ).toFixed(3)}{" "}
+                GiB
               </p>
             </div>
           ))}
@@ -396,7 +390,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
         </div>
         <div className="mt-2">
           <p className="font-semibold">Submit Command</p>
-          <p className="truncate">{job.submit_line}</p>
+          <p className="truncate max-w-[80%]">{job.submit_line}</p>
         </div>
       </CardContent>
     </Card>
