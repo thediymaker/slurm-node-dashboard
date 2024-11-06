@@ -1,0 +1,32 @@
+---
+title: "Slurm Overview"
+description: "Introduction to Slurm workload manager"
+url: "https://slurm.schedmd.com/overview.html"
+---
+
+## Overview
+
+Slurm is an open-source, fault-tolerant, and highly scalable cluster management and job scheduling system for large and small Linux clusters. It allocates access to resources (compute nodes) to users for some duration of time so they can perform work, and provides a framework for starting, executing, and monitoring work on the allocated nodes.
+
+## Key Features
+
+- Simple: Slurm is easy to configure and use, with a well-documented API.
+- Scalable: Slurm can scale to thousands of nodes and hundreds of thousands of tasks.
+- Portable: Slurm is compatible with various architectures and operating systems.
+- Fault Tolerant: Slurm can handle various node and network failures without impacting running jobs.
+
+## Basic Concepts
+
+- Node: A computer in the cluster
+- Job: An allocation of resources assigned to a user for a specified amount of time
+- Partition: A set of nodes grouped together as a scheduling unit
+- Task: A process within a job
+
+## Common Commands
+
+- `srun`: Run a parallel job
+- `sbatch`: Submit a batch script for later execution
+- `squeue`: View information about jobs in the queue
+- `scancel`: Cancel a pending or running job
+
+For more detailed information on using these commands, refer to the specific documentation pages for each.
