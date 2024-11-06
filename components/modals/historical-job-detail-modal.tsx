@@ -257,143 +257,157 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   );
 
   const renderJobDetails = (job: HistoricalJob) => (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Job Details</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-extralight">
-          <div>
-            <p className="font-semibold">Nodes</p>
-            <p>{job.nodes}</p>
-          </div>
-          <div>
-            <p className="font-semibold">Partition</p>
-            <p>{job.partition}</p>
-          </div>
-          <div>
-            <p className="font-semibold">QoS</p>
-            <p>{job.qos}</p>
-          </div>
-          <div>
-            <p className="font-semibold">State</p>
-            <p>{job.state.current.join(", ")}</p>
-          </div>
-          <div>
-            <p className="font-semibold">Reason</p>
-            <p>{job.state.reason}</p>
-          </div>
-          <div>
-            <p className="font-semibold">Priority</p>
-            <p>{job.priority.number}</p>
-          </div>
-          <div>
-            <p className="font-semibold">Start Time</p>
-            <p>{convertUnixToHumanReadable(job.time.start)}</p>
-          </div>
-          <div>
-            <p className="font-semibold">End Time</p>
-            <p>{convertUnixToHumanReadable(job.time.end)}</p>
-          </div>
-          <div>
-            <p className="font-semibold">Elapsed Time</p>
-            <p>{formatDuration(job.time.elapsed)}</p>
-          </div>
-          <div>
-            <p className="font-semibold">CPUs Requested</p>
-            <p>{job.required.CPUs}</p>
-          </div>
-          <div>
-            <p className="font-semibold">Memory Requested</p>
-            <p>{job.required.memory_per_node.number / 1024} GB</p>
-          </div>
-          <div>
-            <p className="font-semibold">Time Limit</p>
-            <p>
-              {job.time.limit.infinite
-                ? "Unlimited"
-                : formatDuration(job.time.limit.number)}
-            </p>
-          </div>
-        </div>
-        <Separator className="my-4" />
-        <div>
-          <p className="font-semibold mb-2">Resources</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-extralight">
+    <div className="mt-6 w-full">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Job Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-extralight">
             <div>
-              <p className="font-semibold">Requested Resources</p>
-              {job.tres.requested.map((res, index) => (
-                <p key={index}>
-                  {res.type}: {res.count} {res.type === "mem" ? " MiB" : ""}
-                </p>
-              ))}
+              <p className="font-semibold">Nodes</p>
+              <p>{job.nodes}</p>
             </div>
             <div>
-              <p className="font-semibold">Allocated Resources</p>
-              {job.tres.allocated.map((res, index) => (
-                <p key={index}>
-                  {res.type}: {res.count} {res.type === "mem" ? " MiB" : ""}
-                </p>
+              <p className="font-semibold">Partition</p>
+              <p>{job.partition}</p>
+            </div>
+            <div>
+              <p className="font-semibold">QoS</p>
+              <p>{job.qos}</p>
+            </div>
+            <div>
+              <p className="font-semibold">State</p>
+              <p>{job.state.current.join(", ")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Reason</p>
+              <p>{job.state.reason}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Priority</p>
+              <p>{job.priority.number}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Start Time</p>
+              <p>{convertUnixToHumanReadable(job.time.start)}</p>
+            </div>
+            <div>
+              <p className="font-semibold">End Time</p>
+              <p>{convertUnixToHumanReadable(job.time.end)}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Elapsed Time</p>
+              <p>{formatDuration(job.time.elapsed)}</p>
+            </div>
+            <div>
+              <p className="font-semibold">CPUs Requested</p>
+              <p>{job.required.CPUs}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Memory Requested</p>
+              <p>{job.required.memory_per_node.number / 1024} GB</p>
+            </div>
+            <div>
+              <p className="font-semibold">Time Limit</p>
+              <p>
+                {job.time.limit.infinite
+                  ? "Unlimited"
+                  : formatDuration(job.time.limit.number)}
+              </p>
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <div>
+            <p className="font-semibold mb-2">Resources</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-extralight">
+              <div>
+                <p className="font-semibold">Requested Resources</p>
+                {job.tres.requested.map((res, index) => (
+                  <p key={index}>
+                    {res.type}: {res.count} {res.type === "mem" ? " MiB" : ""}
+                  </p>
+                ))}
+              </div>
+              <div>
+                <p className="font-semibold">Allocated Resources</p>
+                {job.tres.allocated.map((res, index) => (
+                  <p key={index}>
+                    {res.type}: {res.count} {res.type === "mem" ? " MiB" : ""}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <div>
+            <p className="font-semibold mb-2">Flags</p>
+            <div className="flex flex-wrap gap-2">
+              {job.flags.map((flag, index) => (
+                <Badge key={index} variant="secondary">
+                  {flag}
+                </Badge>
               ))}
             </div>
           </div>
-        </div>
-        <Separator className="my-4" />
-        <div>
-          <p className="font-semibold mb-2">Flags</p>
-          <div className="flex flex-wrap gap-2">
-            {job.flags.map((flag, index) => (
-              <Badge key={index} variant="secondary">
-                {flag}
-              </Badge>
+          <Separator className="my-4" />
+          <div>
+            <p className="font-semibold mb-2">Job Steps</p>
+            {job.steps.map((step, index) => (
+              <div key={index} className="mb-4">
+                <p className="font-semibold">
+                  {step.step.name} (ID: {step.step.id})
+                </p>
+                <p>
+                  Nodes: {step.nodes.count} ({step.nodes.range})
+                </p>
+                <p>Tasks: {step.tasks.count}</p>
+                <p>
+                  Start Time:{" "}
+                  {convertUnixToHumanReadable(step.time.start.number)}
+                </p>
+                <p>
+                  End Time: {convertUnixToHumanReadable(step.time.end.number)}
+                </p>
+                <p>
+                  Memory Used/Allocated:{" "}
+                  {(
+                    (step.tres.requested.max.find((t: any) => t.type === "mem")
+                      ?.count || 0) / 1073741824
+                  ).toFixed(3)}{" "}
+                  /{" "}
+                  {(
+                    (job.tres.requested.find((t) => t.type === "mem")?.count ||
+                      0) / 1024
+                  ).toFixed(3)}{" "}
+                  GiB
+                </p>
+              </div>
             ))}
           </div>
-        </div>
-        <Separator className="my-4" />
-        <div>
-          <p className="font-semibold mb-2">Job Steps</p>
-          {job.steps.map((step, index) => (
-            <div key={index} className="mb-4">
-              <p className="font-semibold">
-                {step.step.name} (ID: {step.step.id})
-              </p>
-              <p>
-                Nodes: {step.nodes.count} ({step.nodes.range})
-              </p>
-              <p>Tasks: {step.tasks.count}</p>
-              <p>
-                Start Time: {convertUnixToHumanReadable(step.time.start.number)}
-              </p>
-              <p>
-                End Time: {convertUnixToHumanReadable(step.time.end.number)}
-              </p>
-              <p>
-                Memory Used/Allocated:{" "}
-                {(
-                  (step.tres.requested.max.find((t: any) => t.type === "mem")
-                    ?.count || 0) / 1073741824
-                ).toFixed(3)}{" "}
-                /{" "}
-                {(
-                  (job.tres.requested.find((t) => t.type === "mem")?.count ||
-                    0) / 1024
-                ).toFixed(3)}{" "}
-                GiB
-              </p>
+          <Separator className="my-4" />
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-semibold mb-2">Working Directory</h4>
+              <div className="bg-secondary/10 rounded px-3 py-2">
+                <p className="text-sm text-muted-foreground break-all">
+                  {job.working_directory}
+                </p>
+              </div>
             </div>
-          ))}
-        </div>
-        <Separator className="my-4" />
-        <div>
-          <p className="font-semibold">Working Directory</p>
-          <p className="truncate">{job.working_directory}</p>
-        </div>
-        <div className="mt-2">
-          <p className="font-semibold">Submit Command</p>
-          <p className="truncate max-w-[80%]">{job.submit_line}</p>
-        </div>
-      </CardContent>
-    </Card>
+
+            <div>
+              <h4 className="font-semibold mb-2">Submit Command</h4>
+              <div className="bg-secondary/10 rounded px-3 py-2">
+                <p className="text-sm text-muted-foreground break-all">
+                  {job.submit_line}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 
   return (
