@@ -1,6 +1,6 @@
 "use client";
 import useSWR from "swr";
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { DNA } from "react-loader-spinner";
+import { ThreeCircles } from "react-loader-spinner";
 import {
   Pagination,
   PaginationContent,
@@ -31,11 +31,10 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
 
   const itemsPerPage = 20;
 
-  const {
-    data: jobData,
-    error: jobError,
-    isLoading: jobIsLoading,
-  } = useSWR(open ? `/api/slurm/jobs/user/${searchID}` : null, jobFetcher);
+  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR(
+    open ? `/api/slurm/jobs/user/${searchID}` : null,
+    jobFetcher
+  );
 
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);
@@ -171,7 +170,12 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogTitle>Error</DialogTitle>
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
+          <DialogTitle></DialogTitle>
           <div>Failed to load, or session expired, please try again.</div>
         </DialogContent>
       </Dialog>
@@ -180,15 +184,20 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
   if (jobIsLoading)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+        <DialogContent
+          aria-describedby={undefined}
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+        >
+          <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <DNA
+            <ThreeCircles
               visible={true}
-              height="80"
-              width="80"
-              ariaLabel="dna-loading"
+              height="64"
+              width="64"
+              color="white"
+              ariaLabel="three-circles-loading"
               wrapperStyle={{}}
-              wrapperClass="dna-wrapper"
+              wrapperClass=""
             />
           </div>
         </DialogContent>
@@ -197,7 +206,10 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+      >
         {jobData &&
         jobData?.errors?.length === 0 &&
         jobData?.jobs?.length > 0 ? (
@@ -205,7 +217,7 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
             <h1 className="text-2xl mb-2 font-extralight uppercase">
               {searchID}
             </h1>
-            <div className="mb-5">User Job Details</div>
+            <DialogTitle className="mb-5">User Job Details</DialogTitle>
             <Table>
               <TableHeader>
                 <TableRow>

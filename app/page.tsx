@@ -1,6 +1,7 @@
-import Nodes from "@/components/cards/nodes";
-import Footer from "@/components/layout/footer";
+import Footer from "@/components/footer/footer";
 import { env } from "process";
+
+import Nodes from "@/components/nodeCard/nodes";
 
 export default function Dashboard() {
   return (

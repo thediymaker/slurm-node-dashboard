@@ -11,22 +11,7 @@ export async function GET() {
       },
       next: {
         revalidate: 30,
-      },
-    }
-  );
-  const data = await res.json();
-  return NextResponse.json(data);
-}
-
-export async function POST() {
-  const res = await fetch(
-    `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/nodes`,
-    {
-      method: "POST",
-      headers: {
-        "X-SLURM-USER-NAME": "root",
-        "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
-      },
+      }
     }
   );
   const data = await res.json();

@@ -306,16 +306,25 @@ specified in the .env file, and then run the ingestion.
 ## Contributing
 
 We welcome contributions! Here's how you can help:
+We welcome contributions! Here's how you can help:
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b new-feature`
 3. Make your changes and commit: `git commit -am 'Add new feature'`
 4. Push to the branch: `git push origin new-feature`
 5. Submit a pull request
+6. Fork the repository
+7. Create a feature branch: `git checkout -b new-feature`
+8. Make your changes and commit: `git commit -am 'Add new feature'`
+9. Push to the branch: `git push origin new-feature`
+10. Submit a pull request
 
 ## License
 
 This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE.md) file for details.
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE.md) file for details.
+
+## Support and Contact
 
 ## Support and Contact
 

@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import { useState, useEffect } from "react";
 
 const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
@@ -49,10 +49,15 @@ const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border shadow-xl w-[1200px] max-w-[90%] max-h-[90%] overflow-y-auto scrollbar-none">
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl w-[1200px] max-w-[90%] max-h-[90%] overflow-y-auto scrollbar-none"
+      >
         {maintenanceData && (
           <div className="m-auto">
-            <div className="text-2xl font-bold mb-2">NOTICE</div>
+            <DialogTitle className="text-2xl font-bold mb-2">
+              NOTICE
+            </DialogTitle>
             <h1 className="text-xl mb-2 font-extralight">
               A regular maintenance of{" "}
               <span className="font-bold">

@@ -5,11 +5,14 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+package-lock.json
+testdata.ts
 
 /data
 
 # testing
 /coverage
+/data
 
 # next.js
 /.next/
@@ -17,6 +20,8 @@
 
 # production
 /build
+
+/public/modules.json
 
 # misc
 .DS_Store
