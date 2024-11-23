@@ -105,12 +105,6 @@ SLURM_API_VERSION="v0.0.40"
 SLURM_SERVER="192.168.1.5"
 SLURM_API_TOKEN=""
 
-# AUTH
-NEXTAUTH_URL="http://localhost:3000" # Update for your url and port
-AUTH_SECRET=""
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD="password"
-
 # PLUGINS
 NEXT_PUBLIC_ENABLE_OPENAI_PLUGIN=false
 NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN=false
@@ -118,7 +112,6 @@ NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN=false
 # ADVANCED FEATURES
 OPENAI_API_KEY=""
 PROMETHEUS_URL=""  # Format http://192.168.1.5:9090
-POSTGRES_URL="postgresql://admin:password@192.168.1.5:5432/db"
 ```
 
 </details>
@@ -203,109 +196,8 @@ This integration allows you to embed the HPC Dashboard within your Open OnDemand
 
 </details>
 
-<details>
-<summary><strong>Postgres Vector DB</strong></summary>
-
-In order to use embeddings with the openai chat, you will need to setup a
-vector database. For this project I've decided to use a localy
-hosted instance, along with Drizzle, but you could also use a cloud
-instance, or a non standard vector database with some tweaks to the code.
-
-To get started, you will want to install postgres, set up a database, create
-a user and give them the appropriate permissions. The easiest way to do this
-is with docker compose.
-
-### Dockerfile
-
-```
-Use the official Postgres image as a base image
-FROM postgres:latest
-
-# Set environment variables for Postgres
-ENV POSTGRES_USER=user
-ENV POSTGRES_PASSWORD=password
-ENV POSTGRES_DB=embed
-
-# Install the build dependencies
-USER root
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    postgresql-server-dev-all \
-    && rm -rf /var/lib/apt/lists/*
-
-# Clone, build, and install the pgvector extension
-RUN cd /tmp \
-    && git clone --branch v0.5.0 https://github.com/pgvector/pgvector.git \
-    && cd pgvector \
-    && make \
-    && make install
-```
-
-This dockerfile will install and configure the pgvector plugin, as well as pull
-down the latest postgres image.
-
-### docker-compose.yml
-
-```
-version: "3"
-
-services:
-  postgres:
-    build: .
-    ports:
-      - "5432:5432"
-    volumes:
-      - /etc/postgres/data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: embed
-```
-
-In this example, I am storing the postgres data in the /etc/postgres directory
-on the local host. Please update these as needed.
-
-Once this is running, from your dashboard terminal (or the same directory as your dashboard),
-you'll want to run the following commands you set up the database.
-
-```
-npm run generate
-npm run migrate
-```
-
-This will use the drizzle .sql files in the /lib/db directory, to generate the
-schema for the data base, and prepare for ingestion.
-
-</details>
-
-<details>
-<summary><strong>Custom Embeddings</strong></summary>
-
-The files stored in /docs will need to be a .mdx file, and have a header like this
-
-```
----
-title: "Page Title"
-description: "Page Description"
-url: "URL"
----
-
-## Section header
-section
-```
-
-Being in this format allows the ingestion process to break it in to smaller
-more correctly identified sections.
-
-To ingest the files, browse to /admin, login with the username and password
-specified in the .env file, and then run the ingestion.
-
-</details>
-
 ## Contributing
 
-We welcome contributions! Here's how you can help:
 We welcome contributions! Here's how you can help:
 
 1. Fork the repository
@@ -313,18 +205,10 @@ We welcome contributions! Here's how you can help:
 3. Make your changes and commit: `git commit -am 'Add new feature'`
 4. Push to the branch: `git push origin new-feature`
 5. Submit a pull request
-6. Fork the repository
-7. Create a feature branch: `git checkout -b new-feature`
-8. Make your changes and commit: `git commit -am 'Add new feature'`
-9. Push to the branch: `git push origin new-feature`
-10. Submit a pull request
 
 ## License
 
 This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE.md) file for details.
-This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE.md) file for details.
-
-## Support and Contact
 
 ## Support and Contact
 
