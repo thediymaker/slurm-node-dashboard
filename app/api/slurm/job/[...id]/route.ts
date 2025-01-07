@@ -9,7 +9,7 @@ export async function GET(
     `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/job/${params.id[0]}`,
     {
       headers: {
-        "X-SLURM-USER-NAME": "root",
+        "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
         "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
       },
       next: {
