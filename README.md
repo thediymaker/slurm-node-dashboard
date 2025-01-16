@@ -56,6 +56,7 @@ Visit `http://localhost:3000` to see your dashboard in action.
 - npm or Yarn
 - PM2 (for production deployment)
 - Slurm API (enabled and configured)
+- Slrum API user
 - Slurm API token
 
 </details>
@@ -104,6 +105,7 @@ REACT_EDITOR="code"
 SLURM_API_VERSION="v0.0.40"
 SLURM_SERVER="192.168.1.5"
 SLURM_API_TOKEN=""
+SLURM_API_ACCOUNT=""
 
 # PLUGINS
 NEXT_PUBLIC_ENABLE_OPENAI_PLUGIN=false
