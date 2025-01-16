@@ -10,7 +10,7 @@ export async function GET(
     {
       method: "GET",
       headers: {
-        "X-SLURM-USER-NAME": "root",
+        "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
         "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
         "Content-Type": "application/json",
       },
@@ -36,7 +36,7 @@ export async function POST(
       {
         method: "POST",
         headers: {
-          "X-SLURM-USER-NAME": "root",
+          "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
           "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
           "Content-Type": "application/json",
         },
