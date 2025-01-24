@@ -1,5 +1,11 @@
 import React from "react";
-import { ServerIcon, CpuIcon, LayersIcon, OctagonIcon } from "lucide-react";
+import {
+  ServerIcon,
+  CpuIcon,
+  LayersIcon,
+  OctagonIcon,
+  BoltIcon,
+} from "lucide-react";
 import GPUUsageDisplay from "./gpu-progress";
 import { CardHoverProps, GPUResources } from "@/types/types";
 
@@ -128,6 +134,45 @@ const CardHover = ({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
         <CpuIcon className="h-4 w-4" />
         <span>CPU Load: {cpuLoad.toFixed(2)}%</span>
       </div>
+
+      {nodeData.energy && nodeData.energy.current_watts.number > 0 && (
+        <div className="space-y-2 border p-2 rounded-lg bg-gray-800/50">
+          <div className="flex items-center space-x-2 text-sm font-medium border-b border-gray-700 pb-2">
+            <BoltIcon className="h-4 w-4 text-yellow-500" />
+            <span>Power Usage</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            {nodeData.energy.current_watts?.set && (
+              <div className="text-sm">
+                <span className="text-gray-400">Current:</span>
+                <span className="ml-2 font-medium text-white">
+                  {nodeData.energy.current_watts.number}W
+                </span>
+              </div>
+            )}
+            {nodeData.energy.average_watts > 0 && (
+              <div className="text-sm">
+                <span className="text-gray-400">Average:</span>
+                <span className="ml-2 font-medium text-white">
+                  {nodeData.energy.average_watts}W
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="text-sm pt-1">
+            <span className="text-gray-400">Total Energy:</span>
+            <span className="ml-2 font-medium text-white">
+              {(nodeData.energy.consumed_energy / 3600000).toFixed(2)} kWh
+            </span>
+          </div>
+          {nodeData.energy.last_collected && (
+            <div className="text-xs text-gray-400 pt-1">
+              Last updated:{" "}
+              {new Date(nodeData.energy.last_collected * 1000).toLocaleString()}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center space-x-2 text-sm font-medium">

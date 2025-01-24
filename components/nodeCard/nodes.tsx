@@ -28,13 +28,13 @@ const nodeFetcher = async () => {
 };
 
 const Nodes = () => {
-  const { data: nodeData, error: nodeError, isLoading: nodeIsLoading } = useSWR(
-    nodeURL,
-    nodeFetcher,
-    {
-      refreshInterval: 15000,
-    }
-  );
+  const {
+    data: nodeData,
+    error: nodeError,
+    isLoading: nodeIsLoading,
+  } = useSWR(nodeURL, nodeFetcher, {
+    refreshInterval: 15000,
+  });
 
   const getInitialCardSize = () => {
     if (typeof window !== "undefined") {
@@ -52,15 +52,12 @@ const Nodes = () => {
 
   //set states
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
-  const [selectedNodeState, setSelectedNodeState] = useState<string>(
-    "allState"
-  );
-  const [selectedNodePartitions, setSelectedNodePartitions] = useState<string>(
-    "allPartitions"
-  );
-  const [selectedNodeFeature, setSelectedNodeFeature] = useState<string>(
-    "allFeatures"
-  );
+  const [selectedNodeState, setSelectedNodeState] =
+    useState<string>("allState");
+  const [selectedNodePartitions, setSelectedNodePartitions] =
+    useState<string>("allPartitions");
+  const [selectedNodeFeature, setSelectedNodeFeature] =
+    useState<string>("allFeatures");
   const [slurmChatEnabled, setSlurmChatEnabled] = useState(false);
   const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
