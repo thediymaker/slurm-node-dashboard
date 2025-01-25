@@ -10,8 +10,6 @@ import Stats from "./stats";
 import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
-import ChatIcon from "../llm/chat-icon";
-import { FeatureEnabled } from "@/actions/env-enabled";
 import { Node } from "@/types/types";
 
 const nodeURL = "/api/slurm/nodes";
@@ -50,7 +48,13 @@ const Nodes = () => {
     return false;
   };
 
-  //set states
+  const getInitialColorSchema = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("colorSchema") || "default";
+    }
+    return "default";
+  };
+
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
@@ -58,20 +62,10 @@ const Nodes = () => {
     useState<string>("allPartitions");
   const [selectedNodeFeature, setSelectedNodeFeature] =
     useState<string>("allFeatures");
-  const [slurmChatEnabled, setSlurmChatEnabled] = useState(false);
-  const [dropdownOpenStatus, setDropdownOpenStatus] = useState({}) as any;
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
+  const [colorSchema, setColorSchema] = useState<string>(getInitialColorSchema);
   const systems: Node[] = nodeData?.nodes || [];
-
-  const checkEnabled = async (feature: string) => {
-    const response = await FeatureEnabled(feature);
-    setSlurmChatEnabled(response);
-  };
-
-  useEffect(() => {
-    checkEnabled("OPENAI_API_KEY");
-  }, []);
 
   useEffect(() => {
     localStorage.setItem("cardSize", cardSize.toString());
@@ -81,7 +75,10 @@ const Nodes = () => {
     localStorage.setItem("showStats", showStats.toString());
   }, [showStats]);
 
-  //get unique partitions
+  useEffect(() => {
+    localStorage.setItem("colorSchema", colorSchema);
+  }, [colorSchema]);
+
   const uniquePartitions = useMemo(() => {
     const partitions = new Set<string>();
     systems.forEach((node) => {
@@ -90,7 +87,6 @@ const Nodes = () => {
     return Array.from(partitions);
   }, [systems]);
 
-  //get unique features
   const uniqueFeatures = useMemo(() => {
     const features = new Set<string>();
     systems.forEach((node) => {
@@ -99,7 +95,6 @@ const Nodes = () => {
     return Array.from(features);
   }, [systems]);
 
-  //filter nodes
   const filteredNodes = useMemo(() => {
     return systems.filter((node: any) => {
       const nodeMatchesType =
@@ -163,11 +158,8 @@ const Nodes = () => {
     setSelectedNodeFeature(value);
   };
 
-  const toggleDropdown = (index: any) => {
-    setDropdownOpenStatus((prevState: any) => ({
-      ...prevState,
-      [index]: !prevState[index],
-    }));
+  const handleColorSchemaChange = (value: string) => {
+    setColorSchema(value);
   };
 
   if (nodeError) {
@@ -188,8 +180,10 @@ const Nodes = () => {
           handleNodeTypeChange={handleNodeTypeChange}
           handleNodePartitionsChange={handleNodePartitionsChange}
           handleNodeFeatureChange={handleNodeFeatureChange}
+          handleColorSchemaChange={handleColorSchemaChange}
           partitions={[]}
           features={[]}
+          colorSchema={colorSchema}
         />
         <div className="flex justify-between">
           <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -199,7 +193,7 @@ const Nodes = () => {
             <Skeleton className="w-6 h-6" />
           </div>
           <div className="flex justify-end w-full mb-4 gap-2 items-center">
-            <div className="flex items-center gap-2 font-extralight">
+            <div className="flex items-center gap-2 font-extralighst">
               GPU Nodes
               <Skeleton className="w-[20px]" />
             </div>
@@ -216,14 +210,16 @@ const Nodes = () => {
   }
 
   return (
-    <div>
+    <div className="">
       <NodeHeader
         handleNodeStateChange={handleNodeStateChange}
         handleNodeTypeChange={handleNodeTypeChange}
         handleNodePartitionsChange={handleNodePartitionsChange}
         handleNodeFeatureChange={handleNodeFeatureChange}
+        handleColorSchemaChange={handleColorSchemaChange}
         partitions={uniquePartitions}
         features={uniqueFeatures}
+        colorSchema={colorSchema}
       />
       <div className="flex justify-between">
         <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -272,11 +268,11 @@ const Nodes = () => {
             memoryUsed={node.alloc_memory}
             status={node.state}
             nodeData={node}
+            colorSchema={colorSchema}
           />
         ))}
       </div>
       <LastUpdated data={nodeData?.last_update?.number} />
-      {slurmChatEnabled ? <ChatIcon /> : null}
     </div>
   );
 };
