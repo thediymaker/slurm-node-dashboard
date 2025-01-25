@@ -17,6 +17,15 @@ export interface NodeData {
   gres: string;
   gres_used: string;
   reason?: string;
+  energy: {
+    current_watts: {
+      number: number;
+      set: boolean;
+    };
+    average_watts: number;
+    consumed_energy: number;
+    last_collected: number;
+  };
 }
 
 export interface GPUResource {
