@@ -201,9 +201,9 @@ export const NodeCard = ({
             props.size === 50
               ? "w-[80px] h-[25px]"
               : props.size === 100
-              ? "w-[80px] h-[70px]"
-              : props.size === 150
               ? "w-[80px] h-[85px]"
+              : props.size === 150
+              ? "w-[80px] h-[100px]"
               : "w-[80px] h-[70px]"
           } ${cpuLoad > 125 ? "animate-pulse border-black" : ""}`}
           onClick={props.historical ? undefined : openModal}
