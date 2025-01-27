@@ -64,7 +64,7 @@ export async function GET(
 
   const end = new Date();
   const start = new Date(end.getTime() - HOURS_TO_ANALYZE * 60 * 60 * 1000);
-  const step = 5 * 60; // 5 minute intervals
+  const step = 5 * 60 * 3; // 15 minute intervals
 
   try {
     // First get the instance name for this node
