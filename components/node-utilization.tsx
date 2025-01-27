@@ -25,7 +25,6 @@ export default function NodeUtilization({
       {isLoading ? (
         <div className="flex items-center space-x-1">
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-          <span className="text-muted-foreground text-sm">Loading</span>
         </div>
       ) : error || !data || data.status !== 200 ? (
         <span className="text-muted">N/A</span>
