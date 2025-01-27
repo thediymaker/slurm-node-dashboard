@@ -68,7 +68,8 @@ export async function GET(req: Request) {
       serie.values.map(({ time, value }) => ({
         time,
         value:
-          query === "node_memory_Active_bytes"
+          query === "node_memory_Active_bytes" ||
+          query === "node_memory_SwapFree_bytes"
             ? (value / (1024 * 1024 * 1024)).toFixed(1)
             : value,
       }))

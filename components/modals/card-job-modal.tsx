@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import React from "react";
 import { Job, JobDetails, NodeCardModalProps } from "@/types/types";
+import NodeUtilization from "../node-utilization";
 
 const NodeCardModal: React.FC<NodeCardModalProps> = ({
   open,
@@ -37,7 +38,11 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
       },
     }).then((res) => res.json());
 
-  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR<{
+  const {
+    data: jobData,
+    error: jobError,
+    isLoading: jobIsLoading,
+  } = useSWR<{
     jobs: Job[];
   }>(open ? slurmURL : null, jobFetcher);
 
@@ -49,15 +54,15 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
       },
     }).then((res) => res.json());
 
-  const { data: promData, error: promError, isLoading: promIsLoading } = useSWR(
-    open ? promURL : null,
-    promFetcher,
-    {
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      refreshInterval: 300000,
-    }
-  );
+  const {
+    data: promData,
+    error: promError,
+    isLoading: promIsLoading,
+  } = useSWR(open ? promURL : null, promFetcher, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    refreshInterval: 300000,
+  });
 
   const {
     data: jobDetails,
@@ -122,19 +127,22 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
         className="border shadow-xl w-[1200px] max-w-[90%] min-h-[90%] max-h-[90%] overflow-y-auto scrollbar-none"
       >
         <div>
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-2xl mb-2 font-extralight">
+          <div className="flex justify-between items-center mb-4 mr-10">
+            <DialogTitle className="text-2xl font-extralight">
               {nodename}
             </DialogTitle>
 
             {!promError && !promIsLoading && promData?.status !== 404 && (
-              <div className="mr-10">
-                <PromComboBox
-                  metricValue={metricValue}
-                  setMetricValue={setMetricValue}
-                  daysValue={daysValue}
-                  setDaysValue={setDaysValue}
-                />
+              <div className="flex items-center gap-8">
+                <div>
+                  <PromComboBox
+                    metricValue={metricValue}
+                    setMetricValue={setMetricValue}
+                    daysValue={daysValue}
+                    setDaysValue={setDaysValue}
+                  />
+                </div>
+                <NodeUtilization nodeName={nodename} />
               </div>
             )}
           </div>
