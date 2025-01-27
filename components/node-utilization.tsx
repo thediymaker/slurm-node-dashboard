@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import useSWR from "swr";
+import { Loader2 } from "lucide-react";
 
 interface NodeUtilizationProps {
   nodeName: string;
@@ -10,7 +11,7 @@ export default function NodeUtilization({
   nodeName,
   className,
 }: NodeUtilizationProps) {
-  const { data, error } = useSWR(
+  const { data, error, isLoading } = useSWR(
     `/api/prometheus/utilization?node=${nodeName}`,
     (url) => fetch(url).then((res) => res.json()),
     {
@@ -18,19 +19,19 @@ export default function NodeUtilization({
     }
   );
 
-  if (error || !data || data.status !== 200) {
-    return (
-      <div className={cn("flex items-center space-x-1.5", className)}>
-        <span className="text-muted-foreground">7d Avg Util:</span>
-        <span className="text-muted">N/A</span>
-      </div>
-    );
-  }
-
   return (
     <div className={cn("flex items-center space-x-1.5", className)}>
-      <span className="text-muted-foreground">7d Avg Util:</span>
-      <span className="font-medium">{data.score}%</span>
+      <span className="text-muted-foreground">24h CPU Util:</span>
+      {isLoading ? (
+        <div className="flex items-center space-x-1">
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground text-sm">Loading</span>
+        </div>
+      ) : error || !data || data.status !== 200 ? (
+        <span className="text-muted">N/A</span>
+      ) : (
+        <span className="font-medium">{data.score}%</span>
+      )}
     </div>
   );
 }

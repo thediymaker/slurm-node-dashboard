@@ -1,84 +1,66 @@
-// app/api/prometheus/utilization/route.ts
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 
-// Types for Prometheus responses
-interface PrometheusMetric {
-  labels: {
-    [key: string]: string;
-  };
-}
+type PrometheusMetric = {
+  labels: Record<string, string>;
+};
 
-interface PrometheusValue {
+type PrometheusValue = {
   time: number;
   value: string;
-}
+};
 
-interface PrometheusResult {
+type PrometheusResult = {
   metric: PrometheusMetric;
   values: PrometheusValue[];
-}
+};
 
-interface PrometheusQueryResponse {
+type PrometheusQueryResponse = {
   result: PrometheusResult[];
   resultType: string;
-}
+};
 
-interface UtilizationResponse {
+type UtilizationResponse = {
   status: number;
   score?: number;
   timeWindow?: string;
   message?: string;
-  debug?: {
-    node: string;
-    instance: string;
-    query: string;
-    dataPoints: number;
-    firstValue: number;
-    lastValue: number;
-  };
   error?: string;
-}
+};
 
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
 const HOURS_TO_ANALYZE = 24;
+const STEP_INTERVAL = 900; // 15 minutes in seconds
 
-let prom: PrometheusDriver | null = null;
-
-if (PROMETHEUS_URL) {
-  prom = new PrometheusDriver({
-    endpoint: PROMETHEUS_URL,
-    baseURL: "/api/v1",
-  });
-}
+const prom = PROMETHEUS_URL
+  ? new PrometheusDriver({
+      endpoint: PROMETHEUS_URL,
+      baseURL: "/api/v1",
+    })
+  : null;
 
 export async function GET(
   req: Request
 ): Promise<NextResponse<UtilizationResponse>> {
-  const url = new URL(req.url);
-  const node = url.searchParams.get("node") || "";
-
   if (!prom) {
-    return NextResponse.json({ status: 404 });
+    return NextResponse.json({
+      status: 404,
+      message: "Prometheus URL not configured",
+    });
   }
 
+  const node = new URL(req.url).searchParams.get("node") || "";
   const end = new Date();
   const start = new Date(end.getTime() - HOURS_TO_ANALYZE * 60 * 60 * 1000);
-  const step = 5 * 60 * 3; // 15 minute intervals
 
   try {
-    // First get the instance name for this node
-    const unameQuery = `node_uname_info{nodename=~"${node}"}`;
-    console.log("Uname query:", unameQuery);
-
+    // Get instance name for the node
     const unameRes = (await prom.rangeQuery(
-      unameQuery,
+      `node_uname_info{nodename=~"${node}"}`,
       start,
       end,
-      step
+      STEP_INTERVAL
     )) as unknown as { result: PrometheusResult[] };
-
-    console.log("Uname response:", JSON.stringify(unameRes.result, null, 2));
 
     const instance = unameRes.result[0]?.metric?.labels["instance"];
     if (!instance) {
@@ -88,59 +70,42 @@ export async function GET(
       });
     }
 
-    // Query CPU usage for this specific instance
-    const cpuQuery = `
-      100 - (
-        avg by (instance) (
-          rate(node_cpu_seconds_total{instance="${instance}",mode="idle"}[5m])
-        ) * 100
-      )
-    `;
-    console.log("CPU query:", cpuQuery);
-
+    // Query CPU usage
     const cpuRes = (await prom.rangeQuery(
-      cpuQuery,
+      `100 - (avg by (instance) (rate(node_cpu_seconds_total{instance="${instance}",mode="idle"}[5m])) * 100)`,
       start,
       end,
-      step
+      STEP_INTERVAL
     )) as unknown as { result: PrometheusResult[] };
 
-    console.log("CPU response first value:", cpuRes.result[0]?.values[0]);
-
-    if (!cpuRes.result || cpuRes.result.length === 0) {
+    if (!cpuRes.result?.[0]?.values.length) {
       return NextResponse.json({
         status: 404,
         message: `No CPU data found for instance: ${instance}`,
       });
     }
 
-    // Calculate the average utilization
-    const values = cpuRes.result[0].values.map((v) => parseFloat(v.value));
-    const validValues = values.filter((v) => !isNaN(v));
-    const averageUtilization =
-      validValues.length > 0
-        ? Math.round(
-            validValues.reduce((a, b) => a + b, 0) / validValues.length
-          )
-        : 0;
+    const values = cpuRes.result[0].values
+      .map((v) => parseFloat(v.value))
+      .filter((v) => !isNaN(v));
 
-    const score = Math.min(Math.max(averageUtilization, 0), 100);
+    if (!values.length) {
+      return NextResponse.json({
+        status: 404,
+        message: `Invalid CPU data for instance: ${instance}`,
+      });
+    }
+
+    const averageUtilization = Math.round(
+      values.reduce((a, b) => a + b, 0) / values.length
+    );
 
     return NextResponse.json({
       status: 200,
-      score,
+      score: Math.min(Math.max(averageUtilization, 0), 100),
       timeWindow: `${HOURS_TO_ANALYZE}h`,
-      debug: {
-        node,
-        instance,
-        query: cpuQuery,
-        dataPoints: validValues.length,
-        firstValue: validValues[0],
-        lastValue: validValues[validValues.length - 1],
-      },
     });
   } catch (error) {
-    console.error("Error querying Prometheus:", error);
     return NextResponse.json({
       status: 500,
       message: "Internal Server Error",
