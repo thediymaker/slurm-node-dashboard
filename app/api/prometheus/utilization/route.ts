@@ -62,7 +62,7 @@ export async function GET(
   const step = 5 * 60; // 5 minute intervals
 
   try {
-    const unameQuery = `node_uname_info{nodename=~"${node}"}`;
+    const unameQuery = `node_uname_info{nodename="${node}"}`;
     const unameRes = (await prom.rangeQuery(
       unameQuery,
       start,
