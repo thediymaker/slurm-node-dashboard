@@ -19,6 +19,11 @@ interface PrometheusResult {
   values: PrometheusValue[];
 }
 
+interface PrometheusQueryResponse {
+  result: PrometheusResult[];
+  resultType: string;
+}
+
 interface UtilizationResponse {
   status: number;
   score?: number;
@@ -36,7 +41,7 @@ interface UtilizationResponse {
 }
 
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
-const HOURS_TO_ANALYZE = 168;
+const HOURS_TO_ANALYZE = 24;
 
 let prom: PrometheusDriver | null = null;
 
@@ -62,13 +67,18 @@ export async function GET(
   const step = 5 * 60; // 5 minute intervals
 
   try {
-    const unameQuery = `node_uname_info{nodename="${node}"}`;
+    // First get the instance name for this node
+    const unameQuery = `node_uname_info{nodename=~"${node}"}`;
+    console.log("Uname query:", unameQuery);
+
     const unameRes = (await prom.rangeQuery(
       unameQuery,
       start,
       end,
       step
     )) as unknown as { result: PrometheusResult[] };
+
+    console.log("Uname response:", JSON.stringify(unameRes.result, null, 2));
 
     const instance = unameRes.result[0]?.metric?.labels["instance"];
     if (!instance) {
@@ -78,6 +88,7 @@ export async function GET(
       });
     }
 
+    // Query CPU usage for this specific instance
     const cpuQuery = `
       100 - (
         avg by (instance) (
@@ -85,6 +96,7 @@ export async function GET(
         ) * 100
       )
     `;
+    console.log("CPU query:", cpuQuery);
 
     const cpuRes = (await prom.rangeQuery(
       cpuQuery,
@@ -93,6 +105,8 @@ export async function GET(
       step
     )) as unknown as { result: PrometheusResult[] };
 
+    console.log("CPU response first value:", cpuRes.result[0]?.values[0]);
+
     if (!cpuRes.result || cpuRes.result.length === 0) {
       return NextResponse.json({
         status: 404,
@@ -100,6 +114,7 @@ export async function GET(
       });
     }
 
+    // Calculate the average utilization
     const values = cpuRes.result[0].values.map((v) => parseFloat(v.value));
     const validValues = values.filter((v) => !isNaN(v));
     const averageUtilization =
@@ -115,8 +130,17 @@ export async function GET(
       status: 200,
       score,
       timeWindow: `${HOURS_TO_ANALYZE}h`,
+      debug: {
+        node,
+        instance,
+        query: cpuQuery,
+        dataPoints: validValues.length,
+        firstValue: validValues[0],
+        lastValue: validValues[validValues.length - 1],
+      },
     });
   } catch (error) {
+    console.error("Error querying Prometheus:", error);
     return NextResponse.json({
       status: 500,
       message: "Internal Server Error",
