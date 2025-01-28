@@ -53,7 +53,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       if (node.state[0] === "MIXED") nodeStates.mixed++;
       if (node.state[0] === "ALLOCATED") nodeStates.allocated++;
       if (node.state[0] === "DOWN") nodeStates.down++;
-      if (node.state[0] === "UNKNOWN") nodeStates.unknown++;
+      if (node.state[0] === "UNKNOWN" || "NOT_RESPONDING") nodeStates.unknown++;
       if (node.state[1] === "DRAIN") nodeStates.drain++;
     });
 
