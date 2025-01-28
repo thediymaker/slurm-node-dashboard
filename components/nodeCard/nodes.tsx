@@ -210,7 +210,7 @@ const Nodes = () => {
   }
 
   return (
-    <div className="">
+    <div className="mr-2">
       <NodeHeader
         handleNodeStateChange={handleNodeStateChange}
         handleNodeTypeChange={handleNodeTypeChange}
