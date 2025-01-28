@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ThreeCircles } from "react-loader-spinner";
+import PropagateLoader from "react-spinners/PropagateLoader";
 import { NodeCpuChart } from "../nodeCard/node-mon-chart";
 import PromComboBox from "../prom-metric";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -104,16 +105,8 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
           className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
         >
           <DialogTitle></DialogTitle>
-          <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <ThreeCircles
-              visible={true}
-              height="64"
-              width="64"
-              color="white"
-              ariaLabel="three-circles-loading"
-              wrapperStyle={{}}
-              wrapperClass=""
-            />
+          <div className="font-bold text-2xl uppercase flex justify-center items-center mb-24">
+            <PropagateLoader color="gray" />
           </div>
         </DialogContent>
       </Dialog>
