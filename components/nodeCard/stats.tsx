@@ -1,15 +1,8 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import { ChartContainer } from "@/components/ui/chart";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Activity, Cpu, Database, Power } from "lucide-react";
+import { parseGPUResources } from "@/utils/gpu-parse";
 
 export default function Stats({ data }: { data: { nodes: any[] } }) {
   const systems = data?.nodes || [];
@@ -19,8 +12,11 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
     let totalMemory = 0;
     let totalCoresUsed = 0;
     let totalCores = 0;
+    let totalGpuUsed = 0;
+    let totalGpu = 0;
     let totalPowerUsage = 0;
     let totalPowerNodes = 0;
+    let totalGpuNodes = 0;
     let nodeStates = {
       idle: 0,
       mixed: 0,
@@ -41,6 +37,16 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
         totalPowerNodes++;
       }
 
+      if (node.gres) {
+        const { gpuTotal, gpuUsed } = parseGPUResources(
+          node.gres,
+          node.gres_used
+        );
+        totalGpuUsed += gpuUsed;
+        totalGpu += gpuTotal;
+        totalGpuNodes++;
+      }
+
       // Track node states
       if (node.state[0] === "IDLE") nodeStates.idle++;
       if (node.state[0] === "MIXED") nodeStates.mixed++;
@@ -55,10 +61,13 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       totalMemory,
       totalCoresUsed,
       totalCores,
+      totalGpuUsed,
+      totalGpu,
       averagePowerUsage:
         totalPowerNodes > 0 ? totalPowerUsage / totalPowerNodes : 0,
       totalPowerKw: totalPowerUsage / 1000,
       nodeStates,
+      totalGpuNodes,
     };
   }, [systems]);
 
@@ -78,9 +87,13 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
     stats.totalMemory > 0
       ? Math.round((stats.totalMemoryUsed / stats.totalMemory) * 100)
       : 0;
+  const gpuPercentage =
+    stats.totalGpu > 0
+      ? Math.round((stats.totalGpuUsed / stats.totalGpu) * 100)
+      : 0;
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-5 gap-4">
       {/* CPU Usage Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -98,6 +111,29 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
               style={{ width: `${cpuPercentage}%` }}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* GPU Usage Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium">GPU Usage</CardTitle>
+          <Cpu className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{gpuPercentage}%</div>
+          <p className="text-xs text-muted-foreground">
+            {stats.totalGpuUsed} of {stats.totalGpu} GPUs
+          </p>
+          <div className="mt-4 h-2 w-full bg-secondary">
+            <div
+              className="h-2 bg-primary"
+              style={{ width: `${gpuPercentage}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {stats.totalGpuNodes} nodes with GPUs
+          </p>
         </CardContent>
       </Card>
 
@@ -200,7 +236,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
               </div>
             </div>
             <div>
-              <div className="font-medium">unknown</div>
+              <div className="font-medium">Unknown</div>
               <div className="text-muted-foreground">
                 {stats.nodeStates.unknown} nodes
               </div>
