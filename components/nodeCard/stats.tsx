@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Activity, Cpu, Database, Power } from "lucide-react";
 import { parseGPUResources } from "@/utils/gpu-parse";
+import { cn } from "@/lib/utils";
 
 export default function Stats({ data }: { data: { nodes: any[] } }) {
   const systems = data?.nodes || [];
@@ -68,6 +69,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       totalPowerKw: totalPowerUsage / 1000,
       nodeStates,
       totalGpuNodes,
+      hasPowerData: totalPowerNodes > 0,
     };
   }, [systems]);
 
@@ -93,11 +95,16 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       : 0;
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div
+      className={cn(
+        "grid gap-4",
+        stats.hasPowerData ? "grid-cols-5" : "grid-cols-4"
+      )}
+    >
       {/* CPU Usage Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
+          <CardTitle className="text-sm font-medium">CPU Allocation</CardTitle>
           <Cpu className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -115,27 +122,31 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       </Card>
 
       {/* GPU Usage Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">GPU Usage</CardTitle>
-          <Cpu className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{gpuPercentage}%</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.totalGpuUsed} of {stats.totalGpu} GPUs
-          </p>
-          <div className="mt-4 h-2 w-full bg-secondary">
-            <div
-              className="h-2 bg-primary"
-              style={{ width: `${gpuPercentage}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {stats.totalGpuNodes} nodes with GPUs
-          </p>
-        </CardContent>
-      </Card>
+      {stats.totalGpu > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              GPU Allocation
+            </CardTitle>
+            <Cpu className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{gpuPercentage}%</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalGpuUsed} of {stats.totalGpu} GPUs
+            </p>
+            <div className="mt-4 h-2 w-full bg-secondary">
+              <div
+                className="h-2 bg-primary"
+                style={{ width: `${gpuPercentage}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {stats.totalGpuNodes} nodes with GPUs
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Memory Usage Card */}
       <Card>
@@ -159,41 +170,43 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       </Card>
 
       {/* Power Usage Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">Avg Power Usage</CardTitle>
-          <Power className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="text-2xl font-bold">
-                {stats.totalPowerKw.toFixed(1)} kW
+      {stats.hasPowerData && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Power Usage</CardTitle>
+            <Power className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-2xl font-bold">
+                  {stats.totalPowerKw.toFixed(1)} kW
+                </div>
+                <p className="text-xs text-muted-foreground">Total Power</p>
               </div>
-              <p className="text-xs text-muted-foreground">Total Power</p>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold">
-                {Math.round(stats.averagePowerUsage)} W
+              <div className="text-right">
+                <div className="text-2xl font-bold">
+                  {Math.round(stats.averagePowerUsage)} W
+                </div>
+                <p className="text-xs text-muted-foreground">Per Node Avg</p>
               </div>
-              <p className="text-xs text-muted-foreground">Per Node Avg</p>
             </div>
-          </div>
-          <div className="h-[60px] mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={powerTrendData}>
-                <Line
-                  type="monotone"
-                  dataKey="watts"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="h-[60px] mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={powerTrendData}>
+                  <Line
+                    type="monotone"
+                    dataKey="watts"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* System Activity Card */}
       <Card>
