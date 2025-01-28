@@ -118,57 +118,75 @@ const getStatusColor = (
       FUTURE: { bgColor: "bg-emerald-500", textColor: "text-white" },
       REBOOT_REQUESTED: { bgColor: "bg-stone-500", textColor: "text-white" },
     },
-    marine: {
-      DRAIN: { bgColor: "bg-cyan-600", textColor: "text-white" },
-      NOT_RESPONDING: { bgColor: "bg-cyan-600", textColor: "text-white" },
-      DOWN: { bgColor: "bg-cyan-600", textColor: "text-white" },
-      IDLE: { bgColor: "bg-teal-500", textColor: "text-white" },
-      MIXED: { bgColor: "bg-sky-700", textColor: "text-white" },
-      PLANNED: { bgColor: "bg-blue-600", textColor: "text-white" },
-      ALLOCATED: { bgColor: "bg-indigo-700", textColor: "text-white" },
-      COMPLETING: { bgColor: "bg-cyan-700", textColor: "text-white" },
-      RESERVED: { bgColor: "bg-blue-800", textColor: "text-white" },
-      FUTURE: { bgColor: "bg-teal-600", textColor: "text-white" },
-      REBOOT_REQUESTED: { bgColor: "bg-slate-600", textColor: "text-white" },
+    neon: {
+      // High contrast neon colors
+      DRAIN: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
+      NOT_RESPONDING: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
+      DOWN: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
+      IDLE: { bgColor: "bg-cyan-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-yellow-400", textColor: "text-black" },
+      PLANNED: { bgColor: "bg-purple-600", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-rose-500", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-lime-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-violet-600", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-teal-400", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-zinc-800", textColor: "text-white" },
     },
-    forest: {
-      DRAIN: { bgColor: "bg-emerald-600", textColor: "text-white" },
-      NOT_RESPONDING: { bgColor: "bg-emerald-600", textColor: "text-white" },
-      DOWN: { bgColor: "bg-emerald-600", textColor: "text-white" },
-      IDLE: { bgColor: "bg-green-500", textColor: "text-white" },
-      MIXED: { bgColor: "bg-lime-600", textColor: "text-white" },
-      PLANNED: { bgColor: "bg-green-700", textColor: "text-white" },
-      ALLOCATED: { bgColor: "bg-emerald-800", textColor: "text-white" },
-      COMPLETING: { bgColor: "bg-lime-700", textColor: "text-white" },
-      RESERVED: { bgColor: "bg-green-800", textColor: "text-white" },
-      FUTURE: { bgColor: "bg-teal-600", textColor: "text-white" },
-      REBOOT_REQUESTED: { bgColor: "bg-stone-600", textColor: "text-white" },
+    nordic: {
+      // Inspired by Nordic design and aurora borealis
+      DRAIN: { bgColor: "bg-teal-600", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-teal-600", textColor: "text-white" },
+      DOWN: { bgColor: "bg-teal-600", textColor: "text-white" },
+      IDLE: { bgColor: "bg-emerald-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-indigo-600", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-cyan-500", textColor: "text-black" },
+      ALLOCATED: { bgColor: "bg-blue-800", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-green-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-violet-800", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-sky-400", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-slate-700", textColor: "text-white" },
     },
-    sunset: {
-      DRAIN: { bgColor: "bg-orange-500", textColor: "text-white" },
-      NOT_RESPONDING: { bgColor: "bg-orange-500", textColor: "text-white" },
-      DOWN: { bgColor: "bg-orange-500", textColor: "text-white" },
-      IDLE: { bgColor: "bg-amber-500", textColor: "text-white" },
-      MIXED: { bgColor: "bg-rose-600", textColor: "text-white" },
-      PLANNED: { bgColor: "bg-red-600", textColor: "text-white" },
-      ALLOCATED: { bgColor: "bg-rose-700", textColor: "text-white" },
-      COMPLETING: { bgColor: "bg-amber-600", textColor: "text-white" },
-      RESERVED: { bgColor: "bg-red-700", textColor: "text-white" },
-      FUTURE: { bgColor: "bg-orange-600", textColor: "text-white" },
+    candy: {
+      // Bright, candy-inspired colors
+      DRAIN: { bgColor: "bg-pink-500", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-pink-500", textColor: "text-white" },
+      DOWN: { bgColor: "bg-pink-500", textColor: "text-white" },
+      IDLE: { bgColor: "bg-green-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-purple-500", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-yellow-400", textColor: "text-black" },
+      ALLOCATED: { bgColor: "bg-red-600", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-blue-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-violet-500", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-lime-400", textColor: "text-black" },
       REBOOT_REQUESTED: { bgColor: "bg-neutral-600", textColor: "text-white" },
     },
-    aurora: {
-      DRAIN: { bgColor: "bg-violet-500", textColor: "text-white" },
-      NOT_RESPONDING: { bgColor: "bg-violet-500", textColor: "text-white" },
-      DOWN: { bgColor: "bg-violet-500", textColor: "text-white" },
-      IDLE: { bgColor: "bg-fuchsia-500", textColor: "text-white" },
-      MIXED: { bgColor: "bg-purple-600", textColor: "text-white" },
-      PLANNED: { bgColor: "bg-indigo-600", textColor: "text-white" },
-      ALLOCATED: { bgColor: "bg-purple-700", textColor: "text-white" },
-      COMPLETING: { bgColor: "bg-fuchsia-600", textColor: "text-white" },
-      RESERVED: { bgColor: "bg-indigo-700", textColor: "text-white" },
-      FUTURE: { bgColor: "bg-violet-600", textColor: "text-white" },
-      REBOOT_REQUESTED: { bgColor: "bg-zinc-600", textColor: "text-white" },
+    desert: {
+      // Southwestern desert theme
+      DRAIN: { bgColor: "bg-orange-600", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-orange-600", textColor: "text-white" },
+      DOWN: { bgColor: "bg-orange-600", textColor: "text-white" },
+      IDLE: { bgColor: "bg-amber-300", textColor: "text-black" },
+      MIXED: { bgColor: "bg-rose-800", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-red-500", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-purple-800", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-yellow-600", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-red-900", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-amber-500", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-stone-800", textColor: "text-white" },
+    },
+    ocean: {
+      // Deep sea inspired colors
+      DRAIN: { bgColor: "bg-sky-600", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-sky-600", textColor: "text-white" },
+      DOWN: { bgColor: "bg-sky-600", textColor: "text-white" },
+      IDLE: { bgColor: "bg-cyan-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-blue-700", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-teal-500", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-indigo-800", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-emerald-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-blue-900", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-cyan-500", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-slate-800", textColor: "text-white" },
     },
   };
 
@@ -213,12 +231,12 @@ export const NodeCard = ({
         <div
           className={`border-[1px] cursor-pointer m-0.5 p-1 rounded-[5px] shadow-xl ${bgColor} ${textColor} ${
             props.size === 50
-              ? "w-[80px] h-[25px]"
+              ? "w-[85px] h-[25px]"
               : props.size === 100
-              ? "w-[80px] h-[85px]"
+              ? "w-[85px] h-[85px]"
               : props.size === 150
-              ? "w-[80px] h-[100px]"
-              : "w-[80px] h-[70px]"
+              ? "w-[85px] h-[100px]"
+              : "w-[85px] h-[85px]"
           } ${cpuLoad > 125 ? "animate-pulse border-black" : ""}`}
           onClick={props.historical ? undefined : openModal}
         >

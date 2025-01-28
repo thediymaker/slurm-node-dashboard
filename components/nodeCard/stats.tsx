@@ -53,7 +53,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       if (node.state[0] === "MIXED") nodeStates.mixed++;
       if (node.state[0] === "ALLOCATED") nodeStates.allocated++;
       if (node.state[0] === "DOWN") nodeStates.down++;
-      if (node.state[0] === "UNKNOWN" || node.state[0] === "NOT_RESPONDING")
+      if (node.state[0] === "UNKNOWN" || node.state[1] === "NOT_RESPONDING")
         nodeStates.unknown++;
       if (node.state[1] === "DRAIN") nodeStates.drain++;
     });
@@ -98,7 +98,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
   return (
     <div
       className={cn(
-        "grid gap-4",
+        "grid gap-4 mb-4",
         stats.hasPowerData ? "grid-cols-5" : "grid-cols-4"
       )}
     >

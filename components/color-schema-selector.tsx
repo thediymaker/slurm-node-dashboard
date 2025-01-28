@@ -17,52 +17,32 @@ const colorSchemaOptions: ColorSchemaOption[] = [
   {
     value: "default",
     label: "Default",
-    colors: [
-      "#60a5fa", // bg-blue-400 (DOWN)
-      "#047857", // bg-green-700 (IDLE)
-      "#9f1239", // bg-red-900 (ALLOCATED)
-      "#6366f1", // bg-indigo-500 (PLANNED)
-    ],
+    colors: ["#60a5fa", "#047857", "#ea580c", "#6366f1", "#7c2d12", "#10b981"],
   },
   {
-    value: "marine",
-    label: "Marine",
-    colors: [
-      "#0891b2", // bg-cyan-600 (DOWN)
-      "#14b8a6", // bg-teal-500 (IDLE)
-      "#4338ca", // bg-indigo-700 (ALLOCATED)
-      "#2563eb", // bg-blue-600 (PLANNED)
-    ],
+    value: "neon",
+    label: "Neon",
+    colors: ["#d946ef", "#22d3ee", "#eab308", "#9333ea", "#ec4899", "#2dd4bf"],
   },
   {
-    value: "forest",
-    label: "Forest",
-    colors: [
-      "#059669", // bg-emerald-600 (DOWN)
-      "#22c55e", // bg-green-500 (IDLE)
-      "#065f46", // bg-emerald-800 (ALLOCATED)
-      "#15803d", // bg-green-700 (PLANNED)
-    ],
+    value: "nordic",
+    label: "Nordic",
+    colors: ["#0d9488", "#34d399", "#4f46e5", "#0ea5e9", "#1e40af", "#22d3ee"],
   },
   {
-    value: "sunset",
-    label: "Sunset",
-    colors: [
-      "#f97316", // bg-orange-500 (DOWN)
-      "#f59e0b", // bg-amber-500 (IDLE)
-      "#be123c", // bg-rose-700 (ALLOCATED)
-      "#dc2626", // bg-red-600 (PLANNED)
-    ],
+    value: "candy",
+    label: "Candy",
+    colors: ["#ec4899", "#4ade80", "#a855f7", "#eab308", "#dc2626", "#3b82f6"],
   },
   {
-    value: "aurora",
-    label: "Aurora",
-    colors: [
-      "#8b5cf6", // bg-violet-500 (DOWN)
-      "#d946ef", // bg-fuchsia-500 (IDLE)
-      "#7e22ce", // bg-purple-700 (ALLOCATED)
-      "#4f46e5", // bg-indigo-600 (PLANNED)
-    ],
+    value: "desert",
+    label: "Desert",
+    colors: ["#ea580c", "#fcd34d", "#be185d", "#b91c1c", "#7e22ce", "#f59e0b"],
+  },
+  {
+    value: "ocean",
+    label: "Ocean",
+    colors: ["#0284c7", "#22d3ee", "#1e40af", "#0d9488", "#1e3a8a", "#06b6d4"],
   },
 ];
 
