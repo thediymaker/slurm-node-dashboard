@@ -1,5 +1,7 @@
 "use client";
+
 import { NodeCard } from "@/components/nodeCard/node-card";
+import GroupedNodes from "@/components/grouped-nodes";
 import useSWR from "swr";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
@@ -11,6 +13,8 @@ import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
 import { Node } from "@/types/types";
+import { Alert, AlertDescription } from "../ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
@@ -18,6 +22,7 @@ const nodeFetcher = async () => {
     headers: {
       "Content-Type": "application/json",
     },
+    next: { revalidate: 15 },
   });
   if (!res.ok) {
     throw new Error("Network response was not ok");
@@ -30,6 +35,7 @@ const Nodes = () => {
     data: nodeData,
     error: nodeError,
     isLoading: nodeIsLoading,
+    mutate,
   } = useSWR(nodeURL, nodeFetcher, {
     refreshInterval: 15000,
   });
@@ -55,6 +61,13 @@ const Nodes = () => {
     return "default";
   };
 
+  const getInitialViewMode = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("isGroupedView") === "true";
+    }
+    return false;
+  };
+
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
@@ -65,6 +78,9 @@ const Nodes = () => {
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
   const [colorSchema, setColorSchema] = useState<string>(getInitialColorSchema);
+  const [isGroupedView, setIsGroupedView] =
+    useState<boolean>(getInitialViewMode);
+
   const systems: Node[] = nodeData?.nodes || [];
 
   useEffect(() => {
@@ -78,6 +94,19 @@ const Nodes = () => {
   useEffect(() => {
     localStorage.setItem("colorSchema", colorSchema);
   }, [colorSchema]);
+
+  useEffect(() => {
+    localStorage.setItem("isGroupedView", isGroupedView.toString());
+  }, [isGroupedView]);
+
+  // Set up polling for data updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      mutate();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [mutate]);
 
   const uniquePartitions = useMemo(() => {
     const partitions = new Set<string>();
@@ -164,11 +193,14 @@ const Nodes = () => {
 
   if (nodeError) {
     return (
-      <div>
-        {nodeError.message === "Network response was not ok"
-          ? "Failed to load, please check your network connection."
-          : "Session expired, please reload the page."}
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          {nodeError.message === "Network response was not ok"
+            ? "Failed to load, please check your network connection."
+            : "Session expired, please reload the page."}
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -181,6 +213,8 @@ const Nodes = () => {
           handleNodePartitionsChange={handleNodePartitionsChange}
           handleNodeFeatureChange={handleNodeFeatureChange}
           handleColorSchemaChange={handleColorSchemaChange}
+          handleViewModeChange={setIsGroupedView}
+          isGroupedView={isGroupedView}
           partitions={[]}
           features={[]}
           colorSchema={colorSchema}
@@ -193,7 +227,7 @@ const Nodes = () => {
             <Skeleton className="w-6 h-6" />
           </div>
           <div className="flex justify-end w-full mb-4 gap-2 items-center">
-            <div className="flex items-center gap-2 font-extralighst">
+            <div className="flex items-center gap-2 font-extralight">
               GPU Nodes
               <Skeleton className="w-[20px]" />
             </div>
@@ -204,7 +238,7 @@ const Nodes = () => {
           </div>
         </div>
         <Separator />
-        <CardSkeleton qty={100} size={100} />
+        <CardSkeleton qty={250} size={85} />
       </div>
     );
   }
@@ -217,6 +251,8 @@ const Nodes = () => {
         handleNodePartitionsChange={handleNodePartitionsChange}
         handleNodeFeatureChange={handleNodeFeatureChange}
         handleColorSchemaChange={handleColorSchemaChange}
+        handleViewModeChange={setIsGroupedView}
+        isGroupedView={isGroupedView}
         partitions={uniquePartitions}
         features={uniqueFeatures}
         colorSchema={colorSchema}
@@ -235,8 +271,8 @@ const Nodes = () => {
           <div className="font-extralight">Show Detail</div>
           <Checkbox
             checked={showStats}
-            onCheckedChange={() => {
-              setShowStats(!showStats);
+            onCheckedChange={(checked) => {
+              setShowStats(checked as boolean);
             }}
           />
         </div>
@@ -253,25 +289,34 @@ const Nodes = () => {
       </div>
       {showStats && nodeData ? <Stats data={nodeData} /> : null}
       <Separator />
-      <div className="flex flex-wrap p-3 uppercase mb-20">
-        {filteredNodes.map((node: any, index: number) => (
-          <NodeCard
-            size={cardSize}
-            key={node.hostname}
-            name={node.name}
-            load={node.cpu_load?.number}
-            partitions={node.partitions}
-            features={node.features}
-            coresTotal={node.cpus}
-            coresUsed={node.alloc_cpus}
-            memoryTotal={node.real_memory}
-            memoryUsed={node.alloc_memory}
-            status={node.state}
-            nodeData={node}
-            colorSchema={colorSchema}
-          />
-        ))}
-      </div>
+
+      {isGroupedView ? (
+        <GroupedNodes
+          nodes={filteredNodes}
+          cardSize={cardSize}
+          colorSchema={colorSchema}
+        />
+      ) : (
+        <div className="flex flex-wrap p-3 uppercase mb-20">
+          {filteredNodes.map((node: any) => (
+            <NodeCard
+              size={cardSize}
+              key={node.hostname}
+              name={node.name}
+              load={node.cpu_load?.number}
+              partitions={node.partitions}
+              features={node.features}
+              coresTotal={node.cpus}
+              coresUsed={node.alloc_cpus}
+              memoryTotal={node.real_memory}
+              memoryUsed={node.alloc_memory}
+              status={node.state}
+              nodeData={node}
+              colorSchema={colorSchema}
+            />
+          ))}
+        </div>
+      )}
       <LastUpdated data={nodeData?.last_update?.number} />
     </div>
   );

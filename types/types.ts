@@ -10,6 +10,13 @@ export interface Node {
   features?: string[];
 }
 
+export interface NodeConfig {
+  [group: string]: {
+    nodes: string[];
+    description?: string;
+  };
+}
+
 export interface NodeData {
   hostname: string;
   features: string[];

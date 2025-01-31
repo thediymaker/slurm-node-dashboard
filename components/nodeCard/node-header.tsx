@@ -1,4 +1,6 @@
-import React, { useEffect } from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import JobSearch from "../job-search";
 import {
   Form,
@@ -18,6 +20,8 @@ import { useForm } from "react-hook-form";
 import HeaderMenu from "@/components/header/header-menu";
 import { ThemeToggle } from "../theme-toggle";
 import ColorSchemaSelector from "../color-schema-selector";
+import { Button } from "@/components/ui/button";
+import { LayoutGrid, List } from "lucide-react";
 
 interface NodeHeaderProps {
   handleNodeStateChange: (value: string) => void;
@@ -25,6 +29,8 @@ interface NodeHeaderProps {
   handleNodePartitionsChange: (value: string) => void;
   handleNodeFeatureChange: (value: string) => void;
   handleColorSchemaChange: (value: string) => void;
+  handleViewModeChange: (value: boolean) => void;
+  isGroupedView: boolean;
   partitions: string[];
   features: string[];
   colorSchema: string;
@@ -36,10 +42,14 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
   handleNodePartitionsChange,
   handleNodeFeatureChange,
   handleColorSchemaChange,
+  handleViewModeChange,
+  isGroupedView,
   partitions,
   features,
   colorSchema,
 }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
   const form = useForm({
     defaultValues: {
       nodeType: "allNodes",
@@ -51,13 +61,47 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
   });
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     form.setValue("colorSchema", colorSchema);
-  }, [colorSchema]);
+  }, [colorSchema, form]);
 
   return (
     <div className="mt-3 justify-between flex">
-      <div className="mr-2">
+      <div className="flex items-start space-x-4">
         <JobSearch />
+
+        {/* TODO: need to put a check to see if teh config file exists, and if not, dont show this */}
+        {isMounted && (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={
+                isGroupedView ? undefined : "bg-primary text-primary-foreground"
+              }
+              onClick={() => handleViewModeChange(false)}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={
+                !isGroupedView
+                  ? undefined
+                  : "bg-primary text-primary-foreground"
+              }
+              onClick={() => handleViewModeChange(true)}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
       <Form {...form}>
         <form className="mx-1 mb-4 flex items-center justify-end">

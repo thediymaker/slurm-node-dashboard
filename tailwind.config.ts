@@ -60,20 +60,37 @@ const config = {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
+          from: {
+            height: "0",
+          },
+          to: {
+            height: "var(--radix-accordion-content-height)",
+          },
         },
         gauge_fadeIn: {
-          from: { opacity: "0" },
-          to: { opacity: "1" },
+          from: {
+            opacity: "0",
+          },
+          to: {
+            opacity: "1",
+          },
         },
         gauge_fill: {
-          from: { "stroke-dashoffset": "332", opacity: "0" },
-          to: { opacity: "1" },
+          from: {
+            "stroke-dashoffset": "332",
+            opacity: "0",
+          },
+          to: {
+            opacity: "1",
+          },
         },
         "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
+          from: {
+            height: "var(--radix-accordion-content-height)",
+          },
+          to: {
+            height: "0",
+          },
         },
       },
       animation: {
