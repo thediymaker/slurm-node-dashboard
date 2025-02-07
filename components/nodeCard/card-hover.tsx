@@ -6,8 +6,8 @@ import {
   OctagonIcon,
   BoltIcon,
 } from "lucide-react";
-import GPUUsageDisplay from "./gpu-progress";
 import { CardHoverProps, GPUResources } from "@/types/types";
+import GPUResourcesDisplay from "./gpu-resource";
 
 const parseGPUResources = (gres: string, gresUsed: string): GPUResources => {
   const resources: GPUResources = {
@@ -59,65 +59,6 @@ const parseGPUResources = (gres: string, gresUsed: string): GPUResources => {
   }
 
   return resources;
-};
-
-const GPUResourcesDisplay: React.FC<{ gpuResources: GPUResources }> = ({
-  gpuResources,
-}) => {
-  const renderGPUUsage = (sliceType: string, total: number, used: number) => (
-    <div key={sliceType} className="space-y-1">
-      <div className="flex justify-between items-center text-sm">
-        <span>{sliceType}</span>
-        <span>{`${used} / ${total} used`}</span>
-      </div>
-      <GPUUsageDisplay gpuUsed={used} gpuTotal={total} />
-      <div className="text-xs text-gray-200">
-        {`${((used / total) * 100).toFixed(1)}% utilization`}
-      </div>
-    </div>
-  );
-
-  switch (gpuResources.sliceType) {
-    case "MIG":
-      return (
-        <>
-          {Object.entries(gpuResources.slices.total).map(([sliceType, total]) =>
-            renderGPUUsage(
-              `MIG ${sliceType}`,
-              total,
-              gpuResources.slices.used[sliceType]
-            )
-          )}
-        </>
-      );
-    case "SHARD":
-      return (
-        <>
-          {renderGPUUsage(
-            "Physical GPUs",
-            gpuResources.slices.total["GPU"],
-            gpuResources.slices.used["GPU"]
-          )}
-          {renderGPUUsage(
-            "GPU Shards",
-            gpuResources.slices.total["SHARD"],
-            gpuResources.slices.used["SHARD"]
-          )}
-        </>
-      );
-    default:
-      return (
-        <>
-          {Object.entries(gpuResources.slices.total).map(([gpuType, total]) =>
-            renderGPUUsage(
-              gpuType.toUpperCase(),
-              total,
-              gpuResources.slices.used[gpuType]
-            )
-          )}
-        </>
-      );
-  }
 };
 
 const CardHover = ({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
@@ -215,7 +156,11 @@ const CardHover = ({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
             <div>GRES: {nodeData.gres}</div>
             <div>GRES Used: {nodeData.gres_used}</div>
           </div>
-          <GPUResourcesDisplay gpuResources={gpuResources} />
+          <GPUResourcesDisplay
+            gpuResources={gpuResources}
+            hostname={nodeData.hostname}
+            nodeData={nodeData}
+          />
         </div>
       )}
 
