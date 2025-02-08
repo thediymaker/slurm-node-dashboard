@@ -7,14 +7,14 @@ export async function GET() {
     const configPath = path.join(process.cwd(), "node.cfg");
     const configContent = await fs.readFile(configPath, "utf-8");
     const config = JSON.parse(configContent);
-    console.log("Node configuration loaded successfully");
 
     return NextResponse.json(config);
   } catch (error) {
-    console.error("Error reading node configuration:", error);
     return NextResponse.json(
-      { error: "Failed to load node configuration" },
-      { status: 500 }
+      {
+        error: `Node configuration is not available or invalid. Showing all nodes without grouping. Please check the "node.cfg" file.`,
+      },
+      { status: 404 }
     );
   }
 }

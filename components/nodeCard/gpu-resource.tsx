@@ -132,10 +132,18 @@ const GPUResourcesDisplay: React.FC<GPUResourcesDisplayProps> = ({
                   className="bg-secondary/10 rounded-md px-1 py-2 space-y-1.5"
                 >
                   <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-medium">GPU</span>
-                    <span className="text-xs">{index}</span>
+                    <div className="">
+                      <span className="text-xs font-medium text-gray-400">
+                        GPU
+                      </span>
+                      <span className="text-xs font-medium text-gray-400">
+                        {index}
+                      </span>
+                    </div>
                     {utilization !== null && (
-                      <span className="text-xs">{utilization.toFixed(0)}%</span>
+                      <span className="text-xs font-medium">
+                        {utilization.toFixed(0)}%
+                      </span>
                     )}
                   </div>
                   {utilization !== null && (

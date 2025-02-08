@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 interface GroupedNodesProps {
@@ -157,39 +158,6 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
     localStorage.setItem("openNodeSections", JSON.stringify(openSections));
   }, [openSections]);
 
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const response = await fetch("/api/node-config");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: NodeConfig = await response.json();
-
-        const otherNodes = nodes
-          .filter(
-            (node) =>
-              !isNodeInAnyRack((node as ExtendedNode).hostname || "", data)
-          )
-          .map((node) => (node as ExtendedNode).hostname)
-          .filter((hostname): hostname is string => Boolean(hostname));
-
-        if (otherNodes.length > 0) {
-          data["Other"] = {
-            nodes: otherNodes,
-            description: "Nodes not assigned to any rack",
-          };
-        }
-
-        setConfig(data);
-      } catch (error) {
-        setError("Failed to load node configuration");
-        console.error("Error loading node configuration:", error);
-      }
-    };
-    loadConfig();
-  }, [nodes]);
-
   const expandNodeRange = (nodeRange: string): string[] => {
     if (!nodeRange.includes("-")) return [nodeRange];
 
@@ -257,106 +225,161 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
     return stats;
   };
 
-  if (error) {
-    return (
-      <div className="p-2 text-red-500 flex items-center gap-2 text-sm border rounded-lg">
-        <AlertCircle className="w-4 h-4" />
-        <span>{error}</span>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const response = await fetch("/api/node-config");
+        const data = await response.json();
+
+        if (data.error) {
+          setError(data.error);
+          // Create a default configuration with all nodes in "Uncategorized"
+          const defaultConfig: NodeConfig = {
+            Uncategorized: {
+              nodes: nodes
+                .map((node) => (node as ExtendedNode).hostname)
+                .filter((hostname): hostname is string => Boolean(hostname)),
+              description: "All nodes (configuration unavailable)",
+            },
+          };
+          setConfig(defaultConfig);
+          return;
+        }
+
+        // Process valid configuration
+        const otherNodes = nodes
+          .filter(
+            (node) =>
+              !isNodeInAnyRack((node as ExtendedNode).hostname || "", data)
+          )
+          .map((node) => (node as ExtendedNode).hostname)
+          .filter((hostname): hostname is string => Boolean(hostname));
+
+        if (otherNodes.length > 0) {
+          data["Other"] = {
+            nodes: otherNodes,
+            description: "Nodes not assigned to any rack",
+          };
+        }
+
+        setConfig(data);
+      } catch (error) {
+        setError("Unable to load node configuration");
+        const defaultConfig: NodeConfig = {
+          Uncategorized: {
+            nodes: nodes
+              .map((node) => (node as ExtendedNode).hostname)
+              .filter((hostname): hostname is string => Boolean(hostname)),
+            description: "All nodes (configuration unavailable)",
+          },
+        };
+        setConfig(defaultConfig);
+      }
+    };
+
+    loadConfig();
+  }, [nodes]);
 
   return (
-    <div className="space-y-2 mt-4 mb-24">
-      <Accordion
-        type="multiple"
-        value={openSections}
-        onValueChange={setOpenSections}
-        className="space-y-2"
-      >
-        {Object.entries(config).map(
-          ([group, { nodes: groupNodes, description }]) => {
-            const stats = getGroupStats(groupNodes);
+    <div className="space-y-4">
+      {error && (
+        <Alert variant="destructive" className="bg-destructive/5 border-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-            return (
-              <AccordionItem
-                key={group}
-                value={group}
-                className="border rounded-lg shadow-sm data-[state=open]:shadow-md transition-shadow duration-200"
-              >
-                <AccordionTrigger className="px-3 py-2 hover:no-underline [&[data-state=open]]:bg-accent/40 rounded-t-lg">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{group}</span>
+      <div className="space-y-2 mt-4 mb-24">
+        <Accordion
+          type="multiple"
+          value={openSections}
+          onValueChange={setOpenSections}
+          className="space-y-2"
+        >
+          {Object.entries(config).map(
+            ([group, { nodes: groupNodes, description }]) => {
+              const stats = getGroupStats(groupNodes);
+
+              return (
+                <AccordionItem
+                  key={group}
+                  value={group}
+                  className="border rounded-lg shadow-sm data-[state=open]:shadow-md transition-shadow duration-200"
+                >
+                  <AccordionTrigger className="px-3 py-2 hover:no-underline [&[data-state=open]]:bg-accent/40 rounded-t-lg">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{group}</span>
+                        {description && (
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
+                            • {description}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2 items-center text-xs">
+                        <StatusBadge
+                          count={stats.idle}
+                          type="idle"
+                          colorSchema={colorSchema}
+                        />
+                        <StatusBadge
+                          count={stats.allocated}
+                          type="allocated"
+                          colorSchema={colorSchema}
+                        />
+                        <StatusBadge
+                          count={stats.mixed}
+                          type="mixed"
+                          colorSchema={colorSchema}
+                        />
+                        <StatusBadge
+                          count={stats.drain}
+                          type="drain"
+                          colorSchema={colorSchema}
+                        />
+                        <Badge variant="outline" className="ml-2 py-0.5 px-1.5">
+                          {stats.total}
+                        </Badge>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="p-2">
                       {description && (
-                        <span className="text-xs text-muted-foreground hidden sm:inline">
-                          • {description}
-                        </span>
+                        <p className="text-xs text-muted-foreground mb-2 sm:hidden">
+                          {description}
+                        </p>
                       )}
+                      <div className="flex flex-wrap gap-2">
+                        {groupNodes.map((nodeName) => {
+                          const nodesData = getNodeData(nodeName);
+                          return nodesData.map((nodeData) => (
+                            <NodeCard
+                              size={cardSize}
+                              key={nodeData.hostname}
+                              name={nodeData.name}
+                              load={nodeData.cpu_load?.number}
+                              partitions={nodeData.partitions}
+                              features={nodeData.features}
+                              coresTotal={nodeData.cpus}
+                              coresUsed={nodeData.alloc_cpus}
+                              memoryTotal={nodeData.real_memory}
+                              memoryUsed={nodeData.alloc_memory}
+                              status={nodeData.state}
+                              nodeData={nodeData}
+                              colorSchema={colorSchema}
+                            />
+                          ));
+                        })}
+                      </div>
                     </div>
-                    <div className="flex gap-2 items-center text-xs">
-                      <StatusBadge
-                        count={stats.idle}
-                        type="idle"
-                        colorSchema={colorSchema}
-                      />
-                      <StatusBadge
-                        count={stats.allocated}
-                        type="allocated"
-                        colorSchema={colorSchema}
-                      />
-                      <StatusBadge
-                        count={stats.mixed}
-                        type="mixed"
-                        colorSchema={colorSchema}
-                      />
-                      <StatusBadge
-                        count={stats.drain}
-                        type="drain"
-                        colorSchema={colorSchema}
-                      />
-                      <Badge variant="outline" className="ml-2 py-0.5 px-1.5">
-                        {stats.total}
-                      </Badge>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="p-2">
-                    {description && (
-                      <p className="text-xs text-muted-foreground mb-2 sm:hidden">
-                        {description}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      {groupNodes.map((nodeName) => {
-                        const nodesData = getNodeData(nodeName);
-                        return nodesData.map((nodeData) => (
-                          <NodeCard
-                            size={cardSize}
-                            key={nodeData.hostname}
-                            name={nodeData.name}
-                            load={nodeData.cpu_load?.number}
-                            partitions={nodeData.partitions}
-                            features={nodeData.features}
-                            coresTotal={nodeData.cpus}
-                            coresUsed={nodeData.alloc_cpus}
-                            memoryTotal={nodeData.real_memory}
-                            memoryUsed={nodeData.alloc_memory}
-                            status={nodeData.state}
-                            nodeData={nodeData}
-                            colorSchema={colorSchema}
-                          />
-                        ));
-                      })}
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            );
-          }
-        )}
-      </Accordion>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            }
+          )}
+        </Accordion>
+      </div>
     </div>
   );
 };
