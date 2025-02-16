@@ -56,7 +56,7 @@ export const CustomTooltip: React.FC<TooltipProps<ValueType, NameType>> = ({
         />
         <DataRow
           label="Average per Node:"
-          value={`${averageWatts.toFixed(0)}W`}
+          value={`${averageWatts.toFixed(0)} W`}
         />
         <DataRow label="Nodes Reporting:" value={`${nodesReporting}`} />
       </div>
