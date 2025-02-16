@@ -52,7 +52,7 @@ export const CustomTooltip: React.FC<TooltipProps<ValueType, NameType>> = ({
       <div className="space-y-2">
         <DataRow
           label="Total Power:"
-          value={`${(watts / 1000).toFixed(0)}kW`}
+          value={`${(watts / 1000).toFixed(0)} kW`}
         />
         <DataRow
           label="Average per Node:"
