@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { CustomTooltip } from "./stats-power-tooltip";
 import useSWR from "swr";
 
-// Fetcher function for SWR
+// SWR fetcher function
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch data");
@@ -15,12 +15,17 @@ const fetcher = async (url: string) => {
 };
 
 export default function Stats({ data }: { data: { nodes: any[] } }) {
-  const systems = data?.nodes || [];
+  // Rename 'systems' to 'nodes' for clarity.
+  const nodes = data?.nodes ?? [];
+
+  // This state controls whether we continue fetching Prometheus data.
   const [isPrometheusAvailable, setIsPrometheusAvailable] = React.useState<
     boolean | null
   >(null);
   const shouldFetch = isPrometheusAvailable !== false;
-  const { data: powerData, error } = useSWR(
+
+  // SWR call to fetch power data from Prometheus
+  const { data: ipmiData, error } = useSWR(
     shouldFetch ? "/api/prometheus/ipmi" : null,
     fetcher,
     {
@@ -36,21 +41,24 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
     }
   );
 
-  const usePrometheusData = powerData?.status === 200;
-  const prometheusData = powerData?.data || [];
-  const powerSummary = powerData?.summary;
+  // Use a single flag based on state rather than creating a separate variable.
+  const prometheusAvailable = isPrometheusAvailable === true;
+  const prometheusData = ipmiData?.data || [];
+  const powerSummary = ipmiData?.summary;
 
+  // Compute aggregated stats
   const stats = React.useMemo(() => {
-    let totalMemoryUsed = 0;
-    let totalMemory = 0;
-    let totalCoresUsed = 0;
-    let totalCores = 0;
-    let totalGpuUsed = 0;
-    let totalGpu = 0;
-    let totalPowerUsage = 0;
-    let totalPowerNodes = 0;
-    let totalGpuNodes = 0;
-    let nodeStates = {
+    let totalMemoryUsed = 0,
+      totalMemory = 0,
+      totalCoresUsed = 0,
+      totalCores = 0,
+      totalGpuUsed = 0,
+      totalGpu = 0,
+      totalPowerUsage = 0,
+      totalPowerNodes = 0,
+      totalGpuNodes = 0;
+
+    const nodeStates = {
       idle: 0,
       mixed: 0,
       allocated: 0,
@@ -59,14 +67,14 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       unknown: 0,
     };
 
-    systems.forEach((node) => {
+    nodes.forEach((node) => {
       totalMemoryUsed += node.alloc_memory;
       totalMemory += node.real_memory;
       totalCoresUsed += node.alloc_cpus;
       totalCores += node.cpus;
 
-      // Only use Slurm power data if Prometheus data isn't available
-      if (!usePrometheusData && node.energy?.current_watts?.number) {
+      // Use Slurm power data only if Prometheus isn’t available.
+      if (!prometheusAvailable && node.energy?.current_watts?.number) {
         totalPowerUsage += node.energy.current_watts.number;
         totalPowerNodes++;
       }
@@ -81,13 +89,14 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
         totalGpuNodes++;
       }
 
-      if (node.state[0] === "IDLE") nodeStates.idle++;
-      if (node.state[0] === "MIXED") nodeStates.mixed++;
-      if (node.state[0] === "ALLOCATED") nodeStates.allocated++;
-      if (node.state[0] === "DOWN") nodeStates.down++;
-      if (node.state[0] === "UNKNOWN" || node.state[1] === "NOT_RESPONDING")
+      const [primaryState, secondaryState] = node.state;
+      if (primaryState === "IDLE") nodeStates.idle++;
+      if (primaryState === "MIXED") nodeStates.mixed++;
+      if (primaryState === "ALLOCATED") nodeStates.allocated++;
+      if (primaryState === "DOWN") nodeStates.down++;
+      if (primaryState === "UNKNOWN" || secondaryState === "NOT_RESPONDING")
         nodeStates.unknown++;
-      if (node.state[1] === "DRAIN") nodeStates.drain++;
+      if (secondaryState === "DRAIN") nodeStates.drain++;
     });
 
     return {
@@ -97,41 +106,43 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       totalCores,
       totalGpuUsed,
       totalGpu,
-      averagePowerUsage: usePrometheusData
+      averagePowerUsage: prometheusAvailable
         ? powerSummary?.currentAverage || 0
         : totalPowerNodes > 0
         ? totalPowerUsage / totalPowerNodes
         : 0,
-      totalPowerKw: usePrometheusData
+      totalPowerKw: prometheusAvailable
         ? (powerSummary?.currentTotal || 0) / 1000
         : totalPowerUsage / 1000,
       nodeStates,
       totalGpuNodes,
-      hasPowerData: usePrometheusData ? true : totalPowerNodes > 0,
+      hasPowerData: prometheusAvailable || totalPowerNodes > 0,
     };
-  }, [systems, usePrometheusData, powerSummary]);
+  }, [nodes, prometheusAvailable, powerSummary]);
 
-  // Use Prometheus data for the chart if available, otherwise fallback to Slurm data
+  // Prepare data for the power usage trend chart
   const powerTrendData = React.useMemo(() => {
-    if (usePrometheusData && prometheusData.length > 0) {
-      return prometheusData.map((data: { time: string | number | Date }) => ({
-        ...data,
-        time:
-          typeof data.time === "number"
-            ? data.time.toString().length === 13
-              ? data.time
-              : data.time * 1000
-            : new Date(data.time).getTime(),
-      }));
+    if (prometheusAvailable && prometheusData.length > 0) {
+      return prometheusData.map(
+        (data: { time: string | number | Date; [key: string]: any }) => ({
+          ...data,
+          time:
+            typeof data.time === "number"
+              ? data.time.toString().length === 13
+                ? data.time
+                : data.time * 1000
+              : new Date(data.time).getTime(),
+        })
+      );
     }
 
-    return systems.slice(0, 10).map((node) => ({
+    return nodes.slice(0, 10).map((node) => ({
       time: Date.now(),
       watts: node.energy?.current_watts?.number || 0,
       averageWatts: node.energy?.current_watts?.number || 0,
       nodesReporting: 1,
     }));
-  }, [systems, usePrometheusData, prometheusData]);
+  }, [nodes, prometheusAvailable, prometheusData]);
 
   const cpuPercentage =
     stats.totalCores > 0
@@ -251,7 +262,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={powerTrendData}>
                   <YAxis domain={["auto", "auto"]} hide />
-                  <Tooltip content={CustomTooltip} />
+                  {prometheusAvailable && <Tooltip content={CustomTooltip} />}
                   <Line
                     type="monotone"
                     dataKey="watts"
@@ -273,7 +284,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{systems.length}</div>
+          <div className="text-2xl font-bold">{nodes.length}</div>
           <p className="text-xs text-muted-foreground">Nodes</p>
           <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
             <div>
