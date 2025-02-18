@@ -273,11 +273,19 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
                 <p className="text-xs text-muted-foreground">Per Node Avg</p>
               </div>
             </div>
-            <div className="h-[60px] mt-4">
+            <div className="h-[60px] mt-4 relative overflow-visible">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={powerTrendData}>
                   <YAxis domain={["auto", "auto"]} hide />
-                  {prometheusAvailable && <Tooltip content={CustomTooltip} />}
+                  {prometheusAvailable && (
+                    <Tooltip
+                      content={CustomTooltip}
+                      cursor={{ stroke: "hsl(var(--muted-foreground))" }}
+                      position={{ x: 0, y: 0 }}
+                      wrapperStyle={{ zIndex: 100 }}
+                      allowEscapeViewBox={{ x: true, y: true }}
+                    />
+                  )}
                   <Line
                     type="monotone"
                     dataKey="watts"
