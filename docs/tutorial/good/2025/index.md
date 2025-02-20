@@ -54,9 +54,10 @@ Before you begin, ensure you have the following:
 
 ## Cloning the Repository
 
-Clone the HPC Dashboard repository from GitHub:
+Once you get logged in, you will want to change directory to the /var/www/ and clone the HPC Dashboard repository from GitHub:
 
 ```bash
+cd /var/www/
 git clone -b tutorial2025 https://github.com/thediymaker/slurm-node-dashboard.git
 cd slurm-node-dashboard
 ```
@@ -72,15 +73,15 @@ cd slurm-node-dashboard
    ```
 
 2. **Set Up Your Environment File**:  
-   Create a `.env` file in the project root. Use the template below and adjust the values to match your environment (e.g., VM public IPs, SLURM API details, and Prometheus URL):
+   Copy the `.env.production` to `.env` in the project root. Use the template below and adjust the values to match your environment (e.g., VM public IPs, SLURM API details, and Prometheus URL):
 
    ```env
    # BASE
-   COMPANY_NAME="Your Company"
+   COMPANY_NAME="Tutorial"
    NEXT_PUBLIC_BASE_URL="http://your_vm_public_ip:3000"
    VERSION=1.1.2
-   CLUSTER_NAME="Cluster"
-   CLUSTER_LOGO="/cluster.png"
+   CLUSTER_NAME="Tutorial"
+   CLUSTER_LOGO="/logo.png"
 
    # DEV
    NODE_ENV="dev"
@@ -88,17 +89,12 @@ cd slurm-node-dashboard
 
    # SLURM
    SLURM_API_VERSION="v0.0.40"
-   SLURM_SERVER="slurm_vm_public_ip"      # Update with your SLURM VM IP
-   SLURM_API_TOKEN="your_slurm_api_token"   # Replace with your API token
-   SLURM_API_ACCOUNT="your_slurm_account"   # If applicable
-
-   # PLUGINS
-   NEXT_PUBLIC_ENABLE_OPENAI_PLUGIN=false
-   NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN=true
+   SLURM_SERVER="r8-good-tutorial-c1.hn.asu.edu"
+   SLURM_API_TOKEN="your_slurm_api_token" # add the API key
+   SLURM_API_ACCOUNT="slurm"
 
    # ADVANCED FEATURES
-   OPENAI_API_KEY=""                        # Provide if using OpenAI features
-   PROMETHEUS_URL="http://prometheus_vm_ip:9090"  # Replace with your Prometheus URL
+   PROMETHEUS_URL="http://r8-good-tutorial-hn.rc.asu.edu:9090"
    ```
 
 ---
@@ -112,7 +108,7 @@ cd slurm-node-dashboard
    npm run dev
    ```
 
-   Visit `http://your_vm_public_ip:3000` in your web browser to see the dashboard.
+   Visit `http://your_vm_public_ip:3020` in your web browser to see the dashboard.
 
 ---
 
@@ -139,19 +135,16 @@ For a production environment, it is recommended to use **PM2** to manage the app
 The HPC Dashboard supports several advanced features:
 
 - **Historical Node Data**:  
-  Collect historical node data hourly:
+  Collect historical node data hourly. You will want to copy the following in to a script, and then call this from crontab. You can set this up to run hourly, or as often as you would like. By default it keeps the last 30 days worth of data.
 
   ```bash
   #!/bin/bash
-  SAVE_DIR="/path/to/data/directory"
+  SAVE_DIR="/var/www/slurm-node-dashboard/data"
   mkdir -p "$SAVE_DIR"
   FILENAME=$(date +"%Y-%m-%dT%H-%M-%S.000Z.json.gz")
-  curl -s "http://localhost:3000/api/slurm/nodes" | gzip > "$SAVE_DIR/$FILENAME"
+  curl -s "http://localhost:3020/api/slurm/nodes" | gzip > "$SAVE_DIR/$FILENAME"
   find "$SAVE_DIR" -name "*.json.gz" -type f -mtime +30 -delete
   ```
-
-- **Prometheus Integration**:  
-  Enable these by setting the appropriate values in your `.env` file.
 
 - **Open OnDemand Integration**:  
   You can embed the dashboard within Open OnDemand by updating the iframe URL in the provided Ruby app template from [this repository](https://github.com/thediymaker/ood-status-iframe).
