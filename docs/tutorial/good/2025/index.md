@@ -73,7 +73,7 @@ cd slurm-node-dashboard
    ```
 
 2. **Set Up Your Environment File**:  
-   Copy the `.env.production` to `.env` in the project root. Use the template below and adjust the values to match your environment (e.g., VM public IPs, SLURM API details, and Prometheus URL):
+   Move the `.env.production` to `.env` in the project root (note, having both could cause build errors, so move not copy). Use the template below and adjust the values to match your environment (e.g., VM public IPs, SLURM API details, and Prometheus URL):
 
    ```env
    # BASE
@@ -89,12 +89,12 @@ cd slurm-node-dashboard
 
    # SLURM
    SLURM_API_VERSION="v0.0.40"
-   SLURM_SERVER="r8-good-tutorial-c1.hn.asu.edu"
+   SLURM_SERVER="192.168.1.233"
    SLURM_API_TOKEN="your_slurm_api_token" # add the API key
    SLURM_API_ACCOUNT="slurm"
 
    # ADVANCED FEATURES
-   PROMETHEUS_URL="http://r8-good-tutorial-hn.rc.asu.edu:9090"
+   PROMETHEUS_URL="http://192.168.1.233:9090"
    ```
 
 ---
@@ -112,7 +112,7 @@ cd slurm-node-dashboard
 
 ---
 
-## Production Deployment (Optional)
+## Production Deployment
 
 For a production environment, it is recommended to use **PM2** to manage the application:
 
@@ -123,31 +123,77 @@ For a production environment, it is recommended to use **PM2** to manage the app
    ```
 
 2. **Start the Application with PM2**:
-   ```bash
-   pm2 start npm --name "hpc-dashboard" -- start
-   pm2 save
-   ```
+
+This will start the application on port 3020, which is what we were using for dev.
+
+```bash
+pm2 start npm --name "hpc-dashboard" -- start -- --port 3020
+pm2 save
+```
 
 ---
 
-## Advanced Integrations & Data Collection
+## Open onDemand Integration
 
-The HPC Dashboard supports several advanced features:
+You can embed the dashboard within Open OnDemand by updating the iframe URL in the provided Python App template from [this repository](https://github.com/thediymaker/ood-status-iframe).
 
-- **Historical Node Data**:  
-  Collect historical node data hourly. You will want to copy the following in to a script, and then call this from crontab. You can set this up to run hourly, or as often as you would like. By default it keeps the last 30 days worth of data.
+### Installation
 
-  ```bash
-  #!/bin/bash
-  SAVE_DIR="/var/www/slurm-node-dashboard/data"
-  mkdir -p "$SAVE_DIR"
-  FILENAME=$(date +"%Y-%m-%dT%H-%M-%S.000Z.json.gz")
-  curl -s "http://localhost:3020/api/slurm/nodes" | gzip > "$SAVE_DIR/$FILENAME"
-  find "$SAVE_DIR" -name "*.json.gz" -type f -mtime +30 -delete
-  ```
+1. Clone this repository into the Open OnDemand apps directory:
 
-- **Open OnDemand Integration**:  
-  You can embed the dashboard within Open OnDemand by updating the iframe URL in the provided Ruby app template from [this repository](https://github.com/thediymaker/ood-status-iframe).
+```bash
+cd /var/www/ood/apps/sys/
+git clone https://github.com/thediymaker/ood-status-iframe.git
+cd ood-status-iframe
+```
+
+2. Create a virtual environment and install requirements
+
+```bash
+python3 -m venv ood-status-iframe
+source ood-status-iframe/bin/activate
+python3 -m pip install -r requirements.txt
+```
+
+3. If you updated the name of the envionment, you will need to modify the path in the bin/python file to match. Also you need ot make sure the bin/python file is executable.
+
+```bash
+chmod +x bin/python
+```
+
+### Configuration
+
+1. Open the `templates/layout.html` file in your preferred text editor.
+
+2. Update the URL in the iFrame to point to your external dashboard:
+
+```erb
+<iframe src="https://your-external-dashboard-url.com" ...>
+```
+
+3. Update the mainifest.yml to reflect the application name and location in the menu that you would like this app to appear.
+
+```yml
+name: System Status
+description: |-
+  HPC Status Page
+category: System
+subcategory: System Information
+icon: fa://bar-chart
+show_in_menu: true
+```
+
+4. Once this is complete, you will now be able to browse to your open on demand instance at http://{your_vm_public_hostname.rc.asu.edu}/. From here, you will see the "System" drop down on the menu, and will be able to select "System Status". This will load the dashboard in your OOD instance.
+
+---
+
+## Notes and best practices
+
+All systems should be secured with SSL certificates. We did not to these in this tutorial, but ideally you would want your Status Dashboard running behind NGNIX or HTTPD with an SSL Certificate, and then giving that URL to the OOD iframe plugin.
+
+You should have real authentication in from of Open OnDemand.
+
+You should have authentication in front of the dashboard, or make sure the dashboard is not accessible outside of Open OnDemand.
 
 ---
 
