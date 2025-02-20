@@ -28,10 +28,10 @@ export async function GET(req: Request) {
   const step = 15 * 60; // 15 minutes
 
   try {
-    // Match either exact hostname or hostname with a domain suffix
+    // Match hostname either exactly or as part of nodename with domain
     const unameQuery = "node_uname_info";
     const unameRes: PrometheusQueryResponse = await prom.rangeQuery(
-      `${unameQuery}{nodename=~"${node}(\\..*)?"}`,
+      `${unameQuery}{nodename=~"${node}(\\..+)?"}`,
       start,
       end,
       step
