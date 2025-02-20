@@ -57,7 +57,7 @@ Before you begin, ensure you have the following:
 Clone the HPC Dashboard repository from GitHub:
 
 ```bash
-git clone https://github.com/thediymaker/slurm-node-dashboard.git
+git clone -b tutorial2025 https://github.com/thediymaker/slurm-node-dashboard.git
 cd slurm-node-dashboard
 ```
 
