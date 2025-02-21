@@ -22,7 +22,7 @@ const SmallCardContent: React.FC<{ name: string }> = ({ name }) => (
   <div
     className={`flex m-auto items-center justify-center w-full h-full uppercase`}
   >
-    <div className="font-extrabold text-[10px] mb-.5">{name}</div>
+    <div className="font-extrabold text-[10px] mb-.5 truncate">{name}</div>
   </div>
 );
 
@@ -42,7 +42,7 @@ const MediumCardContent = ({
   return (
     <div className="flex flex-col h-full">
       <div className="p-1 space-y-1">
-        <div className="font-extrabold text-[10px] leading-tight uppercase">
+        <div className="font-extrabold text-[10px] leading-tight uppercase truncate">
           {name}
         </div>
         <p className="text-[9px] leading-none">
@@ -78,7 +78,7 @@ const LargeCardContent = ({
   return (
     <div className="flex flex-col h-full">
       <div className="p-1 space-y-1">
-        <div className="font-extrabold text-[10px] leading-tight uppercase max-w-[140px]">
+        <div className="font-extrabold text-[10px] leading-tight uppercase max-w-[140px] truncate">
           {name}
         </div>
         <p className="text-[9px] leading-none">
