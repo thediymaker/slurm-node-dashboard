@@ -17,20 +17,17 @@ const fetcher = async (url: string) => {
 export default function Stats({ data }: { data: { nodes: any[] } }) {
   const nodes = data?.nodes ?? [];
 
-  // This state controls whether we continue fetching Prometheus data.
   const [isPrometheusAvailable, setIsPrometheusAvailable] = React.useState<
     boolean | null
   >(null);
   const shouldFetch = isPrometheusAvailable !== false;
 
-  // SWR call to fetch power data from Prometheus
   const {
     data: ipmiData,
     error,
     isValidating,
     mutate,
   } = useSWR(shouldFetch ? "/api/prometheus/ipmi" : null, fetcher, {
-    // Removed auto-refresh by omitting refreshInterval
     fallbackData: { status: 404, data: [], summary: null },
     onError: (err) => {
       console.error("Prometheus endpoint error:", err);
@@ -72,7 +69,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       totalCoresUsed += node.alloc_cpus;
       totalCores += node.cpus;
 
-      // Use Slurm power data only if Prometheus isn’t available.
+      // Use Slurm power data only if Prometheus isn't available
       if (!prometheusAvailable && node.energy?.current_watts?.number) {
         totalPowerUsage += node.energy.current_watts.number;
         totalPowerNodes++;
@@ -98,6 +95,21 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       if (secondaryState === "DRAIN") nodeStates.drain++;
     });
 
+    const currentTotal = prometheusAvailable
+      ? powerSummary?.currentTotal || 0
+      : totalPowerUsage;
+
+    const averagePower = prometheusAvailable
+      ? powerSummary?.currentAverage || 0
+      : totalPowerNodes > 0
+      ? totalPowerUsage / totalPowerNodes
+      : 0;
+
+    // Only consider power data available if we have non-zero values
+    const hasPowerData =
+      (prometheusAvailable && currentTotal > 0) ||
+      (!prometheusAvailable && totalPowerUsage > 0);
+
     return {
       totalMemoryUsed,
       totalMemory,
@@ -105,17 +117,11 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       totalCores,
       totalGpuUsed,
       totalGpu,
-      averagePowerUsage: prometheusAvailable
-        ? powerSummary?.currentAverage || 0
-        : totalPowerNodes > 0
-        ? totalPowerUsage / totalPowerNodes
-        : 0,
-      totalPowerKw: prometheusAvailable
-        ? (powerSummary?.currentTotal || 0) / 1000
-        : totalPowerUsage / 1000,
+      averagePowerUsage: averagePower,
+      totalPowerKw: currentTotal / 1000,
       nodeStates,
       totalGpuNodes,
-      hasPowerData: prometheusAvailable || totalPowerNodes > 0,
+      hasPowerData,
     };
   }, [nodes, prometheusAvailable, powerSummary]);
 
@@ -135,12 +141,15 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       );
     }
 
-    return nodes.slice(0, 10).map((node) => ({
-      time: Date.now(),
-      watts: node.energy?.current_watts?.number || 0,
-      averageWatts: node.energy?.current_watts?.number || 0,
-      nodesReporting: 1,
-    }));
+    return nodes
+      .filter((node) => node.energy?.current_watts?.number)
+      .slice(0, 10)
+      .map((node) => ({
+        time: Date.now(),
+        watts: node.energy.current_watts.number,
+        averageWatts: node.energy.current_watts.number,
+        nodesReporting: 1,
+      }));
   }, [nodes, prometheusAvailable, prometheusData]);
 
   const cpuPercentage =
@@ -160,11 +169,16 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
     console.error("Failed to fetch power data:", error);
   }
 
+  // Only show power card if we have actual power data
+  const showPowerCard =
+    stats.hasPowerData &&
+    (stats.totalPowerKw > 0 || stats.averagePowerUsage > 0);
+
   return (
     <div
       className={cn(
         "grid gap-4 mb-4",
-        stats.hasPowerData ? "grid-cols-5" : "grid-cols-4"
+        showPowerCard ? "grid-cols-5" : "grid-cols-4"
       )}
     >
       {/* CPU Usage Card */}
@@ -238,7 +252,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       </Card>
 
       {/* Power Usage Card */}
-      {stats.hasPowerData && (
+      {showPowerCard && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Power Usage</CardTitle>

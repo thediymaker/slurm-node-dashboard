@@ -21,14 +21,9 @@ export async function GET(req: Request) {
 
   try {
     const now = new Date();
-    // Set the time range to the past 24 hours.
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    // Use a fixed 15-minute step (900 seconds)
     const stepSize = 900;
 
-    // This query computes a 15-minute average for each node.
-    // At each evaluation time T (every 15 minutes), Prometheus averages the value
-    // over the interval [T-15m, T]. If a node doesn't report in that window, it won't appear.
     const powerQuery =
       'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m])';
 
@@ -39,7 +34,19 @@ export async function GET(req: Request) {
       stepSize
     );
 
-    // Aggregate across nodes for each timestamp.
+    // Check if we have any results
+    if (!historicalRes?.result?.length) {
+      return NextResponse.json({
+        status: 200,
+        data: [],
+        summary: {
+          currentTotal: 0,
+          currentAverage: 0,
+          nodesReporting: 0,
+        },
+      });
+    }
+
     const timeSeriesMap = new Map<
       number,
       { totalWatts: number; nodeCount: number }
@@ -68,6 +75,19 @@ export async function GET(req: Request) {
       }))
       .sort((a, b) => a.time - b.time)
       .slice(-MAX_DATA_POINTS);
+
+    // Check if we have any processed data
+    if (!timeSeriesData.length) {
+      return NextResponse.json({
+        status: 200,
+        data: [],
+        summary: {
+          currentTotal: 0,
+          currentAverage: 0,
+          nodesReporting: 0,
+        },
+      });
+    }
 
     const lastPoint = timeSeriesData[timeSeriesData.length - 1];
 
