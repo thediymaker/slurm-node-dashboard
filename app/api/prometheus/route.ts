@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   try {
     const unameQuery = "node_uname_info";
     const unameRes: PrometheusQueryResponse = await prom.rangeQuery(
-      `${unameQuery}{nodename="${node}.*"}`,
+      `${unameQuery}{nodename=~"${node}.*"}`,
       start,
       end,
       step
