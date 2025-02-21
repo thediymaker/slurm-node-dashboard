@@ -49,7 +49,7 @@ ssh -i /path/to/your/ssh_key rocky@your_vm_public_ip
 After logging in, switch to root and navigate to the installation directory:
 
 ```bash
-su -i
+sudo su -
 cd /var/www/
 git clone -b tutorial2025 https://github.com/thediymaker/slurm-node-dashboard.git
 cd slurm-node-dashboard
@@ -120,6 +120,8 @@ pm2 save
 
 ## Open OnDemand Integration
 
+Open OnDemand has already been installed and configured on this VM. If you have an existing OOD instance running from your previous tutorial, you can use it, though the steps will be slightly different. The default username to log in to this dashboard is "tutorial" and the password is "good-tutorial-2025!"
+
 ### Installation Steps
 
 1. Clone the integration repository:
@@ -141,7 +143,7 @@ chmod +x bin/python
 
 ### Configuration Steps
 
-1. Update the iframe URL in `templates/layout.html`. This url will be your public http://hostname:port. For example, http://r8-good-tutorial.rc.asu.edu:3020. In a production environment, you'll likely have this running behind something like httpd or ngnix, and you would just point to your secured, https://externalURL.
+1. Update the iframe URL in `templates/layout.html`. This URL will be your public `http://hostname:port`. For example, `http://r8-good-tutorial.rc.asu.edu:3020`. In a production environment, you'll likely have this running behind something like httpd or nginx, and you would point to your secured `https://externalURL`.
 
 ```html
 <iframe src="https://your-external-dashboard-url.com" ...></iframe>
@@ -158,7 +160,35 @@ icon: fa://bar-chart
 show_in_menu: true
 ```
 
-Access your dashboard at `http://{your_vm_public_hostname.rc.asu.edu}/`
+Access the Open OnDemand dashboard at `http://{your_vm_public_hostname.rc.asu.edu}/`
+
+From here, you will be able to see the status page by browsing to the "System" dropdown in the menu, and then selecting System Status.
+
+## Usage
+
+From the dashboard, you can see the individual compute nodes. You can hover to get basic details and click to get more detailed information.
+
+Let's submit a job so you can see it in action.
+
+As root, switch to the "tutorial" user and browse to the /scratch directory. From here, copy the test batch script from /packages/slurm/submit.sbatch to this base directory. Make sure to use the following command to avoid overriding other users' scripts:
+
+```bash
+su - tutorial
+cd /scratch
+cp /packages/slurm/submit.sbatch ./$(hostname -s)-submit.sbatch
+```
+
+Edit the file and set the SBATCH option `-w` to submit to your specific node. For example:
+
+```bash
+#SBATCH -w r8-good-tutorial-c3
+```
+
+Once submitted, the job should show up on the dashboard. You can see the jobs which are in queue or running with the following command:
+
+```bash
+scontrol show jobs
+```
 
 ## Best Practices
 
