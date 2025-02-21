@@ -16,18 +16,6 @@
         --highlight: #00ff00;
       }
 
-      @keyframes matrix-effect {
-        0% {
-          opacity: 0;
-        }
-        50% {
-          opacity: 0.7;
-        }
-        100% {
-          opacity: 0;
-        }
-      }
-
       @keyframes cursor-blink {
         0%,
         100% {
@@ -48,6 +36,8 @@
         min-height: 100vh;
         position: relative;
         overflow-x: hidden;
+        /* Added to account for footer */
+        padding-bottom: 40px;
       }
 
       /* Matrix rain effect in background */
@@ -84,6 +74,7 @@
         border-radius: 5px;
         box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
         position: relative;
+        margin-bottom: 4rem;
       }
 
       .container::before {
@@ -96,6 +87,36 @@
         padding: 5px;
         width: 100%;
         border-bottom: 1px solid var(--terminal-green);
+      }
+
+      /* Terminal Footer */
+      .terminal-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: var(--darker-bg);
+        border-top: 1px solid var(--terminal-green);
+        padding: 8px;
+        font-family: "Courier New", monospace;
+        color: var(--terminal-green);
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .terminal-prompt {
+        margin-right: 8px;
+      }
+
+      .terminal-cursor {
+        display: inline-block;
+        width: 8px;
+        height: 15px;
+        background-color: var(--terminal-green);
+        animation: cursor-blink 1s infinite;
+        vertical-align: middle;
       }
 
       h1,
@@ -199,19 +220,6 @@
         filter: brightness(0.9) hue-rotate(120deg);
       }
 
-      /* ASCII decorative elements */
-      .container::after {
-        content: "[Process completed]";
-        position: absolute;
-        bottom: -25px;
-        left: 0;
-        color: var(--terminal-green);
-        font-size: 0.9em;
-        width: 100%;
-        border-top: 1px solid var(--terminal-green);
-        padding: 5px;
-      }
-
       /* Scrollbar styling */
       ::-webkit-scrollbar {
         width: 8px;
@@ -231,19 +239,13 @@
       ::-webkit-scrollbar-thumb:hover {
         background: var(--highlight);
       }
-
-      /* Cursor effect */
-      .container::after {
-        content: "_";
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        color: var(--terminal-green);
-        animation: cursor-blink 1s infinite;
-      }
     </style>
   </head>
   <body>
     <div class="container">{{ content }}</div>
+    <footer class="terminal-footer">
+      <span class="terminal-prompt">root@hpc-dashboard:~# </span>
+      <div class="terminal-cursor"></div>
+    </footer>
   </body>
 </html>
