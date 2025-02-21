@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page.title }}</title>
+    <style>
+      :root {
+        --neon-pink: #ff2e88;
+        --neon-blue: #00ffff;
+        --dark-bg: #0a0a0f;
+        --darker-bg: #050508;
+        --text-color: #e0e0e0;
+        --code-bg: #1a1a2e;
+      }
+
+      body {
+        background-color: var(--dark-bg);
+        color: var(--text-color);
+        font-family: "Courier New", monospace;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background-image: linear-gradient(
+            45deg,
+            var(--darker-bg) 25%,
+            transparent 25%
+          ),
+          linear-gradient(-45deg, var(--darker-bg) 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, var(--darker-bg) 75%),
+          linear-gradient(-45deg, transparent 75%, var(--darker-bg) 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: rgba(10, 10, 15, 0.95);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+        border: 1px solid var(--neon-blue);
+        border-radius: 5px;
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: var(--neon-blue);
+        text-shadow: 0 0 5px var(--neon-blue);
+        border-bottom: 1px solid var(--neon-pink);
+        padding-bottom: 0.3em;
+      }
+
+      a {
+        color: var(--neon-pink);
+        text-decoration: none;
+        transition: all 0.3s ease;
+      }
+
+      a:hover {
+        color: var(--neon-blue);
+        text-shadow: 0 0 5px var(--neon-blue);
+      }
+
+      code {
+        background-color: var(--code-bg);
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        font-family: "Courier New", monospace;
+        border: 1px solid var(--neon-pink);
+      }
+
+      pre {
+        background-color: var(--code-bg);
+        padding: 1em;
+        border-radius: 5px;
+        overflow-x: auto;
+        border: 1px solid var(--neon-blue);
+      }
+
+      pre code {
+        border: none;
+        padding: 0;
+      }
+
+      blockquote {
+        border-left: 3px solid var(--neon-pink);
+        margin: 1em 0;
+        padding-left: 1em;
+        color: #bebebe;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--neon-blue);
+        padding: 0.5em;
+      }
+
+      th {
+        background-color: var(--code-bg);
+        color: var(--neon-blue);
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+        border: 2px solid var(--neon-pink);
+        border-radius: 5px;
+      }
+
+      /* Cyberpunk decorative elements */
+      .container::before {
+        content: "< / >";
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        color: var(--neon-pink);
+        opacity: 0.5;
+        font-size: 0.8em;
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--darker-bg);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--neon-pink);
+        border-radius: 5px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--neon-blue);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">{{ content }}</div>
+  </body>
+</html>
