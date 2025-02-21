@@ -1,5 +1,5 @@
 ---
-layout: hacker
+layout: mac
 title: GOOD 2025 HPC Dashboard Tutorial
 permalink: /tutorial/good/2025/
 ---

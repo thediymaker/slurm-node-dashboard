@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page.title }}</title>
+    <style>
+      :root {
+        --terminal-text: #fff;
+        --terminal-bg: #2d2d2d;
+        --darker-bg: #1e1e1e;
+        --accent-color: #ff4081;
+        --highlight: #00b7c3;
+        --code-bg: #363636;
+        --border-color: #404040;
+      }
+
+      @keyframes cursor-blink {
+        0%,
+        100% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      body {
+        background-color: var(--terminal-bg);
+        color: var(--terminal-text);
+        font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Subtle matrix-like background pattern */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(rgba(45, 45, 45, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(45, 45, 45, 0.05) 1px, transparent 1px);
+        background-size: 20px 20px;
+        z-index: -1;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 2rem 2rem;
+        background-color: var(--terminal-bg);
+        position: relative;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        flex: 1;
+        margin-bottom: 40px;
+      }
+
+      .terminal-header {
+        background-color: var(--darker-bg);
+        padding: 8px;
+        font-family: inherit;
+        color: var(--terminal-text);
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .terminal-header-content {
+        max-width: 900px;
+        width: 100%;
+        text-align: left;
+        color: #a0a0a0;
+      }
+
+      .terminal-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: var(--darker-bg);
+        border-top: 1px solid var(--border-color);
+        padding: 8px;
+        font-family: inherit;
+        color: #a0a0a0;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .terminal-prompt {
+        margin-right: 8px;
+      }
+
+      .terminal-cursor {
+        display: inline-block;
+        width: 8px;
+        height: 15px;
+        background-color: var(--accent-color);
+        animation: cursor-blink 1s infinite;
+        vertical-align: middle;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: var(--accent-color);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.3em;
+        position: relative;
+      }
+
+      h1::before {
+        content: "# ";
+        color: var(--highlight);
+      }
+      h2::before {
+        content: "## ";
+        color: var(--highlight);
+      }
+      h3::before {
+        content: "### ";
+        color: var(--highlight);
+      }
+
+      a {
+        color: var(--highlight);
+        text-decoration: none;
+        border-bottom: 1px dashed var(--highlight);
+        transition: all 0.3s ease;
+      }
+
+      a:hover {
+        background: rgba(0, 183, 195, 0.1);
+        text-shadow: 0 0 5px var(--highlight);
+      }
+
+      code {
+        background-color: var(--code-bg);
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        font-family: inherit;
+        color: #ff9800;
+        border: 1px solid var(--border-color);
+      }
+
+      pre {
+        background-color: var(--code-bg);
+        padding: 1em;
+        border-radius: 5px;
+        overflow-x: auto;
+        border: 1px solid var(--border-color);
+        position: relative;
+      }
+
+      pre::before {
+        content: "$ ";
+        color: #4caf50;
+        position: absolute;
+        left: 5px;
+        top: 5px;
+      }
+
+      pre code {
+        border: none;
+        padding: 0;
+        margin-left: 15px;
+      }
+
+      blockquote {
+        border-left: 3px solid var(--accent-color);
+        margin: 1em 0;
+        padding-left: 1em;
+        color: var(--terminal-text);
+        background: rgba(255, 64, 129, 0.05);
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+        background: var(--darker-bg);
+      }
+
+      th,
+      td {
+        border: 1px solid var(--border-color);
+        padding: 0.5em;
+      }
+
+      th {
+        background-color: var(--code-bg);
+        color: var(--accent-color);
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+        border: 2px solid var(--border-color);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--darker-bg);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-color);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="terminal-header">
+      <div class="terminal-header-content">~ % less tutorial.md</div>
+    </header>
+    <div class="container">{{ content }}</div>
+    <footer class="terminal-footer">
+      <span class="terminal-prompt">~ % </span>
+      <div class="terminal-cursor"></div>
+    </footer>
+  </body>
+</html>
