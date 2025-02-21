@@ -67,26 +67,38 @@
 
       .container {
         max-width: 900px;
-        margin: 2rem auto;
+        margin: 0 auto;
+        margin-bottom: 4rem;
+        margin-top: 40px;
         padding: 2rem;
         background-color: rgba(0, 0, 0, 0.95);
-        border: 1px solid var(--terminal-green);
-        border-radius: 5px;
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+        border-left: 1px solid var(--terminal-green);
+        border-right: 1px solid var(--terminal-green);
+        border-bottom: 1px solid var(--terminal-green);
         position: relative;
-        margin-bottom: 4rem;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
       }
 
-      .container::before {
-        content: "root@hpc-dashboard:~# less tutorial.md";
-        position: absolute;
-        top: -30px;
+      .terminal-header {
+        position: fixed;
+        top: 0;
         left: 0;
-        color: var(--terminal-green);
-        font-size: 0.9em;
-        padding: 5px;
         width: 100%;
+        background-color: var(--darker-bg);
         border-bottom: 1px solid var(--terminal-green);
+        padding: 8px;
+        font-family: "Courier New", monospace;
+        color: var(--terminal-green);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .terminal-header-content {
+        max-width: 900px;
+        width: 100%;
+        text-align: left;
       }
 
       /* Terminal Footer */
@@ -242,6 +254,11 @@
     </style>
   </head>
   <body>
+    <header class="terminal-header">
+      <div class="terminal-header-content">
+        root@hpc-dashboard:~# less tutorial.md
+      </div>
+    </header>
     <div class="container">{{ content }}</div>
     <footer class="terminal-footer">
       <span class="terminal-prompt">root@hpc-dashboard:~# </span>
