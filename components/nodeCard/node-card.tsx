@@ -21,7 +21,7 @@ const calculateTotalGPUUsage = (
 const SmallCardContent: React.FC<{ name: string }> = ({ name }) => (
   <div className="flex items-center justify-center w-full h-full">
     <div className="w-full px-1">
-      <div className="font-extrabold text-[10px] mb-.5 truncate text-center w-[80px]">
+      <div className="font-extrabold text-[10px] mb-.5 truncate text-center">
         {name}
       </div>
     </div>
@@ -45,7 +45,7 @@ const MediumCardContent = ({
     <div className="flex flex-col h-full">
       <div className="p-1 space-y-1">
         <div className="w-full">
-          <div className="font-extrabold text-[10px] leading-tight uppercase truncate w-[80px]">
+          <div className="font-extrabold text-[10px] leading-tight uppercase truncate">
             {name}
           </div>
         </div>
@@ -83,7 +83,7 @@ const LargeCardContent = ({
     <div className="flex flex-col h-full">
       <div className="p-1 space-y-1">
         <div className="w-full">
-          <div className="font-extrabold text-[10px] leading-tight uppercase truncate w-[80px]">
+          <div className="font-extrabold text-[10px] leading-tight uppercase truncate">
             {name}
           </div>
         </div>
