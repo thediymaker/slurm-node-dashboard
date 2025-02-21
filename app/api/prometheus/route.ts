@@ -30,26 +30,12 @@ export async function GET(req: Request) {
   try {
     // Match hostname either exactly or as part of nodename with domain
     const unameQuery = "node_uname_info";
-    const prometheusNodeQuery = `${unameQuery}{nodename=~"${node}|${node}\\.novalocal"}`;
-    console.log("Prometheus Query:", prometheusNodeQuery);
-
     const unameRes: PrometheusQueryResponse = await prom.rangeQuery(
-      prometheusNodeQuery,
+      `${unameQuery}{nodename=~"${node}".*}`,
       start,
       end,
       step
     );
-
-    console.log("Query Response:", JSON.stringify(unameRes, null, 2));
-
-    // Handle no results
-    if (!unameRes.result || unameRes.result.length === 0) {
-      console.log("No results found for node query");
-      return NextResponse.json({
-        status: 404,
-        message: `No instance found for node: ${node}. Query: ${prometheusNodeQuery}`,
-      });
-    }
 
     // If multiple matches found, use the first one
     const instance = unameRes.result[0]?.metric?.labels["instance"];
