@@ -175,7 +175,7 @@ As root, switch to the "tutorial" user and browse to the /scratch directory. Fro
 ```bash
 su - tutorial
 cd /scratch
-cp /packages/slurm/submit.sbatch ./$(hostname -s)-submit.sbatch
+cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch
 ```
 
 Edit the file and set the SBATCH option `-w` to submit to your specific node. For example:
