@@ -1,6 +1,6 @@
 # HPC Dashboard Getting Started Guide
 
-Welcome to the HPC Dashboard Tutorial! This guide will help you deploy and run the HPC Dashboard on your provided VM.
+Welcome to the **HPC Dashboard Tutorial**! This guide will walk you through the process of deploying and running the HPC Dashboard on your provided virtual machine (VM).
 
 ---
 
@@ -21,7 +21,7 @@ Welcome to the HPC Dashboard Tutorial! This guide will help you deploy and run t
 
 ## Introduction
 
-The **HPC Dashboard** is a Next.js application designed for real-time monitoring of SLURM nodes. It provides detailed insights into CPU/GPU utilization, node status, job histories, and much more. During this tutorial, you will:
+The **HPC Dashboard** is a Next.js application designed for real-time monitoring of SLURM nodes. It provides detailed insights into CPU/GPU utilization, node status, job histories, and more. In this tutorial, you will:
 
 - Deploy the dashboard on a VM (with a public IP and provided SSH key).
 - Connect to a remote SLURM API and Prometheus instance running on another VM.
@@ -31,30 +31,31 @@ The **HPC Dashboard** is a Next.js application designed for real-time monitoring
 
 ## Prerequisites
 
-Before you begin, ensure you have the following:
+Before proceeding, ensure you have the following:
 
 - **VM Access**:
-  - A provided VM with a public IP.
-  - An SSH key for secure access.
-  - Slurm API key.
-  - Slurm and Prometheus IP addresses
+  - A provided VM with a public IP (provided by the tutorial host).
+  - An SSH key for secure access (provided by the tutorial host).
+  - A SLURM API key (located at `/packages/slurm/config/key` on the VM).
+  - SLURM and Prometheus IP addresses (pre-populated).
 
 ---
 
 ## Environment Setup
 
-1. **Connect to Your VM**:  
-   Open your terminal and use the provided SSH key to connect:
+### 1. Connect to Your VM
 
-   ```bash
-   ssh -i /path/to/your/ssh_key rocky@your_vm_public_ip
-   ```
+Open your terminal and use the provided SSH key to connect:
+
+```bash
+ssh -i /path/to/your/ssh_key rocky@your_vm_public_ip
+```
 
 ---
 
 ## Cloning the Repository
 
-Once you get logged in, you will want to change directory to the /var/www/ and clone the HPC Dashboard repository from GitHub:
+Once logged in, navigate to `/var/www/` and clone the HPC Dashboard repository from GitHub:
 
 ```bash
 cd /var/www/
@@ -66,65 +67,67 @@ cd slurm-node-dashboard
 
 ## Configuring the Application
 
-1. **Install Dependencies**:
+### 1. Install Dependencies
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
-2. **Set Up Your Environment File**:  
-   Move the `.env.production` to `.env` in the project root (note, having both could cause build errors, so move not copy). Use the template below and adjust the values to match your environment (e.g., VM public IPs, SLURM API details, and Prometheus URL):
+### 2. Set Up Your Environment File
 
-   ```env
-   # BASE
-   COMPANY_NAME="Tutorial"
-   NEXT_PUBLIC_BASE_URL="http://your_vm_public_ip:3000"
-   VERSION=1.1.2
-   CLUSTER_NAME="Tutorial"
-   CLUSTER_LOGO="/logo.png"
+Move `.env.production` to `.env` in the project root (avoid copying, as having both can cause build errors). Use the template below and adjust the values to match your environment (e.g., VM public IPs, SLURM API details, and Prometheus URL):
 
-   # DEV
-   NODE_ENV="dev"
-   REACT_EDITOR="code"
+```env
+# BASE
+COMPANY_NAME="Tutorial"
+NEXT_PUBLIC_BASE_URL="http://your_vm_public_ip:3000"
+VERSION=1.1.2
+CLUSTER_NAME="Tutorial"
+CLUSTER_LOGO="/logo.png"
 
-   # SLURM
-   SLURM_API_VERSION="v0.0.40"
-   SLURM_SERVER="192.168.1.233"
-   SLURM_API_TOKEN="your_slurm_api_token" # add the API key
-   SLURM_API_ACCOUNT="slurm"
+# DEV
+NODE_ENV="dev"
+REACT_EDITOR="code"
 
-   # ADVANCED FEATURES
-   PROMETHEUS_URL="http://192.168.1.233:9090"
-   ```
+# SLURM
+SLURM_API_VERSION="v0.0.40"
+SLURM_SERVER="192.168.1.233"
+SLURM_API_TOKEN="your_slurm_api_token" # Add the API key
+SLURM_API_ACCOUNT="slurm"
+
+# ADVANCED FEATURES
+PROMETHEUS_URL="http://192.168.1.233:9090"
+```
 
 ---
 
 ## Running the Dashboard
 
-1. **Development Mode**:  
-   Start the dashboard in development mode:
+### 1. Development Mode
 
-   ```bash
-   npm run dev
-   ```
+Start the dashboard in development mode:
 
-   Visit `http://your_vm_public_ip:3020` in your web browser to see the dashboard.
+```bash
+npm run dev
+```
+
+Visit `http://your_vm_public_ip:3020` in your web browser to access the dashboard.
 
 ---
 
-## Production Deployment
+## Production Deployment (Optional)
 
-For a production environment, it is recommended to use **PM2** to manage the application:
+For a production environment, it is recommended to use **PM2** to manage the application.
 
-1. **Install PM2 Globally**:
+### 1. Install PM2 Globally
 
-   ```bash
-   npm install -g pm2
-   ```
+```bash
+npm install -g pm2
+```
 
-2. **Start the Application with PM2**:
+### 2. Start the Application with PM2
 
-This will start the application on port 3020, which is what we were using for dev.
+This will start the application on port 3020 (same as in development mode).
 
 ```bash
 pm2 start npm --name "hpc-dashboard" -- start -- --port 3020
@@ -133,9 +136,9 @@ pm2 save
 
 ---
 
-## Open onDemand Integration
+## Open OnDemand Integration
 
-You can embed the dashboard within Open OnDemand by updating the iframe URL in the provided Python App template from [this repository](https://github.com/thediymaker/ood-status-iframe).
+You can embed the dashboard within Open OnDemand by updating the iframe URL in the provided Python app template from [this repository](https://github.com/thediymaker/ood-status-iframe).
 
 ### Installation
 
@@ -147,7 +150,7 @@ git clone https://github.com/thediymaker/ood-status-iframe.git
 cd ood-status-iframe
 ```
 
-2. Create a virtual environment and install requirements
+2. Create a virtual environment and install dependencies:
 
 ```bash
 python3 -m venv ood-status-iframe
@@ -155,7 +158,7 @@ source ood-status-iframe/bin/activate
 python3 -m pip install -r requirements.txt
 ```
 
-3. If you updated the name of the envionment, you will need to modify the path in the bin/python file to match. Also you need ot make sure the bin/python file is executable.
+3. If you updated the name of the environment, modify the path in `bin/python` to match. Ensure the file is executable:
 
 ```bash
 chmod +x bin/python
@@ -163,15 +166,14 @@ chmod +x bin/python
 
 ### Configuration
 
-1. Open the `templates/layout.html` file in your preferred text editor.
-
-2. Update the URL in the iFrame to point to your external dashboard:
+1. Open `templates/layout.html` in your preferred text editor.
+2. Update the iFrame URL to point to your external dashboard:
 
 ```erb
 <iframe src="https://your-external-dashboard-url.com" ...>
 ```
 
-3. Update the mainifest.yml to reflect the application name and location in the menu that you would like this app to appear.
+3. Modify `manifest.yml` to reflect the application name and menu location:
 
 ```yml
 name: System Status
@@ -183,34 +185,32 @@ icon: fa://bar-chart
 show_in_menu: true
 ```
 
-4. Once this is complete, you will now be able to browse to your open on demand instance at http://{your_vm_public_hostname.rc.asu.edu}/. From here, you will see the "System" drop down on the menu, and will be able to select "System Status". This will load the dashboard in your OOD instance.
+4. Once completed, navigate to your Open OnDemand instance at `http://{your_vm_public_hostname.rc.asu.edu}/`. You should see the "System" dropdown in the menu, where you can select "System Status" to load the dashboard.
 
 ---
 
-## Notes and best practices
+## Notes & Best Practices
 
-All systems should be secured with SSL certificates. We did not to these in this tutorial, but ideally you would want your Status Dashboard running behind NGNIX or HTTPD with an SSL Certificate, and then giving that URL to the OOD iframe plugin.
-
-You should have real authentication in from of Open OnDemand.
-
-You should have authentication in front of the dashboard, or make sure the dashboard is not accessible outside of Open OnDemand.
+- **Secure your systems with SSL certificates.** Ideally, the Status Dashboard should run behind **NGINX** or **HTTPD** with an SSL certificate, and that URL should be used in the Open OnDemand iframe plugin.
+- **Ensure authentication is in place** before exposing Open OnDemand.
+- **Restrict dashboard access** outside of Open OnDemand, or implement authentication.
 
 ---
 
 ## Additional Resources
 
 - **HPC Dashboard Repository**: [GitHub Repository](https://github.com/thediymaker/slurm-node-dashboard)
-- **Next.js Documentation**: [https://nextjs.org/](https://nextjs.org/)
-- **Tailwind CSS Documentation**: [https://tailwindcss.com/](https://tailwindcss.com/)
-- **SLURM Documentation**: [https://slurm.schedmd.com/documentation.html](https://slurm.schedmd.com/documentation.html)
-- **Prometheus Documentation**: [https://prometheus.io/docs/](https://prometheus.io/docs/)
+- **Next.js Documentation**: [Next.js](https://nextjs.org/)
+- **Tailwind CSS Documentation**: [Tailwind CSS](https://tailwindcss.com/)
+- **SLURM Documentation**: [SLURM](https://slurm.schedmd.com/documentation.html)
+- **Prometheus Documentation**: [Prometheus](https://prometheus.io/docs/)
 - **Video Guides**:
   - [Quick Start Guide](https://youtu.be/wVEhPN-IqEA)
   - [Open OnDemand Integration](https://youtu.be/avLUYgMya98)
 
 ---
 
-Happy monitoring and enjoy the HPC Dashboard Tutorial!
+Happy monitoring, and enjoy the HPC Dashboard Tutorial!
 
 <p align="center">
   Made with ❤️ for HPC
