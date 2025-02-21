@@ -130,6 +130,7 @@ npm install -g pm2
 This will start the application on port 3020 (same as in development mode).
 
 ```bash
+npm run build
 pm2 start npm --name "hpc-dashboard" -- start -- --port 3020
 pm2 save
 ```
