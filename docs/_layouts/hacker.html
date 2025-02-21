@@ -36,8 +36,8 @@
         min-height: 100vh;
         position: relative;
         overflow-x: hidden;
-        /* Added to account for footer */
-        padding-bottom: 40px;
+        display: flex;
+        flex-direction: column;
       }
 
       /* Matrix rain effect in background */
@@ -68,15 +68,15 @@
       .container {
         max-width: 900px;
         margin: 0 auto;
-        margin-bottom: 4rem;
         margin-top: 40px;
         padding: 2rem;
         background-color: rgba(0, 0, 0, 0.95);
         border-left: 1px solid var(--terminal-green);
         border-right: 1px solid var(--terminal-green);
-        border-bottom: 1px solid var(--terminal-green);
         position: relative;
         box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+        flex: 1;
+        margin-bottom: 40px; /* Matches the height of the footer */
       }
 
       .terminal-header {
@@ -85,7 +85,6 @@
         left: 0;
         width: 100%;
         background-color: var(--darker-bg);
-        border-bottom: 1px solid var(--terminal-green);
         padding: 8px;
         font-family: "Courier New", monospace;
         color: var(--terminal-green);
