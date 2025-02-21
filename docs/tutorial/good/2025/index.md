@@ -1,6 +1,6 @@
 ---
-layout: default
-title: HPC Dashboard Tutorial
+layout: hacker
+title: GOOD 2025 HPC Dashboard Tutorial
 permalink: /tutorial/good/2025/
 ---
 

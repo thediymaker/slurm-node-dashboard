@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page.title }}</title>
+    <style>
+      :root {
+        --terminal-green: #00ff00;
+        --darker-green: #006400;
+        --dark-bg: #0c0c0c;
+        --darker-bg: #050505;
+        --text-color: #33ff33;
+        --terminal-text: #33ff33;
+        --code-bg: #1a1a1a;
+        --highlight: #00ff00;
+      }
+
+      @keyframes matrix-effect {
+        0% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 0.7;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes cursor-blink {
+        0%,
+        100% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      body {
+        background-color: var(--dark-bg);
+        color: var(--text-color);
+        font-family: "Courier New", monospace;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Matrix rain effect in background */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+            transparent,
+            transparent 50px,
+            rgba(0, 255, 0, 0.1) 50px,
+            rgba(0, 255, 0, 0.05) 51px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 50px,
+            rgba(0, 255, 0, 0.1) 50px,
+            rgba(0, 255, 0, 0.05) 51px
+          );
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: rgba(0, 0, 0, 0.95);
+        border: 1px solid var(--terminal-green);
+        border-radius: 5px;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+        position: relative;
+      }
+
+      .container::before {
+        content: "root@hpc-dashboard:~# less tutorial.md";
+        position: absolute;
+        top: -30px;
+        left: 0;
+        color: var(--terminal-green);
+        font-size: 0.9em;
+        padding: 5px;
+        width: 100%;
+        border-bottom: 1px solid var(--terminal-green);
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: var(--terminal-green);
+        text-shadow: 0 0 5px var(--terminal-green);
+        border-bottom: 1px solid var(--darker-green);
+        padding-bottom: 0.3em;
+        position: relative;
+      }
+
+      h1::before {
+        content: "# ";
+      }
+      h2::before {
+        content: "## ";
+      }
+      h3::before {
+        content: "### ";
+      }
+
+      a {
+        color: var(--terminal-green);
+        text-decoration: none;
+        border-bottom: 1px dashed var(--terminal-green);
+        transition: all 0.3s ease;
+      }
+
+      a:hover {
+        background: var(--darker-green);
+        text-shadow: 0 0 5px var(--terminal-green);
+      }
+
+      code {
+        background-color: var(--code-bg);
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        font-family: "Courier New", monospace;
+        color: var(--terminal-green);
+        border: 1px solid var(--darker-green);
+      }
+
+      pre {
+        background-color: var(--code-bg);
+        padding: 1em;
+        border-radius: 5px;
+        overflow-x: auto;
+        border: 1px solid var(--darker-green);
+        position: relative;
+      }
+
+      pre::before {
+        content: "$ ";
+        color: var(--terminal-green);
+        position: absolute;
+        left: 5px;
+        top: 5px;
+      }
+
+      pre code {
+        border: none;
+        padding: 0;
+        margin-left: 15px;
+      }
+
+      blockquote {
+        border-left: 3px solid var(--terminal-green);
+        margin: 1em 0;
+        padding-left: 1em;
+        color: var(--text-color);
+        background: rgba(0, 255, 0, 0.05);
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+        background: rgba(0, 0, 0, 0.8);
+      }
+
+      th,
+      td {
+        border: 1px solid var(--darker-green);
+        padding: 0.5em;
+      }
+
+      th {
+        background-color: var(--code-bg);
+        color: var(--terminal-green);
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+        border: 2px solid var(--terminal-green);
+        border-radius: 2px;
+        filter: brightness(0.9) hue-rotate(120deg);
+      }
+
+      /* ASCII decorative elements */
+      .container::after {
+        content: "[Process completed]";
+        position: absolute;
+        bottom: -25px;
+        left: 0;
+        color: var(--terminal-green);
+        font-size: 0.9em;
+        width: 100%;
+        border-top: 1px solid var(--terminal-green);
+        padding: 5px;
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--darker-bg);
+        border: 1px solid var(--darker-green);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--terminal-green);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--highlight);
+      }
+
+      /* Cursor effect */
+      .container::after {
+        content: "_";
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        color: var(--terminal-green);
+        animation: cursor-blink 1s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">{{ content }}</div>
+  </body>
+</html>
