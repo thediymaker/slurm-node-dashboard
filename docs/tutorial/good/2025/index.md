@@ -1,3 +1,8 @@
+---
+layout: default
+title: Your Page Title
+---
+
 # HPC Dashboard Getting Started Guide
 
 Welcome to the **HPC Dashboard Tutorial**! This guide will walk you through deploying and running the HPC Dashboard on your provided virtual machine (VM).
