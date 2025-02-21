@@ -141,7 +141,7 @@ chmod +x bin/python
 
 ### Configuration Steps
 
-1. Update the iframe URL in `templates/layout.html`:
+1. Update the iframe URL in `templates/layout.html`. This url will be your public hostname:port, at http. For example, http://r8-good-tutorial.rc.asu.edu:3020
 
 ```html
 <iframe src="https://your-external-dashboard-url.com" ...></iframe>
