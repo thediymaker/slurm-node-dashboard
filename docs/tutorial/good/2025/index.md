@@ -1,6 +1,7 @@
 ---
 layout: default
-title: Your Page Title
+title: HPC Dashboard Tutorial
+permalink: /tutorial/good/2025/
 ---
 
 # HPC Dashboard Getting Started Guide
