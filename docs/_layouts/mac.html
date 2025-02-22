@@ -166,21 +166,35 @@
         position: relative;
       }
 
+      pre {
+        position: relative;
+        padding-left: 2em;
+      }
+
       pre code {
         border: none;
         padding: 0;
         display: block;
+        position: relative;
       }
 
-      pre code::before {
-        content: "$ ";
+      /* Add dollar sign before the first line */
+      pre::before {
+        content: "$";
         color: #4caf50;
-        margin-right: 0.5em;
+        position: absolute;
+        left: 1em;
+        top: 1em;
       }
 
-      /* For multi-line code blocks, indent lines after the first line */
-      pre code > * + * {
-        padding-left: 1.5em;
+      /* Handle multi-line commands */
+      pre code span {
+        display: block;
+        padding-left: 1em;
+      }
+
+      pre code span:first-child {
+        padding-left: 0;
       }
 
       blockquote {
