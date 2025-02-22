@@ -109,49 +109,33 @@ const StatusBadge = ({
 };
 
 const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
-  console.log("Checking node:", nodeName);
-
   return Object.values(config).some(({ nodes: groupNodes }) =>
     groupNodes.some((rackNodeRange) => {
-      console.log("Comparing with rack range:", rackNodeRange);
-
-      if (!rackNodeRange.includes("-")) {
-        const match = nodeName === rackNodeRange;
-        if (match) console.log(`Direct match found: ${nodeName}`);
-        return match;
-      }
-
-      const rangeParts = rackNodeRange.split("-");
-      if (rangeParts.length < 2) return nodeName === rackNodeRange;
-
-      const startMatch = rangeParts[0].match(/^([a-zA-Z0-9_\-]+?)(\d+)$/);
-      const endMatch = rangeParts[1].match(/^(\d+)$/);
-
-      if (!startMatch || !endMatch) {
-        console.log(`Skipping invalid range format: ${rackNodeRange}`);
+      if (!rackNodeRange.includes("..")) {
         return nodeName === rackNodeRange;
       }
 
-      const [, startPrefix, startNumStr] = startMatch;
-      const startNum = parseInt(startNumStr);
-      const endNum = parseInt(endMatch[1]);
+      const [prefix, suffix] = rackNodeRange.split("..");
 
-      const nodeMatch = nodeName.match(/^([a-zA-Z0-9_\-]+?)(\d+)$/);
+      const nodeMatch = nodeName.match(/^([a-z]+)(\d+)([a-z]*)$/i);
       if (!nodeMatch) return false;
 
-      const [, nodePrefix, nodeNumStr] = nodeMatch;
-      const nodeNum = parseInt(nodeNumStr);
+      const [, nodePrefix, nodeNumStr, nodeSuffix] = nodeMatch;
+      const nodeNumber = parseInt(nodeNumStr, 10);
 
-      console.log(
-        `Matching node ${nodeName}: Prefix=${nodePrefix}, Num=${nodeNum} against range Prefix=${startPrefix}, Start=${startNum}, End=${endNum}`
+      const prefixMatch = prefix.match(/^([a-z]+)(\d+)([a-z]*)$/i);
+      if (!prefixMatch) return false;
+
+      const [, rackPrefix, startNumStr, rackSuffix] = prefixMatch;
+      const startNumber = parseInt(startNumStr, 10);
+      const endNumber = parseInt(suffix, 10);
+
+      return (
+        nodePrefix === rackPrefix &&
+        nodeSuffix === rackSuffix &&
+        nodeNumber >= startNumber &&
+        nodeNumber <= endNumber
       );
-
-      const match =
-        nodePrefix === startPrefix && nodeNum >= startNum && nodeNum <= endNum;
-      if (match)
-        console.log(`Match found: ${nodeName} in range ${rackNodeRange}`);
-
-      return match;
     })
   );
 };
@@ -176,12 +160,17 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
   }, [openSections]);
 
   const expandNodeRange = (nodeRange: string): string[] => {
-    if (!nodeRange.includes("-")) return [nodeRange];
+    if (!nodeRange.includes("..")) return [nodeRange];
 
-    const [prefix, rangeEnd] = nodeRange.split("-");
+    const [prefix, rangeEnd] = nodeRange.split("..");
+
     const basePrefix = prefix.replace(/\d+$/, "");
-    const startNum = parseInt(prefix.match(/\d+$/)?.[0] || "0");
-    const endNum = parseInt(rangeEnd);
+    const startNumMatch = prefix.match(/\d+$/);
+    if (!startNumMatch) return [nodeRange];
+    const startNum = parseInt(startNumMatch[0], 10);
+
+    const endNum = parseInt(rangeEnd, 10);
+    if (isNaN(endNum)) return [nodeRange];
 
     const expandedNodes = [];
     for (let i = startNum; i <= endNum; i++) {
