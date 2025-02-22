@@ -109,23 +109,28 @@ const StatusBadge = ({
 };
 
 const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
+  console.log("Checking node:", nodeName);
+
   return Object.values(config).some(({ nodes: groupNodes }) =>
     groupNodes.some((rackNodeRange) => {
+      console.log("Comparing with rack range:", rackNodeRange);
+
       if (!rackNodeRange.includes("-")) {
-        return nodeName === rackNodeRange; // Direct match
+        const match = nodeName === rackNodeRange;
+        if (match) console.log(`Direct match found: ${nodeName}`);
+        return match;
       }
 
       const rangeParts = rackNodeRange.split("-");
-      if (rangeParts.length !== 2) {
+      if (rangeParts.length < 2) return nodeName === rackNodeRange;
+
+      const startMatch = rangeParts[0].match(/^([a-zA-Z0-9_\-]+?)(\d+)$/);
+      const endMatch = rangeParts[1].match(/^(\d+)$/);
+
+      if (!startMatch || !endMatch) {
+        console.log(`Skipping invalid range format: ${rackNodeRange}`);
         return nodeName === rackNodeRange;
       }
-
-      const [start, end] = rangeParts;
-
-      const startMatch = start.match(/^([a-zA-Z0-9_\-]+?)(\d+)$/);
-      const endMatch = end.match(/^(\d+)$/);
-
-      if (!startMatch || !endMatch) return nodeName === rackNodeRange;
 
       const [, startPrefix, startNumStr] = startMatch;
       const startNum = parseInt(startNumStr);
@@ -137,9 +142,16 @@ const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
       const [, nodePrefix, nodeNumStr] = nodeMatch;
       const nodeNum = parseInt(nodeNumStr);
 
-      return (
-        nodePrefix === startPrefix && nodeNum >= startNum && nodeNum <= endNum
+      console.log(
+        `Matching node ${nodeName}: Prefix=${nodePrefix}, Num=${nodeNum} against range Prefix=${startPrefix}, Start=${startNum}, End=${endNum}`
       );
+
+      const match =
+        nodePrefix === startPrefix && nodeNum >= startNum && nodeNum <= endNum;
+      if (match)
+        console.log(`Match found: ${nodeName} in range ${rackNodeRange}`);
+
+      return match;
     })
   );
 };
