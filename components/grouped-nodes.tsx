@@ -112,28 +112,33 @@ const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
   return Object.values(config).some(({ nodes: groupNodes }) =>
     groupNodes.some((rackNodeRange) => {
       if (!rackNodeRange.includes("-")) {
+        return nodeName === rackNodeRange; // Direct match
+      }
+
+      const rangeParts = rackNodeRange.split("-");
+      if (rangeParts.length !== 2) {
         return nodeName === rackNodeRange;
       }
 
-      const [prefix, suffix] = rackNodeRange.split("-");
-      const nodeMatch = nodeName.match(/^([a-z]+)(\d+)([a-z]*)$/i);
+      const [start, end] = rangeParts;
+
+      const startMatch = start.match(/^([a-zA-Z0-9_\-]+?)(\d+)$/);
+      const endMatch = end.match(/^(\d+)$/);
+
+      if (!startMatch || !endMatch) return nodeName === rackNodeRange;
+
+      const [, startPrefix, startNumStr] = startMatch;
+      const startNum = parseInt(startNumStr);
+      const endNum = parseInt(endMatch[1]);
+
+      const nodeMatch = nodeName.match(/^([a-zA-Z0-9_\-]+?)(\d+)$/);
       if (!nodeMatch) return false;
 
-      const [, nodePrefix, nodeNumStr, nodeSuffix] = nodeMatch;
-      const nodeNumber = parseInt(nodeNumStr);
-
-      const prefixMatch = prefix.match(/^([a-z]+)(\d+)([a-z]*)$/i);
-      if (!prefixMatch) return false;
-
-      const [, rackPrefix, startNumStr, rackSuffix] = prefixMatch;
-      const startNumber = parseInt(startNumStr);
-      const endNumber = parseInt(suffix);
+      const [, nodePrefix, nodeNumStr] = nodeMatch;
+      const nodeNum = parseInt(nodeNumStr);
 
       return (
-        nodePrefix === rackPrefix &&
-        nodeSuffix === rackSuffix &&
-        nodeNumber >= startNumber &&
-        nodeNumber <= endNumber
+        nodePrefix === startPrefix && nodeNum >= startNum && nodeNum <= endNum
       );
     })
   );
