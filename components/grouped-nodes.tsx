@@ -117,23 +117,20 @@ const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
 
       const [prefix, suffix] = rackNodeRange.split("..");
 
-      const nodeMatch = nodeName.match(/^(.+?)(\d+)([a-zA-Z]*)$/);
+      const nodeMatch = nodeName.match(/^(.*?)(\d+)(.*)$/);
       if (!nodeMatch) return false;
       const [, nodePrefix, nodeNumStr, nodeSuffix] = nodeMatch;
       const nodeNumber = parseInt(nodeNumStr, 10);
 
-      const prefixMatch = prefix.match(/^(.+?)(\d+)([a-zA-Z]*)$/);
+      const prefixMatch = prefix.match(/^(.*?)(\d+)(.*)$/);
       if (!prefixMatch) return false;
       const [, rackPrefix, startNumStr, rackSuffix] = prefixMatch;
       const startNumber = parseInt(startNumStr, 10);
       const endNumber = parseInt(suffix, 10);
 
-      return (
-        nodePrefix === rackPrefix &&
-        nodeSuffix === rackSuffix &&
-        nodeNumber >= startNumber &&
-        nodeNumber <= endNumber
-      );
+      if (nodePrefix !== rackPrefix || nodeSuffix !== rackSuffix) return false;
+
+      return nodeNumber >= startNumber && nodeNumber <= endNumber;
     })
   );
 };
@@ -162,17 +159,21 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
 
     const [prefix, rangeEnd] = nodeRange.split("..");
 
-    const basePrefix = prefix.replace(/\d+$/, "");
-    const startNumMatch = prefix.match(/\d+$/);
+    const startNumMatch = prefix.match(/(\d+)$/);
     if (!startNumMatch) return [nodeRange];
-    const startNum = parseInt(startNumMatch[0], 10);
-
+    const startNumStr = startNumMatch[1];
+    const startNum = parseInt(startNumStr, 10);
     const endNum = parseInt(rangeEnd, 10);
     if (isNaN(endNum)) return [nodeRange];
 
-    const expandedNodes = [];
+    const basePrefix = prefix.slice(0, prefix.length - startNumStr.length);
+    const padLength = startNumStr.length;
+
+    const expandedNodes: string[] = [];
     for (let i = startNum; i <= endNum; i++) {
-      expandedNodes.push(`${basePrefix}${i.toString().padStart(3, "0")}`);
+      expandedNodes.push(
+        `${basePrefix}${i.toString().padStart(padLength, "0")}`
+      );
     }
     return expandedNodes;
   };
