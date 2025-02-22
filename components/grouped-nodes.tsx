@@ -108,37 +108,6 @@ const StatusBadge = ({
   );
 };
 
-const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
-  return Object.values(config).some(({ nodes: groupNodes }) =>
-    groupNodes.some((rackNodeRange) => {
-      if (!rackNodeRange.includes("-")) {
-        return nodeName === rackNodeRange;
-      }
-
-      const [prefix, suffix] = rackNodeRange.split("-");
-      const nodeMatch = nodeName.match(/^([a-z]+)(\d+)([a-z]*)$/i);
-      if (!nodeMatch) return false;
-
-      const [, nodePrefix, nodeNumStr, nodeSuffix] = nodeMatch;
-      const nodeNumber = parseInt(nodeNumStr);
-
-      const prefixMatch = prefix.match(/^([a-z]+)(\d+)([a-z]*)$/i);
-      if (!prefixMatch) return false;
-
-      const [, rackPrefix, startNumStr, rackSuffix] = prefixMatch;
-      const startNumber = parseInt(startNumStr);
-      const endNumber = parseInt(suffix);
-
-      return (
-        nodePrefix === rackPrefix &&
-        nodeSuffix === rackSuffix &&
-        nodeNumber >= startNumber &&
-        nodeNumber <= endNumber
-      );
-    })
-  );
-};
-
 const GroupedNodes: React.FC<GroupedNodesProps> = ({
   nodes,
   cardSize,
@@ -159,18 +128,39 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
   }, [openSections]);
 
   const expandNodeRange = (nodeRange: string): string[] => {
-    if (!nodeRange.includes("-")) return [nodeRange];
+    if (!nodeRange.includes("..")) return [nodeRange];
 
-    const [prefix, rangeEnd] = nodeRange.split("-");
-    const basePrefix = prefix.replace(/\d+$/, "");
-    const startNum = parseInt(prefix.match(/\d+$/)?.[0] || "0");
-    const endNum = parseInt(rangeEnd);
+    const [prefix, rangeEnd] = nodeRange.split("..");
 
-    const expandedNodes = [];
+    const startNumMatch = prefix.match(/(\d+)$/);
+    if (!startNumMatch) return [nodeRange];
+    const startNumStr = startNumMatch[1];
+    const startNum = parseInt(startNumStr, 10);
+    const endNum = parseInt(rangeEnd, 10);
+    if (isNaN(endNum)) return [nodeRange];
+
+    const basePrefix = prefix.slice(0, prefix.length - startNumStr.length);
+    const padLength = startNumStr.length;
+
+    const expandedNodes: string[] = [];
     for (let i = startNum; i <= endNum; i++) {
-      expandedNodes.push(`${basePrefix}${i.toString().padStart(3, "0")}`);
+      expandedNodes.push(
+        `${basePrefix}${i.toString().padStart(padLength, "0")}`
+      );
     }
     return expandedNodes;
+  };
+
+  const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
+    return Object.values(config).some(({ nodes: groupNodes }) =>
+      groupNodes.some((rackNodeRange) => {
+        if (!rackNodeRange.includes("..")) {
+          return nodeName === rackNodeRange;
+        }
+        const expandedNodes = expandNodeRange(rackNodeRange);
+        return expandedNodes.includes(nodeName);
+      })
+    );
   };
 
   const getNodeData = (nodeName: string): any[] => {
