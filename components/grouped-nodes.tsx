@@ -117,15 +117,13 @@ const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
 
       const [prefix, suffix] = rackNodeRange.split("..");
 
-      const nodeMatch = nodeName.match(/^([a-z]+)(\d+)([a-z]*)$/i);
+      const nodeMatch = nodeName.match(/^(.+?)(\d+)([a-zA-Z]*)$/);
       if (!nodeMatch) return false;
-
       const [, nodePrefix, nodeNumStr, nodeSuffix] = nodeMatch;
       const nodeNumber = parseInt(nodeNumStr, 10);
 
-      const prefixMatch = prefix.match(/^([a-z]+)(\d+)([a-z]*)$/i);
+      const prefixMatch = prefix.match(/^(.+?)(\d+)([a-zA-Z]*)$/);
       if (!prefixMatch) return false;
-
       const [, rackPrefix, startNumStr, rackSuffix] = prefixMatch;
       const startNumber = parseInt(startNumStr, 10);
       const endNumber = parseInt(suffix, 10);
