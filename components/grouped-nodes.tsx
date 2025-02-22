@@ -108,33 +108,6 @@ const StatusBadge = ({
   );
 };
 
-const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
-  return Object.values(config).some(({ nodes: groupNodes }) =>
-    groupNodes.some((rackNodeRange) => {
-      if (!rackNodeRange.includes("..")) {
-        return nodeName === rackNodeRange;
-      }
-
-      const [prefix, suffix] = rackNodeRange.split("..");
-
-      const nodeMatch = nodeName.match(/^(.*?)(\d+)(.*)$/);
-      if (!nodeMatch) return false;
-      const [, nodePrefix, nodeNumStr, nodeSuffix] = nodeMatch;
-      const nodeNumber = parseInt(nodeNumStr, 10);
-
-      const prefixMatch = prefix.match(/^(.*?)(\d+)(.*)$/);
-      if (!prefixMatch) return false;
-      const [, rackPrefix, startNumStr, rackSuffix] = prefixMatch;
-      const startNumber = parseInt(startNumStr, 10);
-      const endNumber = parseInt(suffix, 10);
-
-      if (nodePrefix !== rackPrefix || nodeSuffix !== rackSuffix) return false;
-
-      return nodeNumber >= startNumber && nodeNumber <= endNumber;
-    })
-  );
-};
-
 const GroupedNodes: React.FC<GroupedNodesProps> = ({
   nodes,
   cardSize,
@@ -176,6 +149,18 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
       );
     }
     return expandedNodes;
+  };
+
+  const isNodeInAnyRack = (nodeName: string, config: NodeConfig): boolean => {
+    return Object.values(config).some(({ nodes: groupNodes }) =>
+      groupNodes.some((rackNodeRange) => {
+        if (!rackNodeRange.includes("..")) {
+          return nodeName === rackNodeRange;
+        }
+        const expandedNodes = expandNodeRange(rackNodeRange);
+        return expandedNodes.includes(nodeName);
+      })
+    );
   };
 
   const getNodeData = (nodeName: string): any[] => {
