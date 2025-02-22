@@ -166,18 +166,21 @@
         position: relative;
       }
 
-      pre::before {
-        content: "$ ";
-        color: #4caf50;
-        position: absolute;
-        left: 5px;
-        top: 5px;
-      }
-
       pre code {
         border: none;
         padding: 0;
-        margin-left: 15px;
+        display: block;
+      }
+
+      pre code::before {
+        content: "$ ";
+        color: #4caf50;
+        margin-right: 0.5em;
+      }
+
+      /* For multi-line code blocks, indent lines after the first line */
+      pre code > * + * {
+        padding-left: 1.5em;
       }
 
       blockquote {
