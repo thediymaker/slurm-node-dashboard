@@ -167,34 +167,31 @@
       }
 
       pre {
-        position: relative;
-        padding-left: 2em;
+        background-color: var(--code-bg);
+        padding: 1em;
+        border-radius: 5px;
+        overflow-x: auto;
+        border: 1px solid var(--border-color);
+        display: flex;
+      }
+
+      pre .dollar {
+        color: #4caf50;
+        margin-right: 0.5em;
+        user-select: none;
       }
 
       pre code {
         border: none;
         padding: 0;
-        display: block;
-        position: relative;
+        flex: 1;
+        color: #ff9800;
       }
 
-      /* Add dollar sign before the first line */
-      pre::before {
-        content: "$";
-        color: #4caf50;
-        position: absolute;
-        left: 1em;
-        top: 1em;
-      }
-
-      /* Handle multi-line commands */
-      pre code span {
-        display: block;
-        padding-left: 1em;
-      }
-
-      pre code span:first-child {
-        padding-left: 0;
+      /* Remove any margin/padding that might affect alignment */
+      pre code > * {
+        margin: 0;
+        padding: 0;
       }
 
       blockquote {
