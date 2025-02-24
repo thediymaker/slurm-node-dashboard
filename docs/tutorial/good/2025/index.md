@@ -27,7 +27,7 @@ The **HPC Dashboard** is a Next.js application designed for real-time monitoring
 
 - Deploying the dashboard on a VM with a public IP
 - Connecting to a remote SLURM API and Prometheus instance
-- Setting up basic and advanced integrations
+- Setting up the Open OnDemand integration
 
 ## Prerequisites
 
@@ -37,13 +37,13 @@ Ensure you have the following:
   - VM with public IP (provided by tutorial host)
   - SSH key for secure access (provided by tutorial host)
   - SLURM API key (located at `/packages/slurm/config/key`)
-  - SLURM and Prometheus IP addresses (pre-populated)
+  - SLURM and Prometheus IP addresses (provided by tutorial host)
 
 ## Environment Setup
 
 ### SSH Connection
 
-First, set appropriate permissions and connect to your VM:
+Connect to your VM using SSH:
 
 ```bash
 chmod 600 /path/to/your/ssh_key
@@ -52,7 +52,7 @@ ssh -i /path/to/your/ssh_key rocky@your_vm_public_ip
 
 ## Repository Setup
 
-After logging in, switch to root and navigate to the installation directory:
+After logging in, switch to root and clone the repository:
 
 ```bash
 sudo su -
@@ -65,28 +65,29 @@ cd slurm-node-dashboard
 
 ### Install Dependencies
 
+Install required Node.js packages:
+
 ```bash
 npm install
 ```
 
 ### Environment Configuration
 
-Move the production environment file to the active configuration:
+Set up the production environment:
 
 ```bash
 mv .env.production .env
 ```
 
-Update `.env` with your specific configuration:
+Update `.env` with your configuration:
 
 ```env
 COMPANY_NAME="Tutorial"
-NEXT_PUBLIC_BASE_URL="http://your_vm_public_ip:3000"
 VERSION=1.1.2
 CLUSTER_NAME="Tutorial"
 CLUSTER_LOGO="/logo.png"
 
-PROMETHEUS_URL="http://192.168.1.233:9090"
+PROMETHEUS_URL=""
 OPENAI_API_KEY=""
 
 NODE_ENV="production"
@@ -94,7 +95,7 @@ REACT_EDITOR="code"
 
 SLURM_API_VERSION="v0.0.40"
 SLURM_SERVER="192.168.1.233"
-SLURM_API_TOKEN="your_slurm_api_token"
+SLURM_API_TOKEN="your_slurm_api_token"  # Located at /packages/slurm/config/key
 SLURM_API_ACCOUNT="slurm"
 ```
 
@@ -110,9 +111,39 @@ npm run dev
 
 Access the dashboard at `http://your_vm_public_ip:3020`
 
+The dashboard displays all tutorial systems, which are running as SLURM compute nodes. Hover over nodes to view system details including hostname, load, and core usage. Click on nodes to view running jobs.
+
+The interface includes:
+
+- Color scheme options (top right)
+- Menu access to historical data and modules pages
+- GitHub link for bug reports and forking
+
+### Adding Prometheus Integration
+
+By default, the nodes have `ipmi_exporter` and `node_exporter` running for power and node data collection.
+
+To enable Prometheus:
+
+1. Stop the development server (Ctrl+C)
+2. Update the `.env` file:
+
+```bash
+# Change this line
+PROMETHEUS_URL="http://192.168.1.233:9090"
+```
+
+3. Restart the development server:
+
+```bash
+npm run dev
+```
+
+The dashboard will now display power information and additional node data.
+
 ## Production Setup
 
-For production environments, use PM2 as the process manager:
+For production deployment, use PM2 to manage the dashboard:
 
 ```bash
 # Install PM2
@@ -126,7 +157,10 @@ pm2 save
 
 ## Open OnDemand Integration
 
-Open OnDemand has already been installed and configured on this VM. If you have an existing OOD instance running from your previous tutorial, you can use it, though the steps will be slightly different. The default username to log in to this dashboard is "tutorial" and the password is "good-tutorial-2025!"
+Open OnDemand is pre-installed on the VM. Default credentials:
+
+- Username: "tutorial"
+- Password: "good-tutorial-2025!"
 
 ### Installation Steps
 
@@ -149,10 +183,10 @@ chmod +x bin/python
 
 ### Configuration Steps
 
-1. Update the iframe URL in `templates/layout.html`. This URL will be your public `http://hostname:port`. For example, `http://r8-good-tutorial.rc.asu.edu:3020`. In a production environment, you'll likely have this running behind something like httpd or nginx, and you would point to your secured `https://externalURL`.
+1. Update the iframe URL in `templates/layout.html`:
 
 ```html
-<iframe src="https://your-external-dashboard-url.com" ...></iframe>
+<iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...></iframe>
 ```
 
 2. Configure `manifest.yml`:
@@ -166,17 +200,15 @@ icon: fa://bar-chart
 show_in_menu: true
 ```
 
-Access the Open OnDemand dashboard at `http://{your_vm_public_hostname.rc.asu.edu}/`
+Access Open OnDemand at `http://{your_vm_public_hostname.rc.asu.edu}/`
 
-From here, you will be able to see the status page by browsing to the "System" dropdown in the menu, and then selecting System Status.
+The status page is available under System → System Status.
 
 ## Usage
 
-From the dashboard, you can see the individual compute nodes. You can hover to get basic details and click to get more detailed information.
+To submit a test job:
 
-Let's submit a job so you can see it in action.
-
-As root, switch to the "tutorial" user and browse to the /scratch directory. From here, copy the test batch script from /packages/slurm/submit.sbatch to this base directory. Make sure to use the following command to avoid overriding other users' scripts:
+1. Switch to the tutorial user and prepare the batch script:
 
 ```bash
 su - tutorial
@@ -184,13 +216,13 @@ cd /scratch
 cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch
 ```
 
-Edit the file and set the SBATCH option `-w` to submit to your specific node. For example:
+2. Edit the script to specify your node:
 
 ```bash
 #SBATCH -w r8-good-tutorial-c3
 ```
 
-Once submitted, the job should show up on the dashboard. You can see the jobs which are in queue or running with the following command:
+3. Monitor jobs using:
 
 ```bash
 scontrol show jobs
@@ -198,11 +230,11 @@ scontrol show jobs
 
 ## Best Practices
 
-- Implement SSL certificates for secure communication
-- Deploy behind NGINX or HTTPD with proper SSL configuration
-- Enable authentication for Open OnDemand access
-- Restrict direct dashboard access or implement additional authentication
-- Regularly update dependencies and security patches
+- Implement SSL certificates
+- Deploy behind NGINX or HTTPD with SSL
+- Enable authentication for Open OnDemand
+- Restrict dashboard access
+- Maintain regular security updates
 
 ## Additional Resources
 
