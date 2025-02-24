@@ -166,12 +166,7 @@ const Stats = memo(({ data }: { data: { nodes: any[] } }) => {
     3 + (stats.totalGpu > 0 ? 1 : 0) + (showPowerCard ? 1 : 0);
 
   return (
-    <div
-      className={cn(
-        "grid gap-4 mb-4 grid-cols-1",
-        `sm:grid-cols-${visibleCards}`
-      )}
-    >
+    <div className="grid gap-4 mb-4 grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
       {/* CPU Usage Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
