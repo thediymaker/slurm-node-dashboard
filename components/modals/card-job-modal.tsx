@@ -10,7 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ThreeCircles } from "react-loader-spinner";
 import PropagateLoader from "react-spinners/PropagateLoader";
 import { NodeCpuChart } from "../nodeCard/node-mon-chart";
 import PromComboBox from "../prom-metric";

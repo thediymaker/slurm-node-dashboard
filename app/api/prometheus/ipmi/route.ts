@@ -2,6 +2,7 @@ import { PrometheusQueryResponse } from "@/types/types";
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 
+export const revalidate = 0;
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
 const MAX_DATA_POINTS = 200;
 
