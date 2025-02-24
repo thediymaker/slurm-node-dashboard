@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from "recharts";
 import { Activity, Cpu, Database, Power, RefreshCw } from "lucide-react";
@@ -14,7 +14,7 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
-export default function Stats({ data }: { data: { nodes: any[] } }) {
+const Stats = memo(({ data }: { data: { nodes: any[] } }) => {
   const nodes = data?.nodes ?? [];
 
   const [isPrometheusAvailable, setIsPrometheusAvailable] = React.useState<
@@ -42,37 +42,38 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
   const prometheusData = ipmiData?.data || [];
   const powerSummary = ipmiData?.summary;
 
-  // Compute aggregated stats
-  const stats = React.useMemo(() => {
-    let totalMemoryUsed = 0,
-      totalMemory = 0,
-      totalCoresUsed = 0,
-      totalCores = 0,
-      totalGpuUsed = 0,
-      totalGpu = 0,
-      totalPowerUsage = 0,
-      totalPowerNodes = 0,
-      totalGpuNodes = 0;
-
-    const nodeStates = {
-      idle: 0,
-      mixed: 0,
-      allocated: 0,
-      down: 0,
-      drain: 0,
-      unknown: 0,
+  // Compute aggregated stats using reduce for clarity
+  const stats = useMemo(() => {
+    const initialStats = {
+      totalMemoryUsed: 0,
+      totalMemory: 0,
+      totalCoresUsed: 0,
+      totalCores: 0,
+      totalGpuUsed: 0,
+      totalGpu: 0,
+      totalPowerUsage: 0,
+      totalPowerNodes: 0,
+      totalGpuNodes: 0,
+      nodeStates: {
+        idle: 0,
+        mixed: 0,
+        allocated: 0,
+        down: 0,
+        drain: 0,
+        unknown: 0,
+      },
     };
 
-    nodes.forEach((node) => {
-      totalMemoryUsed += node.alloc_memory;
-      totalMemory += node.real_memory;
-      totalCoresUsed += node.alloc_cpus;
-      totalCores += node.cpus;
+    return nodes.reduce((acc, node) => {
+      acc.totalMemoryUsed += node.alloc_memory;
+      acc.totalMemory += node.real_memory;
+      acc.totalCoresUsed += node.alloc_cpus;
+      acc.totalCores += node.cpus;
 
       // Use Slurm power data only if Prometheus isn't available
       if (!prometheusAvailable && node.energy?.current_watts?.number) {
-        totalPowerUsage += node.energy.current_watts.number;
-        totalPowerNodes++;
+        acc.totalPowerUsage += node.energy.current_watts.number;
+        acc.totalPowerNodes++;
       }
 
       if (node.gres) {
@@ -80,77 +81,37 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
           node.gres,
           node.gres_used
         );
-        totalGpuUsed += gpuUsed;
-        totalGpu += gpuTotal;
-        totalGpuNodes++;
+        acc.totalGpuUsed += gpuUsed;
+        acc.totalGpu += gpuTotal;
+        acc.totalGpuNodes++;
       }
 
       const [primaryState, secondaryState] = node.state;
-      if (primaryState === "IDLE") nodeStates.idle++;
-      if (primaryState === "MIXED") nodeStates.mixed++;
-      if (primaryState === "ALLOCATED") nodeStates.allocated++;
-      if (primaryState === "DOWN") nodeStates.down++;
+      if (primaryState === "IDLE") acc.nodeStates.idle++;
+      if (primaryState === "MIXED") acc.nodeStates.mixed++;
+      if (primaryState === "ALLOCATED") acc.nodeStates.allocated++;
+      if (primaryState === "DOWN") acc.nodeStates.down++;
+      if (secondaryState === "DRAIN") acc.nodeStates.drain++;
       if (primaryState === "UNKNOWN" || secondaryState === "NOT_RESPONDING")
-        nodeStates.unknown++;
-      if (secondaryState === "DRAIN") nodeStates.drain++;
-    });
+        acc.nodeStates.unknown++;
 
-    const currentTotal = prometheusAvailable
-      ? powerSummary?.currentTotal || 0
-      : totalPowerUsage;
+      return acc;
+    }, initialStats);
+  }, [nodes, prometheusAvailable]);
 
-    const averagePower = prometheusAvailable
-      ? powerSummary?.currentAverage || 0
-      : totalPowerNodes > 0
-      ? totalPowerUsage / totalPowerNodes
-      : 0;
+  // Determine power totals and averages based on availability of Prometheus
+  const currentTotal = prometheusAvailable
+    ? powerSummary?.currentTotal || 0
+    : stats.totalPowerUsage;
+  const averagePower = prometheusAvailable
+    ? powerSummary?.currentAverage || 0
+    : stats.totalPowerNodes > 0
+    ? stats.totalPowerUsage / stats.totalPowerNodes
+    : 0;
 
-    // Only consider power data available if we have non-zero values
-    const hasPowerData =
-      (prometheusAvailable && currentTotal > 0) ||
-      (!prometheusAvailable && totalPowerUsage > 0);
-
-    return {
-      totalMemoryUsed,
-      totalMemory,
-      totalCoresUsed,
-      totalCores,
-      totalGpuUsed,
-      totalGpu,
-      averagePowerUsage: averagePower,
-      totalPowerKw: currentTotal / 1000,
-      nodeStates,
-      totalGpuNodes,
-      hasPowerData,
-    };
-  }, [nodes, prometheusAvailable, powerSummary]);
-
-  // Prepare data for the power usage trend chart
-  const powerTrendData = React.useMemo(() => {
-    if (prometheusAvailable && prometheusData.length > 0) {
-      return prometheusData.map(
-        (data: { time: string | number | Date; [key: string]: any }) => ({
-          ...data,
-          time:
-            typeof data.time === "number"
-              ? data.time.toString().length === 13
-                ? data.time
-                : data.time * 1000
-              : new Date(data.time).getTime(),
-        })
-      );
-    }
-
-    return nodes
-      .filter((node) => node.energy?.current_watts?.number)
-      .slice(0, 10)
-      .map((node) => ({
-        time: Date.now(),
-        watts: node.energy.current_watts.number,
-        averageWatts: node.energy.current_watts.number,
-        nodesReporting: 1,
-      }));
-  }, [nodes, prometheusAvailable, prometheusData]);
+  const hasPowerData =
+    (prometheusAvailable && currentTotal > 0) ||
+    (!prometheusAvailable && stats.totalPowerUsage > 0);
 
   const cpuPercentage =
     stats.totalCores > 0
@@ -165,22 +126,48 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       ? Math.round((stats.totalGpuUsed / stats.totalGpu) * 100)
       : 0;
 
+  // Helper to normalize time values
+  const normalizeTime = (time: string | number | Date): number => {
+    if (typeof time === "number") {
+      return time.toString().length === 13 ? time : time * 1000;
+    }
+    return new Date(time).getTime();
+  };
+
+  // Prepare data for the power usage trend chart
+  const powerTrendData = useMemo(() => {
+    if (prometheusAvailable && prometheusData.length > 0) {
+      return prometheusData.map(
+        (item: { time: string | number | Date; [key: string]: any }) => ({
+          ...item,
+          time: normalizeTime(item.time),
+        })
+      );
+    }
+    return nodes
+      .filter((node) => node.energy?.current_watts?.number)
+      .slice(0, 10)
+      .map((node) => ({
+        time: Date.now(),
+        watts: node.energy.current_watts.number,
+        averageWatts: node.energy.current_watts.number,
+        nodesReporting: 1,
+      }));
+  }, [nodes, prometheusAvailable, prometheusData]);
+
   if (error) {
     console.error("Failed to fetch power data:", error);
   }
 
-  // Only show power card if we have actual power data
-  const showPowerCard =
-    stats.hasPowerData &&
-    (stats.totalPowerKw > 0 || stats.averagePowerUsage > 0);
+  const showPowerCard = hasPowerData && (currentTotal > 0 || averagePower > 0);
+
+  // Compute grid columns based on the number of visible cards
+  const visibleCards =
+    3 + (stats.totalGpu > 0 ? 1 : 0) + (showPowerCard ? 1 : 0);
+  const gridColumns = `grid-cols-${visibleCards}`;
 
   return (
-    <div
-      className={cn(
-        "grid gap-4 mb-4",
-        showPowerCard ? "grid-cols-5" : "grid-cols-4"
-      )}
-    >
+    <div className={cn("grid gap-4 mb-4", gridColumns)}>
       {/* CPU Usage Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -259,7 +246,7 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
             <div className="flex items-center space-x-2">
               <Power className="h-4 w-4 text-muted-foreground" />
               <button
-                onClick={() => mutate()}
+                onClick={mutate}
                 disabled={isValidating}
                 title="Refresh"
                 className="focus:outline-none"
@@ -276,13 +263,13 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-2xl font-bold">
-                  {stats.totalPowerKw.toFixed(1)} kW
+                  {(currentTotal / 1000).toFixed(1)} kW
                 </div>
                 <p className="text-xs text-muted-foreground">Total Power</p>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold">
-                  {Math.round(stats.averagePowerUsage)} W
+                  {Math.round(averagePower)} W
                 </div>
                 <p className="text-xs text-muted-foreground">Per Node Avg</p>
               </div>
@@ -365,4 +352,6 @@ export default function Stats({ data }: { data: { nodes: any[] } }) {
       </Card>
     </div>
   );
-}
+});
+
+export default Stats;
