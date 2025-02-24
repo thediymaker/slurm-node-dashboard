@@ -159,7 +159,8 @@ const Stats = memo(({ data }: { data: { nodes: any[] } }) => {
     console.error("Failed to fetch power data:", error);
   }
 
-  const showPowerCard = hasPowerData && (currentTotal > 0 || averagePower > 0);
+  const showPowerCard =
+    isValidating || (hasPowerData && (currentTotal > 0 || averagePower > 0));
 
   // Compute grid columns based on the number of visible cards
   const visibleCards =
@@ -246,7 +247,12 @@ const Stats = memo(({ data }: { data: { nodes: any[] } }) => {
             <div className="flex items-center space-x-2">
               <Power className="h-4 w-4 text-muted-foreground" />
               <button
-                onClick={mutate}
+                onClick={() =>
+                  mutate(undefined, {
+                    optimisticData: ipmiData,
+                    rollbackOnError: true,
+                  })
+                }
                 disabled={isValidating}
                 title="Refresh"
                 className="focus:outline-none"
