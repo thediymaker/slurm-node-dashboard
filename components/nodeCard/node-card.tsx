@@ -19,8 +19,12 @@ const calculateTotalGPUUsage = (
 };
 
 const SmallCardContent: React.FC<{ name: string }> = ({ name }) => (
-  <div className={`flex m-auto items-center justify-center w-full h-full`}>
-    <div className="font-extrabold text-[10px] mb-.5">{name}</div>
+  <div className="flex items-center justify-center w-full h-full">
+    <div className="w-full px-1">
+      <div className="font-extrabold text-[10px] mb-.5 truncate text-center">
+        {name}
+      </div>
+    </div>
   </div>
 );
 
@@ -39,12 +43,16 @@ const MediumCardContent = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-1">
-        <div className="font-extrabold text-[10px] mb-.5">{name}</div>
-        <p className=" text-[9px]">
+      <div className="p-1 space-y-1">
+        <div className="w-full">
+          <div className="font-extrabold text-[10px] leading-tight uppercase truncate">
+            {name}
+          </div>
+        </div>
+        <p className="text-[9px] leading-none">
           CPU: {coresUsed} / {coresTotal}
         </p>
-        <p className="text-[9px]">
+        <p className="text-[9px] leading-none">
           MEM: {(memoryUsed / 1024).toFixed(0)} /{" "}
           {(memoryTotal / 1024).toFixed(0)}
         </p>
@@ -72,20 +80,22 @@ const LargeCardContent = ({
   );
 
   return (
-    <div className="flex flex-col h-full p-1">
-      <div className="flex-grow">
-        <div className="font-extrabold text-[10px] mb-.5 truncate max-w-[140px]">
-          {name}
+    <div className="flex flex-col h-full">
+      <div className="p-1 space-y-1">
+        <div className="w-full">
+          <div className="font-extrabold text-[10px] leading-tight uppercase truncate">
+            {name}
+          </div>
         </div>
-        <p className="text-[9px]">
+        <p className="text-[9px] leading-none">
           CPU: {coresUsed} / {coresTotal}
         </p>
-        <p className="text-[9px]">
+        <p className="text-[9px] leading-none">
           MEM: {(memoryUsed / 1024).toFixed(0)} /{" "}
           {(memoryTotal / 1024).toFixed(0)}
         </p>
-        <p className="text-[9px]">
-          Load: {(nodeData.cpu_load / coresTotal).toFixed(2)}
+        <p className="text-[9px] leading-none">
+          LOAD: {(nodeData.cpu_load / coresTotal).toFixed(2)}
         </p>
       </div>
       {gpuTotal > 0 && (
