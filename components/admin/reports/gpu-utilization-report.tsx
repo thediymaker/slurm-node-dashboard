@@ -137,14 +137,50 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
 
         const jobs = jobsData.jobs || [];
 
+        // Process GPU data to extract utilization values correctly with more robust extraction
+        const processedGpus = gpuData.data.map((gpu: any) => {
+          // More robust extraction function that handles different data formats
+          const extractUtilization = (gpuData: any): number => {
+            if (
+              !gpuData.values ||
+              !Array.isArray(gpuData.values) ||
+              gpuData.values.length === 0
+            ) {
+              return 0;
+            }
+
+            const firstValue = gpuData.values[0];
+
+            if (typeof firstValue === "number") {
+              return firstValue;
+            } else if (typeof firstValue === "object") {
+              if (firstValue.value !== undefined) {
+                return parseFloat(firstValue.value);
+              } else if (firstValue.time && firstValue.value !== undefined) {
+                return parseFloat(firstValue.value);
+              }
+            }
+
+            return 0;
+          };
+
+          const utilization = extractUtilization(gpu);
+
+          // Log for debugging
+          console.log(
+            `GPU ${gpu.gpu} (${gpu.modelName || "Unknown"}): ${utilization}%`
+          );
+
+          return {
+            gpu: gpu.gpu,
+            modelName: gpu.modelName || "Unknown",
+            utilization: isNaN(utilization) ? 0 : utilization,
+          };
+        });
+
         return {
           node: nodeName,
-          gpus: gpuData.data.map((gpu: any) => ({
-            ...gpu,
-            // Only use the latest value for utilization
-            utilization:
-              gpu.values && gpu.values.length > 0 ? gpu.values[0].value : 0,
-          })),
+          gpus: processedGpus,
           jobs: jobs,
         };
       } catch (error) {
@@ -162,13 +198,18 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
 
       // Process each node's data
       nodeData.forEach((node) => {
-        // Get average GPU utilization for this node
-        const totalUtilization = node.gpus.reduce(
+        // Get valid GPUs for this node (with numerical utilization values)
+        const validGpus = node.gpus.filter((gpu) => !isNaN(gpu.utilization));
+
+        // Calculate average GPU utilization for this node
+        const totalUtilization = validGpus.reduce(
           (acc, gpu) => acc + gpu.utilization,
           0
         );
         const avgNodeUtilization =
-          node.gpus.length > 0 ? totalUtilization / node.gpus.length : 0;
+          validGpus.length > 0 ? totalUtilization / validGpus.length : 0;
+
+        console.log(`Node ${node.node} avg utilization:`, avgNodeUtilization);
 
         // Process each job running on this node
         node.jobs.forEach((job) => {
@@ -188,8 +229,8 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
             // Update existing job data
             const existingJob = jobMap.get(jobId)!;
 
-            // Only update utilization if we have GPU data
-            if (node.gpus.length > 0) {
+            // Only update utilization if we have valid GPU data
+            if (validGpus.length > 0) {
               const totalUtil =
                 existingJob.avgUtilization * existingJob.nodeNames.length;
               const newAvgUtil =
@@ -225,17 +266,23 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
         currentMinute < 10 ? "0" + currentMinute : currentMinute
       }`;
 
-      // Calculate average utilization across all nodes for current time
-      const currentUtilization = nodeData
+      // Filter out any nodes without gpus or with non-numeric utilization data
+      const validGpus = nodeData
         .flatMap((node) => node.gpus)
-        .reduce((acc, gpu) => {
-          return acc + gpu.utilization;
-        }, 0);
+        .filter((gpu) => !isNaN(gpu.utilization));
+
+      // Calculate average utilization across all nodes for current time
+      const totalUtilization = validGpus.reduce((acc, gpu) => {
+        return acc + gpu.utilization;
+      }, 0);
 
       const avgUtilization =
-        nodeData.flatMap((node) => node.gpus).length > 0
-          ? currentUtilization / nodeData.flatMap((node) => node.gpus).length
-          : 0;
+        validGpus.length > 0 ? totalUtilization / validGpus.length : 0;
+
+      // Log for debugging
+      console.log("Valid GPUs found:", validGpus.length);
+      console.log("Total utilization:", totalUtilization);
+      console.log("Average utilization:", avgUtilization);
 
       // Return only current real data point
       return [
