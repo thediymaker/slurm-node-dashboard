@@ -137,39 +137,76 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
 
         const jobs = jobsData.jobs || [];
 
-        // Process GPU data to extract utilization values correctly with more robust extraction
-        const processedGpus = gpuData.data.map((gpu: any) => {
-          // More robust extraction function that handles different data formats
-          const extractUtilization = (gpuData: any): number => {
+        // Ultra robust extraction function that handles many possible data formats
+        const extractGpuUtilization = (gpu: any): number => {
+          try {
+            // Handle case where utilization is directly a property
+            if (typeof gpu.utilization === "number") {
+              return gpu.utilization;
+            }
+
+            // Handle missing or invalid values
             if (
-              !gpuData.values ||
-              !Array.isArray(gpuData.values) ||
-              gpuData.values.length === 0
+              !gpu.values ||
+              !Array.isArray(gpu.values) ||
+              gpu.values.length === 0
             ) {
               return 0;
             }
 
-            const firstValue = gpuData.values[0];
+            const firstValue = gpu.values[0];
 
+            // Handle array of numbers
             if (typeof firstValue === "number") {
               return firstValue;
-            } else if (typeof firstValue === "object") {
+            }
+
+            // Handle array of arrays (Prometheus matrix format)
+            if (Array.isArray(firstValue) && firstValue.length >= 2) {
+              // Second element is typically the value
+              const value = firstValue[1];
+              return typeof value === "string"
+                ? parseFloat(value)
+                : Number(value);
+            }
+
+            // Handle object with value property
+            if (typeof firstValue === "object" && firstValue !== null) {
               if (firstValue.value !== undefined) {
-                return parseFloat(firstValue.value);
-              } else if (firstValue.time && firstValue.value !== undefined) {
-                return parseFloat(firstValue.value);
+                return typeof firstValue.value === "string"
+                  ? parseFloat(firstValue.value)
+                  : Number(firstValue.value);
               }
             }
 
-            return 0;
-          };
+            // Handle other potential formats
+            if (firstValue && typeof firstValue === "object") {
+              for (const key in firstValue) {
+                if (
+                  key.toLowerCase().includes("util") ||
+                  key.toLowerCase().includes("value")
+                ) {
+                  const val = firstValue[key];
+                  return typeof val === "string"
+                    ? parseFloat(val)
+                    : Number(val);
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Error extracting GPU utilization:", e);
+          }
 
-          const utilization = extractUtilization(gpu);
+          return 0;
+        };
 
-          // Log for debugging
-          console.log(
-            `GPU ${gpu.gpu} (${gpu.modelName || "Unknown"}): ${utilization}%`
-          );
+        // Process the GPU data with our robust extraction
+        const processedGpus = gpuData.data.map((gpu: any) => {
+          const utilization = extractGpuUtilization(gpu);
+
+          // Debug logs
+          console.log(`Node ${nodeName}, GPU ${gpu.gpu}: ${utilization}%`);
+          console.log("Raw GPU data:", JSON.stringify(gpu.values));
 
           return {
             gpu: gpu.gpu,
@@ -387,9 +424,33 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
 
   // Load data on initial render
   useEffect(() => {
+    // Add debugging to inspect the API structure directly
+    const inspectPrometheusDcgmApi = async () => {
+      try {
+        const nodes = await fetchNodesWithGpus();
+        if (nodes && nodes.length > 0) {
+          console.log("First node to check:", nodes[0]);
+          const response = await fetch(
+            `/api/prometheus/dcgm?node=${encodeURIComponent(nodes[0])}`
+          );
+          const data = await response.json();
+          console.log(
+            "PROMETHEUS DCGM API RESPONSE:",
+            JSON.stringify(data, null, 2)
+          );
+        }
+      } catch (error) {
+        console.error("Error inspecting Prometheus API:", error);
+      }
+    };
+
+    // Run the inspection
+    inspectPrometheusDcgmApi();
+
+    // Regular data loading
     loadAllData();
     // No auto-refresh interval as requested
-  }, [loadAllData]);
+  }, [loadAllData, fetchNodesWithGpus]);
 
   // Find underutilized jobs (all of them, not just top 5)
   const underutilizedJobs = jobUtilizationData
@@ -482,10 +543,21 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
             {timeSeriesData.length > 0 ? (
               <div className="flex flex-col items-center justify-center h-64">
                 <div className="text-6xl font-bold text-primary">
-                  {timeSeriesData[0].averageUtilization}%
+                  {timeSeriesData[0].averageUtilization || 0}%
                 </div>
                 <div className="text-sm text-muted-foreground mt-2">
                   Last updated: {timeSeriesData[0].timestamp}
+                </div>
+                <div className="text-xs text-muted-foreground mt-6">
+                  <pre className="bg-muted p-2 rounded text-xs overflow-x-auto max-w-full">
+                    Debug: Found{" "}
+                    {
+                      nodeUtilizationData
+                        .flatMap((node) => node.gpus)
+                        .filter((gpu) => gpu.utilization > 0).length
+                    }{" "}
+                    active GPUs
+                  </pre>
                 </div>
               </div>
             ) : (
