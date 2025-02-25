@@ -2,7 +2,19 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 // Define types for job and node data
@@ -355,19 +373,51 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
 
     // Calculate wasted GPU hours (assuming low utilization = wasted resources)
     const wastedGpuHours = jobData.reduce((acc, job) => {
-      const utilization = job.avgUtilization / 100;
-      const wastedFraction = 1 - utilization;
-      // Convert job duration to hours (assuming it's in minutes)
-      const durationHours = job.duration / 60;
-      return acc + wastedFraction * job.gpuCount * durationHours;
+      // Ensure we have valid numbers
+      const utilization = !isNaN(job.avgUtilization) ? job.avgUtilization : 0;
+      const wastedFraction = (100 - utilization) / 100; // Calculate percentage wasted
+
+      // Handle duration - could be in seconds or minutes, ensure it's converted to hours
+      // In Slurm, job.duration is typically in seconds, not minutes
+      const durationHours = !isNaN(job.duration)
+        ? job.duration > 3600
+          ? job.duration / 3600
+          : job.duration / 60
+        : 0;
+
+      // Ensure gpuCount is a number
+      const gpuCount = !isNaN(job.gpuCount) ? job.gpuCount : 0;
+
+      // Calculate wasted GPU hours: wastedFraction * gpuCount * durationHours
+      const wasted = wastedFraction * gpuCount * durationHours;
+
+      // Log for debugging
+      console.log(
+        `Job ${job.jobId}: ${utilization}% util, ${gpuCount} GPUs, ${durationHours}h duration = ${wasted} wasted GPU hours`
+      );
+
+      return acc + wasted;
     }, 0);
 
     setUtilizationRanges(ranges);
+    // Format summary stats with proper rounding and validation
     setSummaryStats({
       totalJobs,
       underutilizedJobs,
       averageUtilization: parseFloat(averageUtilization.toFixed(1)),
-      wastedGpuHours: Math.round(wastedGpuHours),
+      wastedGpuHours:
+        !isNaN(wastedGpuHours) && wastedGpuHours > 0
+          ? Math.round(wastedGpuHours)
+          : 0,
+    });
+
+    // Log summary stats for debugging
+    console.log("Summary Stats:", {
+      totalJobs,
+      underutilizedJobs,
+      averageUtilization: parseFloat(averageUtilization.toFixed(1)),
+      wastedGpuHours: !isNaN(wastedGpuHours) ? Math.round(wastedGpuHours) : 0,
+      rawWastedGpuHours: wastedGpuHours,
     });
   }, []);
 
@@ -478,7 +528,7 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
   }
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full max-w-[1400px]">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold mb-2">
@@ -831,7 +881,9 @@ const UnderutilizedJobsTable = ({ jobs }: { jobs: GpuJobUtilization[] }) => {
               </TableCell>
               <TableCell className="text-right">{job.gpuCount}</TableCell>
               <TableCell className="text-right">
-                {(job.duration / 60).toFixed(1)}
+                {job.duration > 3600
+                  ? (job.duration / 3600).toFixed(1)
+                  : (job.duration / 60).toFixed(1)}
               </TableCell>
               <TableCell className="max-w-[200px] truncate">
                 {job.nodeNames.join(", ")}
