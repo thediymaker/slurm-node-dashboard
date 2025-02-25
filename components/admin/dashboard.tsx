@@ -48,7 +48,7 @@ export default function AdminDashboard() {
       </div>
       <Separator />
 
-      <div className="max-w-[90%] mx-auto w-[1000px]">
+      <div className="max-w-[90%] mx-auto w-full">
         <Tabs defaultValue={getDefaultTab()} className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="overview" onClick={() => router.push("/admin")}>
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
 
           <TabsContent value="overview">
             <AdminPlugins error={error} isLoading={isLoading} />
-            <div className="mt-5">
+            <div className="mt-5 m-w-[1000px]">
               <ClusterStats />
             </div>
           </TabsContent>

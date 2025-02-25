@@ -2,21 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 // Define types for job and node data
 interface JobData {
@@ -60,6 +49,8 @@ interface GpuJobUtilization {
   duration: number;
   nodeNames: string[];
 }
+
+type SortableKey = "avgUtilization" | "gpuCount" | "duration";
 
 interface GpuUtilizationReportProps {
   data?: any;
@@ -452,6 +443,17 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
     // No auto-refresh interval as requested
   }, [loadAllData, fetchNodesWithGpus]);
 
+  // Ensure both average utilization values are consistent
+  useEffect(() => {
+    if (timeSeriesData.length > 0) {
+      // Update summary stats to match the current utilization
+      setSummaryStats((prev) => ({
+        ...prev,
+        averageUtilization: timeSeriesData[0].averageUtilization || 0,
+      }));
+    }
+  }, [timeSeriesData]);
+
   // Find underutilized jobs (all of them, not just top 5)
   const underutilizedJobs = jobUtilizationData
     .filter((job) => job.avgUtilization < UNDERUTILIZATION_THRESHOLD)
@@ -459,7 +461,7 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 w-full">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28 w-full" />
@@ -476,7 +478,7 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold mb-2">
@@ -689,53 +691,12 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
         </CardContent>
       </Card>
 
-      {/* Underutilized Jobs Table - Replaced Chart with Table */}
+      {/* Underutilized Jobs Table - with sorting functionality */}
       <Card>
         <CardContent className="pt-6">
           <h3 className="text-lg font-medium mb-4">Underutilized Jobs</h3>
           {underutilizedJobs.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Job ID</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead className="text-right">Utilization</TableHead>
-                    <TableHead className="text-right">GPUs</TableHead>
-                    <TableHead className="text-right">Duration (hrs)</TableHead>
-                    <TableHead>Nodes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {underutilizedJobs.map((job) => (
-                    <TableRow key={job.jobId}>
-                      <TableCell className="font-medium">{job.jobId}</TableCell>
-                      <TableCell>{job.user}</TableCell>
-                      <TableCell className="text-right">
-                        <span
-                          className={
-                            job.avgUtilization < 10
-                              ? "text-red-500 font-semibold"
-                              : "text-amber-500"
-                          }
-                        >
-                          {job.avgUtilization.toFixed(1)}%
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {job.gpuCount}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {(job.duration / 60).toFixed(1)}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {job.nodeNames.join(", ")}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <UnderutilizedJobsTable jobs={underutilizedJobs} />
           ) : (
             <div className="flex items-center justify-center h-48 bg-muted/20 rounded-md">
               <p className="text-muted-foreground">
@@ -748,6 +709,137 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+};
+
+// Component for sortable underutilized jobs table
+const UnderutilizedJobsTable = ({ jobs }: { jobs: GpuJobUtilization[] }) => {
+  const [sortedJobs, setSortedJobs] = useState<GpuJobUtilization[]>([...jobs]);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortableKey;
+    direction: "ascending" | "descending";
+  }>({
+    key: "avgUtilization",
+    direction: "ascending",
+  });
+
+  // Handle sorting when a column is clicked
+  const requestSort = (key: SortableKey) => {
+    let direction: "ascending" | "descending" = "ascending";
+
+    if (sortConfig.key === key && sortConfig.direction === "ascending") {
+      direction = "descending";
+    }
+
+    setSortConfig({ key, direction });
+  };
+
+  // Apply sorting when sort config changes
+  useEffect(() => {
+    const sortableJobs = [...jobs];
+    sortableJobs.sort((a, b) => {
+      // Type-safe access to properties
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue < bValue) {
+        return sortConfig.direction === "ascending" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === "ascending" ? 1 : -1;
+      }
+      return 0;
+    });
+
+    setSortedJobs(sortableJobs);
+  }, [jobs, sortConfig]);
+
+  // Get the sort direction indicator
+  const getSortDirectionIcon = (key: SortableKey) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === "ascending" ? (
+      <ChevronUp className="h-4 w-4 ml-1" />
+    ) : (
+      <ChevronDown className="h-4 w-4 ml-1" />
+    );
+  };
+
+  // Make a sortable column header
+  const SortableColumnHeader = ({
+    column,
+    label,
+    className = "",
+  }: {
+    column: SortableKey;
+    label: string;
+    className?: string;
+  }) => (
+    <TableHead className={className}>
+      <button
+        className="flex items-center justify-end w-full focus:outline-none"
+        onClick={() => requestSort(column)}
+      >
+        {label}
+        {getSortDirectionIcon(column)}
+      </button>
+    </TableHead>
+  );
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Job ID</TableHead>
+            <TableHead>User</TableHead>
+            <SortableColumnHeader
+              column="avgUtilization"
+              label="Utilization"
+              className="text-right"
+            />
+            <SortableColumnHeader
+              column="gpuCount"
+              label="GPUs"
+              className="text-right"
+            />
+            <SortableColumnHeader
+              column="duration"
+              label="Duration (hrs)"
+              className="text-right"
+            />
+            <TableHead>Nodes</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedJobs.map((job) => (
+            <TableRow key={job.jobId}>
+              <TableCell className="font-medium">{job.jobId}</TableCell>
+              <TableCell>{job.user}</TableCell>
+              <TableCell className="text-right">
+                <span
+                  className={cn(
+                    job.avgUtilization < 10
+                      ? "text-red-500 font-semibold"
+                      : job.avgUtilization < 20
+                      ? "text-amber-500"
+                      : "text-amber-400"
+                  )}
+                >
+                  {job.avgUtilization.toFixed(1)}%
+                </span>
+              </TableCell>
+              <TableCell className="text-right">{job.gpuCount}</TableCell>
+              <TableCell className="text-right">
+                {(job.duration / 60).toFixed(1)}
+              </TableCell>
+              <TableCell className="max-w-[200px] truncate">
+                {job.nodeNames.join(", ")}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };
