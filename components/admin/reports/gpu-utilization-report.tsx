@@ -528,7 +528,7 @@ const GpuUtilizationReport: React.FC<GpuUtilizationReportProps> = ({
   }
 
   return (
-    <div className="space-y-6 w-full max-w-[1400px]">
+    <div className="space-y-6 w-full">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold mb-2">
