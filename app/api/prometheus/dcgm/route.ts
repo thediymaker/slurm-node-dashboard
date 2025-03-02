@@ -51,6 +51,7 @@ export async function GET(req: Request) {
       return {
         gpu: series.metric?.labels?.gpu || "unknown",
         modelName: series.metric?.labels?.modelName || "unknown",
+        hpcJob: series.metric?.labels?.hpc_job || "unknown",
         utilization: parseFloat(
           parseFloat(value?.toString() || "0").toFixed(2)
         ),
