@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, LogOut, BarChart, Settings } from "lucide-react";
 import ClusterStats from "./cluster-stats";
 import AdminPlugins from "./plugins";
-import ReportsPanel from "./reports-panel";
+import JobMetricsDashboard from "./job-metrics-dashboard";
 
 export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="reports">
-            {pathname.includes("reports") && <ReportsPanel />}
+            {pathname.includes("reports") && <JobMetricsDashboard />}
           </TabsContent>
         </Tabs>
       </div>

@@ -1,4 +1,3 @@
-import { PrometheusQueryResponse } from "@/types/types";
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 
