@@ -1,6 +1,3 @@
-// components/admin/UnderutilizedJobsTable.tsx
-"use client";
-
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -52,13 +49,16 @@ export default function UnderutilizedJobsTable({
         // Calculate offset for pagination
         const offset = (currentPage - 1) * pageSize;
 
-        // Construct URL with parameters
-        let url = `/api/prometheus/job-metrics/underutilized?limit=${pageSize}&threshold=${threshold}`;
+        // Construct URL with parameters including offset
+        let url = `/api/prometheus/job-metrics/underutilized?limit=${pageSize}&offset=${offset}&threshold=${threshold}`;
 
         if (searchQuery) {
           url += `&jobId=${encodeURIComponent(searchQuery)}`;
         }
 
+        console.log(
+          `Fetching page ${currentPage} with offset ${offset}: ${url}`
+        );
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -66,10 +66,14 @@ export default function UnderutilizedJobsTable({
         }
 
         const result = await response.json();
+        console.log("API response:", result);
 
         if (result.status === 200 && result.data?.jobs) {
           setJobs(result.data.jobs);
           setTotalJobs(result.data.total);
+          console.log(
+            `Received ${result.data.jobs.length} jobs, total: ${result.data.total}`
+          );
         } else {
           throw new Error(result.error || "Invalid response format");
         }
@@ -93,6 +97,11 @@ export default function UnderutilizedJobsTable({
   // Calculate total pages
   const totalPages = Math.ceil(totalJobs / pageSize);
 
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, threshold]);
+
   // Get severity level based on utilization
   const getUtilizationSeverity = (value: number) => {
     if (value < 10) return "destructive";
@@ -111,8 +120,8 @@ export default function UnderutilizedJobsTable({
 
   if (error) {
     return (
-      <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-        <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+      <div className="rounded-md bg-destructive/10 p-4 dark:bg-destructive/20">
+        <div className="flex items-center gap-2 text-destructive dark:text-destructive">
           <AlertCircle className="h-5 w-5" />
           <span>{error}</span>
         </div>

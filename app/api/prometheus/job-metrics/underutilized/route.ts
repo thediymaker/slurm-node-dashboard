@@ -20,7 +20,6 @@ function extractValueFromPrometheusResult(
   defaultValue: number = 0
 ): number {
   if (!result || !result.result || result.result.length === 0) {
-    console.log("No results found");
     return defaultValue;
   }
 
@@ -29,23 +28,19 @@ function extractValueFromPrometheusResult(
 
     // Check if value is an array [timestamp, value] format
     if (Array.isArray(item.value)) {
-      console.log("Value is array format:", item.value);
       return parseFloat(item.value[1]) || defaultValue;
     }
 
     // Check if value is nested object with time and value properties
     if (item.value && typeof item.value === "object" && "value" in item.value) {
-      console.log("Value is object format:", item.value);
       return parseFloat(item.value.value) || defaultValue;
     }
 
     // Direct value access
     if (typeof item.value === "string" || typeof item.value === "number") {
-      console.log("Value is direct format:", item.value);
-      return parseFloat(item.value) || defaultValue;
+      return parseFloat(String(item.value)) || defaultValue;
     }
 
-    console.log("Unexpected value format:", item.value);
     return defaultValue;
   } catch (error) {
     console.error("Error extracting value:", error);
@@ -69,7 +64,12 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const threshold = parseFloat(searchParams.get("threshold") || "30");
   const limit = parseInt(searchParams.get("limit") || "50");
+  const offset = parseInt(searchParams.get("offset") || "0"); // Add offset parameter
   const jobFilter = searchParams.get("jobId") || "";
+
+  console.log(
+    `Processing request with: threshold=${threshold}, limit=${limit}, offset=${offset}, jobFilter=${jobFilter}`
+  );
 
   try {
     // Get all underutilized jobs based on threshold
@@ -77,11 +77,9 @@ export async function GET(req: NextRequest) {
 
     if (jobFilter) {
       // If job filter is provided, check only that specific job
-      // IMPORTANT: Using <= instead of < to include 0% utilization
       underutilizedQuery = `job:gpu_utilization:current_avg{hpc_job=~".*${jobFilter}.*"} <= ${threshold}`;
     } else {
       // Otherwise get all jobs below threshold
-      // IMPORTANT: Using <= instead of < to include 0% utilization
       underutilizedQuery = `job:gpu_utilization:current_avg <= ${threshold}`;
     }
 
@@ -89,57 +87,31 @@ export async function GET(req: NextRequest) {
     const underutilizedResult = await prom.instantQuery(underutilizedQuery);
     console.log(`Found ${underutilizedResult.result.length} total results`);
 
-    // Debug the first result to examine structure
-    if (underutilizedResult.result.length > 0) {
-      console.log(
-        "First result structure:",
-        JSON.stringify(underutilizedResult.result[0], null, 2)
-      );
-    }
-
     // Extract job IDs from the result
-    const jobIds = underutilizedResult.result
+    const allJobIds = underutilizedResult.result
       .map((item) => {
         const jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
-        if (!jobId) {
-          console.log(
-            "No hpc_job found in metric:",
-            JSON.stringify(item.metric, null, 2)
-          );
-        }
         return jobId;
       })
-      .filter(Boolean)
-      .slice(0, limit);
+      .filter(Boolean);
 
-    console.log("Extracted job IDs:", jobIds);
+    // Calculate total count for pagination
+    const totalCount = allJobIds.length;
+
+    // Apply pagination to job IDs - IMPORTANT FIX for pagination
+    const jobIds = allJobIds.slice(offset, offset + limit);
+
+    console.log(
+      `Total jobs: ${totalCount}, returning page with ${jobIds.length} jobs starting from offset ${offset}`
+    );
 
     if (jobIds.length === 0) {
-      console.log("No underutilized jobs found after filtering");
-
-      // Let's try to get ALL jobs to see if any exist
-      try {
-        const allJobsQuery = "job:gpu_utilization:current_avg";
-        const allJobsResult = await prom.instantQuery(allJobsQuery);
-        console.log(
-          `Found ${allJobsResult.result.length} total jobs in Prometheus`
-        );
-
-        if (allJobsResult.result.length > 0) {
-          console.log(
-            "Sample job metrics:",
-            JSON.stringify(allJobsResult.result[0], null, 2)
-          );
-        }
-      } catch (error) {
-        console.error("Error checking all jobs:", error);
-      }
-
+      console.log("No underutilized jobs found for current page");
       return NextResponse.json({
         status: 200,
         data: {
           jobs: [],
-          total: 0,
+          total: totalCount, // Return total for pagination controls
         },
       });
     }
@@ -158,29 +130,20 @@ export async function GET(req: NextRequest) {
         prom.instantQuery(`job:gpu_count:current${jobsSelector}`),
       ]);
 
-    // Debug first result from each query to understand structure
-    if (gpuUtilResults.result.length > 0) {
-      console.log(
-        "GPU Util sample:",
-        JSON.stringify(gpuUtilResults.result[0], null, 2)
-      );
-    }
-
     // Create a map of job metrics for easy lookup
     const metricsMap: Record<string, any> = {};
 
-    // Process all metric results with the fixed extraction function
+    // Process all metric results
     [
-      { results: gpuUtilResults, key: "gpuUtilization" },
-      { results: memUtilResults, key: "memoryUtilization" },
-      { results: memMaxResults, key: "maxMemoryUtilization" },
-      { results: gpuCountResults, key: "gpuCount" },
-    ].forEach(({ results, key }) => {
-      results.result.forEach((item) => {
+      { result: gpuUtilResults.result, key: "gpuUtilization" },
+      { result: memUtilResults.result, key: "memoryUtilization" },
+      { result: memMaxResults.result, key: "maxMemoryUtilization" },
+      { result: gpuCountResults.result, key: "gpuCount" },
+    ].forEach(({ result, key }) => {
+      result.forEach((item) => {
         // Handle different possible structures of the metric
         const jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
         if (!jobId) {
-          console.log(`No jobId found for ${key} metric:`, item);
           return;
         }
 
@@ -188,8 +151,7 @@ export async function GET(req: NextRequest) {
           metricsMap[jobId] = {};
         }
 
-        // Extract value safely using our helper function
-        // This handles both array format [timestamp, value] and object format {time, value}
+        // Extract value safely handling both array and object formats
         let value: number;
 
         try {
@@ -209,25 +171,19 @@ export async function GET(req: NextRequest) {
           }
 
           if (isNaN(value)) {
-            console.log(`Invalid ${key} value for job ${jobId}:`, item.value);
             value = 0;
           }
         } catch (error) {
-          console.error(`Error parsing ${key} value for job ${jobId}:`, error);
           value = 0;
         }
 
         metricsMap[jobId][key] = value;
-        console.log(`Set ${key} for job ${jobId} to ${value}`);
       });
     });
-
-    console.log("Metrics map:", metricsMap);
 
     // Build the job details array
     const jobDetails = jobIds.map((jobId) => {
       const metrics = metricsMap[jobId] || {};
-      console.log(`Building details for job ${jobId}:`, metrics);
 
       // Use a deterministic "random" start time based on jobId hash
       // In production, you would want to get this from Prometheus or your job system
@@ -258,17 +214,6 @@ export async function GET(req: NextRequest) {
         startTime,
       };
     });
-
-    console.log("Final job details:", jobDetails);
-
-    // Count total underutilized jobs
-    const totalQuery = `count(${underutilizedQuery})`;
-    const totalResult = await prom.instantQuery(totalQuery);
-    const totalCount = parseInt(
-      Array.isArray(totalResult.result[0]?.value)
-        ? totalResult.result[0]?.value[1]
-        : totalResult.result[0]?.value?.value || "0"
-    );
 
     return NextResponse.json({
       status: 200,
