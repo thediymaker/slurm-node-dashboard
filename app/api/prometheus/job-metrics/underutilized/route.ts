@@ -1,5 +1,3 @@
-// app/api/prometheus/job-metrics/underutilized/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 
@@ -64,11 +62,15 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const threshold = parseFloat(searchParams.get("threshold") || "30");
   const limit = parseInt(searchParams.get("limit") || "50");
-  const offset = parseInt(searchParams.get("offset") || "0"); // Add offset parameter
+  const offset = parseInt(searchParams.get("offset") || "0");
   const jobFilter = searchParams.get("jobId") || "";
 
+  // Get sorting parameters
+  const sort = searchParams.get("sort") || "";
+  const order = searchParams.get("order") || "asc";
+
   console.log(
-    `Processing request with: threshold=${threshold}, limit=${limit}, offset=${offset}, jobFilter=${jobFilter}`
+    `Processing request with: threshold=${threshold}, limit=${limit}, offset=${offset}, jobFilter=${jobFilter}, sort=${sort}, order=${order}`
   );
 
   try {
@@ -98,36 +100,30 @@ export async function GET(req: NextRequest) {
     // Calculate total count for pagination
     const totalCount = allJobIds.length;
 
-    // Apply pagination to job IDs - IMPORTANT FIX for pagination
-    const jobIds = allJobIds.slice(offset, offset + limit);
-
-    console.log(
-      `Total jobs: ${totalCount}, returning page with ${jobIds.length} jobs starting from offset ${offset}`
-    );
-
-    if (jobIds.length === 0) {
-      console.log("No underutilized jobs found for current page");
+    if (allJobIds.length === 0) {
+      console.log("No underutilized jobs found");
       return NextResponse.json({
         status: 200,
         data: {
           jobs: [],
-          total: totalCount, // Return total for pagination controls
+          total: 0,
         },
       });
     }
 
     // Create a vector selector with all job IDs for batch querying
-    const jobsSelector = `{hpc_job=~"${jobIds.join("|")}"}`;
+    // Using ALL job IDs here to get metrics for sorting
+    const allJobsSelector = `{hpc_job=~"${allJobIds.join("|")}"}`;
 
     // Batch query all metrics for these jobs
-    console.log("Querying job metrics with selector:", jobsSelector);
+    console.log("Querying job metrics with selector:", allJobsSelector);
 
     const [gpuUtilResults, memUtilResults, memMaxResults, gpuCountResults] =
       await Promise.all([
-        prom.instantQuery(`job:gpu_utilization:current_avg${jobsSelector}`),
-        prom.instantQuery(`job:gpu_memory:current_avg_pct${jobsSelector}`),
-        prom.instantQuery(`job:gpu_memory:current_max_pct${jobsSelector}`),
-        prom.instantQuery(`job:gpu_count:current${jobsSelector}`),
+        prom.instantQuery(`job:gpu_utilization:current_avg${allJobsSelector}`),
+        prom.instantQuery(`job:gpu_memory:current_avg_pct${allJobsSelector}`),
+        prom.instantQuery(`job:gpu_memory:current_max_pct${allJobsSelector}`),
+        prom.instantQuery(`job:gpu_count:current${allJobsSelector}`),
       ]);
 
     // Create a map of job metrics for easy lookup
@@ -181,8 +177,8 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    // Build the job details array
-    const jobDetails = jobIds.map((jobId) => {
+    // Build the job details array for all jobs
+    const allJobDetails = allJobIds.map((jobId) => {
       const metrics = metricsMap[jobId] || {};
 
       // Use a deterministic "random" start time based on jobId hash
@@ -215,10 +211,26 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Apply sorting if requested
+    if (sort === "utilization") {
+      console.log(`Sorting by utilization, order: ${order}`);
+      if (order === "asc") {
+        allJobDetails.sort((a, b) => a.gpuUtilization - b.gpuUtilization);
+      } else {
+        allJobDetails.sort((a, b) => b.gpuUtilization - a.gpuUtilization);
+      }
+    }
+
+    // Now apply pagination after sorting
+    const paginatedJobs = allJobDetails.slice(offset, offset + limit);
+    console.log(
+      `Applied pagination: ${paginatedJobs.length} jobs from offset ${offset}`
+    );
+
     return NextResponse.json({
       status: 200,
       data: {
-        jobs: jobDetails,
+        jobs: paginatedJobs,
         total: totalCount,
       },
     });
