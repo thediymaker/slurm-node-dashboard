@@ -1,7 +1,7 @@
 // components/admin/JobMetricsDashboard.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -13,9 +13,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoaderIcon, SearchIcon } from "lucide-react";
-import JobMetricsSummary from "./job-metrics-summary";
-import UnderutilizedJobsTable from "./underutilized-jobs-table";
-import JobDetailsPanel from "./job-details-panel";
+import JobMetricsSummary, { JobMetricsSummaryRef } from "./job-metrics-summary";
+import UnderutilizedJobsTable, {
+  UnderutilizedJobsTableRef,
+} from "./underutilized-jobs-table";
+import JobDetailsPanel, { JobDetailsPanelRef } from "./job-details-panel";
 import { useDebounce } from "@/hooks/use-debounce";
 
 export default function JobMetricsDashboard() {
@@ -26,13 +28,20 @@ export default function JobMetricsDashboard() {
   const [timePeriod, setTimePeriod] = useState<"1d" | "7d" | "30d">("1d");
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // Handle search input change
-  const handleSearch = (e: any) => {
-    setSearchQuery(e.target.value);
+  // Refs to child components for manual refresh
+  const summaryRef = useRef<JobMetricsSummaryRef>(null);
+  const tableRef = useRef<UnderutilizedJobsTableRef>(null);
+  const detailsRef = useRef<JobDetailsPanelRef>(null);
 
-    // If the search looks like a job ID and user presses Enter, select that job
-    if (e.key === "Enter" && e.target.value.trim()) {
-      setSelectedJobId(e.target.value.trim());
+  // Handle search input change
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Handle key press for search
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      setSelectedJobId(searchQuery.trim());
       setActiveTab("job-details");
     }
   };
@@ -51,7 +60,18 @@ export default function JobMetricsDashboard() {
   // Force refresh all data
   const handleRefresh = () => {
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 100);
+
+    // Refresh the active component based on the current tab
+    if (activeTab === "summary" && summaryRef.current) {
+      summaryRef.current.refreshData();
+    } else if (activeTab === "underutilized" && tableRef.current) {
+      tableRef.current.refreshData();
+    } else if (activeTab === "job-details" && detailsRef.current) {
+      detailsRef.current.refreshData();
+    }
+
+    // Show loading indicator briefly
+    setTimeout(() => setIsLoading(false), 200);
   };
 
   return (
@@ -65,12 +85,7 @@ export default function JobMetricsDashboard() {
               className="pl-8"
               value={searchQuery}
               onChange={handleSearch}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && searchQuery.trim()) {
-                  setSelectedJobId(searchQuery.trim());
-                  setActiveTab("job-details");
-                }
-              }}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
 
@@ -79,8 +94,11 @@ export default function JobMetricsDashboard() {
             size="icon"
             onClick={handleRefresh}
             title="Refresh data"
+            disabled={isLoading}
           >
-            <LoaderIcon className="h-4 w-4" />
+            <LoaderIcon
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+            />
           </Button>
         </div>
 
@@ -112,6 +130,7 @@ export default function JobMetricsDashboard() {
         <TabsContent value="summary" className="mt-6">
           <JobMetricsSummary
             key={isLoading ? "loading-summary" : "loaded-summary"}
+            ref={summaryRef}
           />
         </TabsContent>
 
@@ -131,6 +150,7 @@ export default function JobMetricsDashboard() {
                 }-underutilized-${debouncedSearch}`}
                 searchQuery={debouncedSearch}
                 onSelectJob={handleSelectJob}
+                ref={tableRef}
               />
             </CardContent>
           </Card>
@@ -151,6 +171,7 @@ export default function JobMetricsDashboard() {
                 <JobDetailsPanel
                   key={`${selectedJobId}-${isLoading ? "loading" : "loaded"}`}
                   jobId={selectedJobId}
+                  ref={detailsRef}
                 />
               ) : (
                 <div className="text-center py-12 text-muted-foreground">

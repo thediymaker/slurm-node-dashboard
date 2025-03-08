@@ -1,7 +1,12 @@
-// components/admin/JobMetricsSummary.tsx
+// components/admin/job-metrics-summary.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -22,43 +27,49 @@ type SummaryData = {
   };
 };
 
-export default function JobMetricsSummary() {
+export type JobMetricsSummaryRef = {
+  refreshData: () => void;
+};
+
+const JobMetricsSummary = forwardRef<JobMetricsSummaryRef, {}>((props, ref) => {
   const [data, setData] = useState<SummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const response = await fetch("/api/prometheus/job-metrics/summary");
+    try {
+      const response = await fetch("/api/prometheus/job-metrics/summary");
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch summary data");
-        }
-
-        const result = await response.json();
-
-        if (result.status === 200 && result.data) {
-          setData(result.data);
-        } else {
-          throw new Error("Invalid response format");
-        }
-      } catch (err) {
-        console.error("Error fetching summary data:", err);
-        setError("Failed to load job metrics summary");
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error("Failed to fetch summary data");
       }
-    };
 
+      const result = await response.json();
+
+      if (result.status === 200 && result.data) {
+        setData(result.data);
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (err) {
+      console.error("Error fetching summary data:", err);
+      setError("Failed to load job metrics summary");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Expose the refreshData function to parent components
+  useImperativeHandle(ref, () => ({
+    refreshData: fetchData,
+  }));
+
+  useEffect(() => {
     fetchData();
-
-    // Refresh data every 5 minutes
-    const interval = setInterval(fetchData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    // No automatic refresh interval anymore
   }, []);
 
   if (error) {
@@ -233,4 +244,9 @@ export default function JobMetricsSummary() {
       </Card>
     </div>
   );
-}
+});
+
+// Display name for React DevTools
+JobMetricsSummary.displayName = "JobMetricsSummary";
+
+export default JobMetricsSummary;

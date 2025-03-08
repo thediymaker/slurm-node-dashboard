@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
+import { URL } from "url";
 
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
 
@@ -12,44 +13,26 @@ if (PROMETHEUS_URL) {
   });
 }
 
-// Helper function to safely extract numeric values from Prometheus results
-function extractValueFromPrometheusResult(
-  result: any,
-  defaultValue: number = 0
-): number {
-  if (!result || !result.result || result.result.length === 0) {
-    return defaultValue;
-  }
-
-  try {
-    const item = result.result[0];
-
-    // Check if value is an array [timestamp, value] format
-    if (Array.isArray(item.value)) {
-      return parseFloat(item.value[1]) || defaultValue;
-    }
-
-    // Check if value is nested object with time and value properties
-    if (item.value && typeof item.value === "object" && "value" in item.value) {
-      return parseFloat(item.value.value) || defaultValue;
-    }
-
-    // Direct value access
-    if (typeof item.value === "string" || typeof item.value === "number") {
-      return parseFloat(String(item.value)) || defaultValue;
-    }
-
-    return defaultValue;
-  } catch (error) {
-    console.error("Error extracting value:", error);
-    return defaultValue;
-  }
-}
-
 // Function to fetch job information from Slurm
 async function fetchSlurmJobInfo(jobId: string) {
   try {
-    const response = await fetch(`/api/slurm/job/${jobId}`);
+    console.log(`Fetching Slurm data for job ${jobId}`);
+
+    // If API_BASE_URL is the same domain as your app, it will create a loop
+    // You need to ensure this creates a fully qualified URL to your own app
+    // But NOT the same request path that's being processed
+
+    // Remove the URL constructor and just use a relative path if you're calling
+    // your own API from within your API handlers
+    const apiUrl = `/api/slurm/job/${jobId}`;
+
+    console.log(`Using Slurm API URL: ${apiUrl}`);
+
+    // Use a server-side fetch so it doesn't create a client-side request
+    // Use an absolute URL within your application
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}${apiUrl}`
+    );
 
     if (!response.ok) {
       console.error(
@@ -60,9 +43,18 @@ async function fetchSlurmJobInfo(jobId: string) {
 
     const data = await response.json();
 
+    // Log a portion of the response structure to help with debugging
+    const dataPreview = JSON.stringify(data).substring(0, 200);
+    console.log(
+      `Slurm API response for job ${jobId} (preview): ${dataPreview}...`
+    );
+
     // Check if we have actual job data
     if (data && data.jobs && data.jobs.length > 0) {
+      console.log(`Successfully found Slurm data for job ${jobId}`);
       return data.jobs[0];
+    } else {
+      console.warn(`No job data found in Slurm response for job ${jobId}`);
     }
 
     return null;
@@ -134,13 +126,38 @@ export async function GET(req: NextRequest) {
     const underutilizedResult = await prom.instantQuery(underutilizedQuery);
     console.log(`Found ${underutilizedResult.result.length} total results`);
 
-    // Extract job IDs from the result
+    // Extract job IDs from the result and normalize them
     const allJobIds = underutilizedResult.result
       .map((item) => {
+        // Get the job ID from the metric
         const jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
+
+        if (!jobId) {
+          return null;
+        }
+
+        // Check if jobId is a string and only contains a number (Slurm job ID)
+        if (typeof jobId === "string" && /^\d+$/.test(jobId)) {
+          // Slurm API expects numeric job IDs
+          return jobId;
+        }
+
+        // For job IDs with prefixes or other formats, try to extract just the numeric part
+        // This assumes job IDs have formats like "job_123", "slurm_123", etc.
+        const matches = jobId.match(/(\d+)$/);
+        if (matches && matches[1]) {
+          return matches[1]; // Return just the numeric part
+        }
+
+        // If we can't extract a numeric part, return the original
         return jobId;
       })
-      .filter(Boolean);
+      .filter(Boolean); // Remove nulls
+
+    console.log(
+      `Extracted ${allJobIds.length} job IDs for Slurm lookup:`,
+      allJobIds
+    );
 
     // Calculate total count for pagination
     const totalCount = allJobIds.length;
@@ -205,9 +222,17 @@ export async function GET(req: NextRequest) {
           value: string[] | { time: string; value: string } | string;
         }) => {
           // Handle different possible structures of the metric
-          const jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
+          let jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
           if (!jobId) {
             return;
+          }
+
+          // Normalize job ID to match what we use for Slurm lookup
+          if (typeof jobId === "string" && !/^\d+$/.test(jobId)) {
+            const matches = jobId.match(/(\d+)$/);
+            if (matches && matches[1]) {
+              jobId = matches[1]; // Use just the numeric part
+            }
           }
 
           if (!metricsMap[jobId]) {
@@ -267,17 +292,22 @@ export async function GET(req: NextRequest) {
     );
     const slurmJobsResults = await Promise.all(slurmJobsPromises);
 
-    // Create a map of Slurm job data
+    // Create a map of Slurm job data with more detailed logging
     const slurmJobMap: Record<string, any> = {};
     slurmJobsResults.forEach((jobData, index) => {
+      const jobId = allJobIds[index];
       if (jobData) {
-        const jobId = allJobIds[index];
+        console.log(`Adding Slurm data for job ${jobId} to map`);
         slurmJobMap[jobId] = jobData;
+      } else {
+        console.warn(`No Slurm data found for job ${jobId}`);
       }
     });
 
     console.log(
-      `Retrieved Slurm data for ${Object.keys(slurmJobMap).length} jobs`
+      `Retrieved Slurm data for ${Object.keys(slurmJobMap).length} out of ${
+        allJobIds.length
+      } jobs`
     );
 
     // Step 4: Build the job details array with both Prometheus metrics and Slurm data
@@ -295,19 +325,64 @@ export async function GET(req: NextRequest) {
 
       if (slurmData) {
         // Extract Slurm job information
-        startTime = slurmData.start_time?.number
-          ? slurmData.start_time.number * 1000
-          : Date.now() - 600000;
+        // Check if start_time is an object with a number property
+        if (
+          slurmData.start_time &&
+          typeof slurmData.start_time === "object" &&
+          "number" in slurmData.start_time
+        ) {
+          startTime = slurmData.start_time.number * 1000; // Convert to milliseconds
+        } else if (typeof slurmData.start_time === "number") {
+          startTime = slurmData.start_time * 1000; // Convert to milliseconds
+        } else {
+          startTime = Date.now() - 600000; // Default to 10 min ago
+        }
+
+        // Get job name
         jobName = slurmData.name || "";
+
+        // Get username
         userName = slurmData.user_name || "";
-        jobState = Array.isArray(slurmData.job_state)
-          ? slurmData.job_state.join(", ")
-          : "";
-        timeLimit = slurmData.time_limit?.number || 0;
+
+        // Get job state - handle both string and array formats
+        if (Array.isArray(slurmData.job_state)) {
+          jobState = slurmData.job_state.join(", ");
+        } else if (typeof slurmData.job_state === "string") {
+          jobState = slurmData.job_state;
+        } else {
+          jobState = "";
+        }
+
+        // Get time limit
+        if (
+          slurmData.time_limit &&
+          typeof slurmData.time_limit === "object" &&
+          "number" in slurmData.time_limit
+        ) {
+          timeLimit = slurmData.time_limit.number || 0;
+        } else if (typeof slurmData.time_limit === "number") {
+          timeLimit = slurmData.time_limit;
+        }
+
+        // Get TRES info (resources)
         tresInfo = slurmData.tres_per_node || "";
+
+        console.log(`Successfully populated Slurm data for job ${jobId}:`, {
+          jobName,
+          userName,
+          jobState,
+          timeLimit,
+          tresInfo,
+          startTime: new Date(startTime).toISOString(),
+        });
       } else {
         // Fallback if no Slurm data available
         startTime = Date.now() - 600000; // Default to 10 min ago
+        console.log(
+          `Using fallback data for job ${jobId} with startTime ${new Date(
+            startTime
+          ).toISOString()}`
+        );
       }
 
       const jobDuration = Date.now() - startTime;
