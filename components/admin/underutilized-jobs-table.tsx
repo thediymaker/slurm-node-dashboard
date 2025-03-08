@@ -1,4 +1,3 @@
-// components/admin/underutilized-jobs-table.tsx
 import React, {
   useState,
   useEffect,
@@ -82,14 +81,62 @@ const UnderutilizedJobsTable = forwardRef<
   UnderutilizedJobsTableRef,
   UnderutilizedJobsTableProps
 >(({ searchQuery = "", onSelectJob, threshold = 30 }, ref) => {
+  // Get initial page from localStorage or default to 1
+  const getInitialPage = () => {
+    try {
+      const savedPage = localStorage.getItem("underutilizedJobsCurrentPage");
+      return savedPage ? parseInt(savedPage, 10) : 1;
+    } catch (e) {
+      return 1;
+    }
+  };
+
+  // Get initial sort from localStorage or default to null
+  const getInitialSort = () => {
+    try {
+      const savedSort = localStorage.getItem("underutilizedJobsSortOrder");
+      return savedSort ? (savedSort as "asc" | "desc" | null) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
   const [jobs, setJobs] = useState<JobData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(getInitialPage());
   const [totalJobs, setTotalJobs] = useState(0);
   const [pageSize] = useState(10);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(
+    getInitialSort()
+  );
   const [jumpToPage, setJumpToPage] = useState("");
+  const [loadingJobDetails, setLoadingJobDetails] = useState(false);
+
+  // Save currentPage to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "underutilizedJobsCurrentPage",
+        currentPage.toString()
+      );
+    } catch (e) {
+      console.error("Failed to save page to localStorage:", e);
+    }
+  }, [currentPage]);
+
+  // Save sortOrder to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (sortOrder) {
+        localStorage.setItem("underutilizedJobsSortOrder", sortOrder);
+      } else {
+        localStorage.removeItem("underutilizedJobsSortOrder");
+      }
+    } catch (e) {
+      console.error("Failed to save sort order to localStorage:", e);
+    }
+  }, [sortOrder]);
 
   const fetchJobs = async () => {
     setIsLoading(true);
@@ -138,20 +185,100 @@ const UnderutilizedJobsTable = forwardRef<
     }
   };
 
+  // Function to fetch detailed job information for a specific page of jobs
+  const fetchJobDetails = async (jobsWithoutDetails: any[]) => {
+    if (!jobsWithoutDetails || jobsWithoutDetails.length === 0) return;
+
+    setLoadingJobDetails(true);
+
+    try {
+      // Extract job IDs that need details
+      const jobIds = jobsWithoutDetails.map((job) => job.jobId);
+
+      // Make a batch request for all job details at once
+      const detailsUrl = `/api/slurm/jobs?ids=${jobIds.join(",")}`;
+      console.log(`Fetching details for jobs: ${jobIds.join(", ")}`);
+
+      const response = await fetch(detailsUrl);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch job details: ${response.statusText}`);
+      }
+
+      const detailsResult = await response.json();
+
+      if (detailsResult && detailsResult.jobs) {
+        // Create a map of job details by job ID
+        const detailsMap: { [key: string]: any } = {};
+        detailsResult.jobs.forEach(
+          (jobDetail: { job_id: { toString: () => any } }) => {
+            const jobId = jobDetail.job_id.toString();
+            detailsMap[jobId] = jobDetail;
+          }
+        );
+
+        // Update the jobs array with details
+        setJobs((currentJobs) =>
+          currentJobs.map((job) => {
+            const details = detailsMap[job.jobId];
+
+            if (details) {
+              return {
+                ...job,
+                jobName: details.name || job.jobName || "Unnamed job",
+                userName: details.user_name || job.userName || "unknown",
+                jobState: Array.isArray(details.job_state)
+                  ? details.job_state.join(", ")
+                  : details.job_state || job.jobState || "",
+                timeLimit:
+                  details.time_limit?.number ||
+                  details.time_limit ||
+                  job.timeLimit ||
+                  0,
+                tresInfo: details.tres_per_node || job.tresInfo || "",
+                hasSlurmData: true,
+              };
+            }
+
+            return job;
+          })
+        );
+
+        console.log(
+          `Updated ${Object.keys(detailsMap).length} jobs with details`
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching job details:", error);
+    } finally {
+      setLoadingJobDetails(false);
+    }
+  };
+
+  // Fetch job data when page, sort, or filters change
+  useEffect(() => {
+    fetchJobs();
+  }, [currentPage, pageSize, searchQuery, threshold, sortOrder]);
+
+  // After initial jobs load, fetch details for jobs missing details
+  useEffect(() => {
+    if (!isLoading && jobs.length > 0) {
+      const jobsNeedingDetails = jobs.filter((job) => !job.hasSlurmData);
+      if (jobsNeedingDetails.length > 0) {
+        fetchJobDetails(jobsNeedingDetails);
+      }
+    }
+  }, [isLoading, jobs]);
+
+  // Reset to page 1 when search query or threshold changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, threshold]);
+
   // Expose the refreshData function to parent components
   useImperativeHandle(ref, () => ({
     refreshData: fetchJobs,
   }));
-
-  useEffect(() => {
-    fetchJobs();
-    // No automatic refresh interval
-  }, [currentPage, pageSize, searchQuery, threshold, sortOrder]);
-
-  // Reset to page 1 when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, threshold]);
 
   // Handle toggle sort
   const toggleSort = () => {
@@ -373,7 +500,12 @@ const UnderutilizedJobsTable = forwardRef<
                     <span className="flex items-center">{job.jobId}</span>
                   </TableCell>
                   <TableCell>
-                    {job.hasSlurmData ? (
+                    {loadingJobDetails && !job.hasSlurmData ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    ) : job.hasSlurmData ? (
                       <HoverCard>
                         <HoverCardTrigger asChild>
                           <div className="cursor-pointer group">
