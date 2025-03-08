@@ -1,3 +1,4 @@
+// Simplified UnderutilizedJobsTable always showing running average
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -21,16 +22,38 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  LineChart,
+  Clock,
+  User,
+  Server,
+  Info,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Label } from "@/components/ui/label";
 
 interface JobData {
   jobId: string;
+  jobName?: string;
+  userName?: string;
+  jobState?: string;
+  timeLimit?: number;
+  tresInfo?: string;
   gpuUtilization: number;
+  currentUtilization: number;
+  historicalUtilization: number;
   memoryUtilization: number;
   maxMemoryUtilization: number;
   startTime: number;
   gpuCount: number;
+  timeWindow?: string;
+  isNewJob?: boolean;
+  hasSlurmData?: boolean;
 }
 
 interface UnderutilizedJobsTableProps {
@@ -156,9 +179,58 @@ export default function UnderutilizedJobsTable({
   // Format time ago for display
   const formatTimeAgo = (timestamp: number) => {
     try {
-      return formatDistanceToNow(timestamp, { addSuffix: true });
+      const formattedTime = formatDistanceToNow(timestamp, { addSuffix: true });
+      // Highlight if job is very new (less than 10 minutes)
+      const isVeryNew = Date.now() - timestamp < 600000;
+
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1">
+                <span>{formattedTime}</span>
+                {isVeryNew && (
+                  <Badge
+                    variant="outline"
+                    className="px-1 py-0 h-5 text-xs text-green-500 border-green-500"
+                  >
+                    new
+                  </Badge>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              Started: {format(timestamp, "MMM d, yyyy h:mm a")}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
     } catch (e) {
       return "Unknown";
+    }
+  };
+
+  // Format time limit in minutes to human readable
+  const formatTimeLimit = (minutes: number) => {
+    if (!minutes) return "N/A";
+    if (minutes < 60) return `${minutes}m`;
+
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    if (hours < 24) {
+      return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+
+    if (remainingHours === 0 && remainingMinutes === 0) {
+      return `${days}d`;
+    } else if (remainingMinutes === 0) {
+      return `${days}d ${remainingHours}h`;
+    } else {
+      return `${days}d ${remainingHours}h ${remainingMinutes}m`;
     }
   };
 
@@ -180,11 +252,12 @@ export default function UnderutilizedJobsTable({
           <TableHeader>
             <TableRow>
               <TableHead>Job ID</TableHead>
+              <TableHead>Details</TableHead>
               <TableHead>Started</TableHead>
               <TableHead>GPU Count</TableHead>
               <TableHead className="cursor-pointer" onClick={toggleSort}>
                 <span className="flex items-center">
-                  Avg. Utilization {getSortIcon()}
+                  GPU Utilization {getSortIcon()}
                 </span>
               </TableHead>
               <TableHead>Memory Usage</TableHead>
@@ -197,6 +270,9 @@ export default function UnderutilizedJobsTable({
                 <TableRow key={i}>
                   <TableCell>
                     <Skeleton className="h-4 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-4 w-24" />
@@ -218,7 +294,7 @@ export default function UnderutilizedJobsTable({
             ) : jobs.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center py-8 text-muted-foreground"
                 >
                   {searchQuery
@@ -230,12 +306,103 @@ export default function UnderutilizedJobsTable({
               jobs.map((job) => (
                 <TableRow key={job.jobId}>
                   <TableCell className="font-medium">{job.jobId}</TableCell>
+                  <TableCell>
+                    {job.hasSlurmData ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {job.jobName || "Unnamed job"}
+                              </span>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <User className="h-3 w-3" /> {job.userName}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="w-60">
+                            <div className="space-y-2">
+                              <div className="font-medium">{job.jobName}</div>
+                              <div className="grid grid-cols-[auto_1fr] gap-x-2 text-sm">
+                                <span className="text-muted-foreground">
+                                  User:
+                                </span>
+                                <span>{job.userName}</span>
+
+                                <span className="text-muted-foreground">
+                                  State:
+                                </span>
+                                <span>{job.jobState}</span>
+
+                                <span className="text-muted-foreground">
+                                  Time Limit:
+                                </span>
+                                <span>
+                                  {formatTimeLimit(job.timeLimit || 0)}
+                                </span>
+
+                                <span className="text-muted-foreground">
+                                  Resources:
+                                </span>
+                                <span>{job.tresInfo || "N/A"}</span>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="text-muted-foreground text-sm italic">
+                        No job details
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>{formatTimeAgo(job.startTime)}</TableCell>
                   <TableCell>{job.gpuCount}</TableCell>
                   <TableCell>
-                    <Badge variant={getUtilizationSeverity(job.gpuUtilization)}>
-                      {job.gpuUtilization.toFixed(1)}%
-                    </Badge>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center gap-1">
+                            <Badge
+                              variant={getUtilizationSeverity(
+                                job.gpuUtilization
+                              )}
+                            >
+                              {job.gpuUtilization.toFixed(1)}%
+                            </Badge>
+                            {!job.isNewJob && job.timeWindow && (
+                              <LineChart className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            {job.isNewJob && (
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1 text-xs">
+                            {job.isNewJob ? (
+                              <div className="font-medium text-green-500">
+                                New job - current value
+                              </div>
+                            ) : (
+                              <div>
+                                Running average over{" "}
+                                {job.timeWindow || "time period"}
+                              </div>
+                            )}
+                            <div>
+                              Current: {job.currentUtilization?.toFixed(1)}%
+                            </div>
+                            {!job.isNewJob && (
+                              <div>
+                                Historical avg:{" "}
+                                {job.historicalUtilization?.toFixed(1)}%
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">

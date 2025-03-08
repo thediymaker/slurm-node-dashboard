@@ -46,6 +46,51 @@ function extractValueFromPrometheusResult(
   }
 }
 
+// Function to fetch job information from Slurm
+async function fetchSlurmJobInfo(jobId: string) {
+  try {
+    const response = await fetch(`/api/slurm/job/${jobId}`);
+
+    if (!response.ok) {
+      console.error(
+        `Failed to fetch Slurm data for job ${jobId}: ${response.statusText}`
+      );
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Check if we have actual job data
+    if (data && data.jobs && data.jobs.length > 0) {
+      return data.jobs[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error fetching Slurm data for job ${jobId}:`, error);
+    return null;
+  }
+}
+
+// Function to determine appropriate time window for averaging
+function getTimeWindow(jobDuration: number): string {
+  // Convert job duration to hours
+  const durationHours = jobDuration / (60 * 60 * 1000);
+
+  // Use appropriate time window based on job duration
+  if (durationHours < 1) {
+    return "5m"; // For very new jobs, use 5 minute average
+  } else if (durationHours < 24) {
+    // For jobs less than 24 hours
+    return durationHours < 3 ? "15m" : "1h";
+  } else if (durationHours < 168) {
+    // Less than 7 days
+    return "1d"; // Use 1-day average for medium-length jobs
+  } else {
+    return "7d"; // Use 7-day average for long-running jobs
+  }
+}
+
 export async function GET(req: NextRequest) {
   if (!prom) {
     console.error(
@@ -111,14 +156,11 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Create a vector selector with all job IDs for batch querying
-    // Using ALL job IDs here to get metrics for sorting
+    // Step 1: Get current utilization and other metrics
     const allJobsSelector = `{hpc_job=~"${allJobIds.join("|")}"}`;
 
-    // Batch query all metrics for these jobs
-    console.log("Querying job metrics with selector:", allJobsSelector);
-
-    const [gpuUtilResults, memUtilResults, memMaxResults, gpuCountResults] =
+    console.log("Querying current job metrics with selector:", allJobsSelector);
+    const [currentUtilResults, memUtilResults, memMaxResults, gpuCountResults] =
       await Promise.all([
         prom.instantQuery(`job:gpu_utilization:current_avg${allJobsSelector}`),
         prom.instantQuery(`job:gpu_memory:current_avg_pct${allJobsSelector}`),
@@ -126,74 +168,175 @@ export async function GET(req: NextRequest) {
         prom.instantQuery(`job:gpu_count:current${allJobsSelector}`),
       ]);
 
+    // Step 2: Get historical average data
+    console.log("Getting historical utilization data...");
+    let historicalUtilResults: any = { result: [] };
+
+    try {
+      // Get 1d average - good balance for performance
+      historicalUtilResults = await prom.instantQuery(
+        `job:gpu_utilization:1d_avg${allJobsSelector}`
+      );
+      console.log(
+        `Retrieved ${historicalUtilResults.result.length} historical averages`
+      );
+    } catch (error) {
+      console.error("Error fetching historical data:", error);
+      // Fall back to current values if historical fails
+      historicalUtilResults = currentUtilResults;
+    }
+
     // Create a map of job metrics for easy lookup
     const metricsMap: Record<string, any> = {};
 
-    // Process all metric results
+    // Process current metric results
     [
-      { result: gpuUtilResults.result, key: "gpuUtilization" },
+      { result: currentUtilResults.result, key: "currentUtilization" },
+      { result: historicalUtilResults.result, key: "historicalUtilization" },
       { result: memUtilResults.result, key: "memoryUtilization" },
       { result: memMaxResults.result, key: "maxMemoryUtilization" },
       { result: gpuCountResults.result, key: "gpuCount" },
     ].forEach(({ result, key }) => {
-      result.forEach((item) => {
-        // Handle different possible structures of the metric
-        const jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
-        if (!jobId) {
-          return;
-        }
+      if (!result) return;
 
-        if (!metricsMap[jobId]) {
-          metricsMap[jobId] = {};
-        }
-
-        // Extract value safely handling both array and object formats
-        let value: number;
-
-        try {
-          if (Array.isArray(item.value)) {
-            // Standard Prometheus format [timestamp, value]
-            value = parseFloat(item.value[1]);
-          } else if (
-            item.value &&
-            typeof item.value === "object" &&
-            "value" in item.value
-          ) {
-            // Object format with nested value
-            value = parseFloat(item.value.value);
-          } else {
-            // Direct value (unlikely but handle it)
-            value = parseFloat(String(item.value));
+      result.forEach(
+        (item: {
+          metric: { hpc_job: any; labels: { hpc_job: any } };
+          value: string[] | { time: string; value: string } | string;
+        }) => {
+          // Handle different possible structures of the metric
+          const jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
+          if (!jobId) {
+            return;
           }
 
-          if (isNaN(value)) {
+          if (!metricsMap[jobId]) {
+            metricsMap[jobId] = {};
+          }
+
+          // Extract value safely handling multiple formats
+          let value: number;
+
+          try {
+            if (Array.isArray(item.value)) {
+              // Standard Prometheus format [timestamp, value]
+              value = parseFloat(item.value[1]);
+            } else if (
+              item.value &&
+              typeof item.value === "object" &&
+              "value" in item.value
+            ) {
+              // Object format with nested value
+              if (
+                typeof item.value === "object" &&
+                item.value !== null &&
+                "value" in item.value &&
+                typeof (item.value as any).value === "string"
+              ) {
+                value = parseFloat((item.value as any).value);
+              } else {
+                value = 0;
+              }
+            } else if (typeof item.value === "string") {
+              // Direct value as string
+              value = parseFloat(item.value);
+            } else if (typeof item.value === "number") {
+              // Direct value as number
+              value = item.value;
+            } else {
+              value = 0;
+            }
+
+            if (isNaN(value)) {
+              value = 0;
+            }
+          } catch (error) {
+            console.error(`Error extracting ${key} for job ${jobId}:`, error);
             value = 0;
           }
-        } catch (error) {
-          value = 0;
-        }
 
-        metricsMap[jobId][key] = value;
-      });
+          metricsMap[jobId][key] = value;
+        }
+      );
     });
 
-    // Build the job details array for all jobs
+    // Step 3: Fetch Slurm job information in parallel
+    console.log("Fetching Slurm job information...");
+    const slurmJobsPromises = allJobIds.map((jobId) =>
+      fetchSlurmJobInfo(jobId)
+    );
+    const slurmJobsResults = await Promise.all(slurmJobsPromises);
+
+    // Create a map of Slurm job data
+    const slurmJobMap: Record<string, any> = {};
+    slurmJobsResults.forEach((jobData, index) => {
+      if (jobData) {
+        const jobId = allJobIds[index];
+        slurmJobMap[jobId] = jobData;
+      }
+    });
+
+    console.log(
+      `Retrieved Slurm data for ${Object.keys(slurmJobMap).length} jobs`
+    );
+
+    // Step 4: Build the job details array with both Prometheus metrics and Slurm data
     const allJobDetails = allJobIds.map((jobId) => {
       const metrics = metricsMap[jobId] || {};
+      const slurmData = slurmJobMap[jobId];
 
-      // Use a deterministic "random" start time based on jobId hash
-      // In production, you would want to get this from Prometheus or your job system
-      const jobIdHash = jobId
-        .split("")
-        .reduce((acc: any, char: string) => acc + char.charCodeAt(0), 0);
-      const startTimeOffset = (jobIdHash % 72) * 3600000; // Up to 72 hours ago
-      const startTime = Date.now() - startTimeOffset;
+      // Get start time from Slurm if available, or fallback to a recent time
+      let startTime: number;
+      let jobName = "";
+      let userName = "";
+      let jobState = "";
+      let timeLimit = 0;
+      let tresInfo = "";
+
+      if (slurmData) {
+        // Extract Slurm job information
+        startTime = slurmData.start_time?.number
+          ? slurmData.start_time.number * 1000
+          : Date.now() - 600000;
+        jobName = slurmData.name || "";
+        userName = slurmData.user_name || "";
+        jobState = Array.isArray(slurmData.job_state)
+          ? slurmData.job_state.join(", ")
+          : "";
+        timeLimit = slurmData.time_limit?.number || 0;
+        tresInfo = slurmData.tres_per_node || "";
+      } else {
+        // Fallback if no Slurm data available
+        startTime = Date.now() - 600000; // Default to 10 min ago
+      }
+
+      const jobDuration = Date.now() - startTime;
+      const timeWindow = getTimeWindow(jobDuration);
+
+      // For very new jobs (less than 30 minutes), use current values only
+      const isNewJob = jobDuration < 1800000; // 30 minutes in milliseconds
+
+      // For running average, use historical data when available, but use current for new jobs
+      const gpuUtilization =
+        !isNewJob && metrics.historicalUtilization !== undefined
+          ? metrics.historicalUtilization
+          : metrics.currentUtilization || 0;
 
       return {
         jobId,
-        gpuUtilization:
-          typeof metrics.gpuUtilization === "number"
-            ? metrics.gpuUtilization
+        jobName,
+        userName,
+        jobState,
+        timeLimit,
+        tresInfo,
+        gpuUtilization: typeof gpuUtilization === "number" ? gpuUtilization : 0,
+        currentUtilization:
+          typeof metrics.currentUtilization === "number"
+            ? metrics.currentUtilization
+            : 0,
+        historicalUtilization:
+          typeof metrics.historicalUtilization === "number"
+            ? metrics.historicalUtilization
             : 0,
         memoryUtilization:
           typeof metrics.memoryUtilization === "number"
@@ -204,10 +347,13 @@ export async function GET(req: NextRequest) {
             ? metrics.maxMemoryUtilization
             : 0,
         gpuCount:
-          typeof metrics.gpuCount === "number"
+          typeof metrics.gpuCount === "number" && metrics.gpuCount > 0
             ? Math.round(metrics.gpuCount)
             : 1,
         startTime,
+        timeWindow,
+        isNewJob,
+        hasSlurmData: !!slurmData,
       };
     });
 
