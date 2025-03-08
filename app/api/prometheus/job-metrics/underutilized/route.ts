@@ -18,18 +18,9 @@ async function fetchSlurmJobInfo(jobId: string) {
   try {
     console.log(`Fetching Slurm data for job ${jobId}`);
 
-    // If API_BASE_URL is the same domain as your app, it will create a loop
-    // You need to ensure this creates a fully qualified URL to your own app
-    // But NOT the same request path that's being processed
-
-    // Remove the URL constructor and just use a relative path if you're calling
-    // your own API from within your API handlers
     const apiUrl = `/api/slurm/job/${jobId}`;
-
     console.log(`Using Slurm API URL: ${apiUrl}`);
 
-    // Use a server-side fetch so it doesn't create a client-side request
-    // Use an absolute URL within your application
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}${apiUrl}`
     );
@@ -43,13 +34,11 @@ async function fetchSlurmJobInfo(jobId: string) {
 
     const data = await response.json();
 
-    // Log a portion of the response structure to help with debugging
     const dataPreview = JSON.stringify(data).substring(0, 200);
     console.log(
       `Slurm API response for job ${jobId} (preview): ${dataPreview}...`
     );
 
-    // Check if we have actual job data
     if (data && data.jobs && data.jobs.length > 0) {
       console.log(`Successfully found Slurm data for job ${jobId}`);
       return data.jobs[0];
@@ -69,17 +58,48 @@ function getTimeWindow(jobDuration: number): string {
   // Convert job duration to hours
   const durationHours = jobDuration / (60 * 60 * 1000);
 
-  // Use appropriate time window based on job duration
   if (durationHours < 1) {
-    return "5m"; // For very new jobs, use 5 minute average
+    return "5m";
   } else if (durationHours < 24) {
-    // For jobs less than 24 hours
     return durationHours < 3 ? "15m" : "1h";
   } else if (durationHours < 168) {
-    // Less than 7 days
-    return "1d"; // Use 1-day average for medium-length jobs
+    return "1d";
   } else {
-    return "7d"; // Use 7-day average for long-running jobs
+    return "7d";
+  }
+}
+
+// Fixed function to safely extract value from Prometheus result
+function extractPrometheusValue(item: any): number {
+  try {
+    if (!item || !item.value) return 0;
+
+    // Handle array format [timestamp, value]
+    if (Array.isArray(item.value) && item.value.length >= 2) {
+      const numericValue = parseFloat(item.value[1]);
+      return isNaN(numericValue) ? 0 : numericValue;
+    }
+
+    // Handle object format with value property
+    if (
+      typeof item.value === "object" &&
+      item.value !== null &&
+      "value" in item.value
+    ) {
+      const numericValue = parseFloat(item.value.value);
+      return isNaN(numericValue) ? 0 : numericValue;
+    }
+
+    // Handle direct string or number
+    if (typeof item.value === "string" || typeof item.value === "number") {
+      const numericValue = parseFloat(item.value);
+      return isNaN(numericValue) ? 0 : numericValue;
+    }
+
+    return 0;
+  } catch (error) {
+    console.error("Error extracting Prometheus value:", error);
+    return 0;
   }
 }
 
@@ -143,13 +163,11 @@ export async function GET(req: NextRequest) {
         }
 
         // For job IDs with prefixes or other formats, try to extract just the numeric part
-        // This assumes job IDs have formats like "job_123", "slurm_123", etc.
         const matches = jobId.match(/(\d+)$/);
         if (matches && matches[1]) {
-          return matches[1]; // Return just the numeric part
+          return matches[1];
         }
 
-        // If we can't extract a numeric part, return the original
         return jobId;
       })
       .filter(Boolean); // Remove nulls
@@ -206,7 +224,7 @@ export async function GET(req: NextRequest) {
     // Create a map of job metrics for easy lookup
     const metricsMap: Record<string, any> = {};
 
-    // Process current metric results
+    // Process current metric results with proper value extraction
     [
       { result: currentUtilResults.result, key: "currentUtilization" },
       { result: historicalUtilResults.result, key: "historicalUtilization" },
@@ -216,73 +234,31 @@ export async function GET(req: NextRequest) {
     ].forEach(({ result, key }) => {
       if (!result) return;
 
-      result.forEach(
-        (item: {
-          metric: { hpc_job: any; labels: { hpc_job: any } };
-          value: string[] | { time: string; value: string } | string;
-        }) => {
-          // Handle different possible structures of the metric
-          let jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
-          if (!jobId) {
-            return;
+      result.forEach((item: any) => {
+        // Handle different possible structures of the metric
+        let jobId = item.metric?.hpc_job || item.metric?.labels?.hpc_job;
+        if (!jobId) return;
+
+        // Normalize job ID to match what we use for Slurm lookup
+        if (typeof jobId === "string" && !/^\d+$/.test(jobId)) {
+          const matches = jobId.match(/(\d+)$/);
+          if (matches && matches[1]) {
+            jobId = matches[1]; // Use just the numeric part
           }
-
-          // Normalize job ID to match what we use for Slurm lookup
-          if (typeof jobId === "string" && !/^\d+$/.test(jobId)) {
-            const matches = jobId.match(/(\d+)$/);
-            if (matches && matches[1]) {
-              jobId = matches[1]; // Use just the numeric part
-            }
-          }
-
-          if (!metricsMap[jobId]) {
-            metricsMap[jobId] = {};
-          }
-
-          // Extract value safely handling multiple formats
-          let value: number;
-
-          try {
-            if (Array.isArray(item.value)) {
-              // Standard Prometheus format [timestamp, value]
-              value = parseFloat(item.value[1]);
-            } else if (
-              item.value &&
-              typeof item.value === "object" &&
-              "value" in item.value
-            ) {
-              // Object format with nested value
-              if (
-                typeof item.value === "object" &&
-                item.value !== null &&
-                "value" in item.value &&
-                typeof (item.value as any).value === "string"
-              ) {
-                value = parseFloat((item.value as any).value);
-              } else {
-                value = 0;
-              }
-            } else if (typeof item.value === "string") {
-              // Direct value as string
-              value = parseFloat(item.value);
-            } else if (typeof item.value === "number") {
-              // Direct value as number
-              value = item.value;
-            } else {
-              value = 0;
-            }
-
-            if (isNaN(value)) {
-              value = 0;
-            }
-          } catch (error) {
-            console.error(`Error extracting ${key} for job ${jobId}:`, error);
-            value = 0;
-          }
-
-          metricsMap[jobId][key] = value;
         }
-      );
+
+        if (!metricsMap[jobId]) {
+          metricsMap[jobId] = {};
+        }
+
+        // Use our improved value extraction function
+        const value = extractPrometheusValue(item);
+
+        // Log the extracted values for debugging
+        console.log(`Extracted ${key} for job ${jobId}: ${value}`);
+
+        metricsMap[jobId][key] = value;
+      });
     });
 
     // Step 3: Fetch Slurm job information in parallel
@@ -325,7 +301,6 @@ export async function GET(req: NextRequest) {
 
       if (slurmData) {
         // Extract Slurm job information
-        // Check if start_time is an object with a number property
         if (
           slurmData.start_time &&
           typeof slurmData.start_time === "object" &&
@@ -397,6 +372,16 @@ export async function GET(req: NextRequest) {
           ? metrics.historicalUtilization
           : metrics.currentUtilization || 0;
 
+      // Log the final values for debugging
+      console.log(`Final values for job ${jobId}:`, {
+        gpuUtilization,
+        currentUtilization: metrics.currentUtilization,
+        historicalUtilization: metrics.historicalUtilization,
+        memoryUtilization: metrics.memoryUtilization,
+        maxMemoryUtilization: metrics.maxMemoryUtilization,
+        gpuCount: metrics.gpuCount,
+      });
+
       return {
         jobId,
         jobName,
@@ -404,27 +389,13 @@ export async function GET(req: NextRequest) {
         jobState,
         timeLimit,
         tresInfo,
-        gpuUtilization: typeof gpuUtilization === "number" ? gpuUtilization : 0,
-        currentUtilization:
-          typeof metrics.currentUtilization === "number"
-            ? metrics.currentUtilization
-            : 0,
-        historicalUtilization:
-          typeof metrics.historicalUtilization === "number"
-            ? metrics.historicalUtilization
-            : 0,
-        memoryUtilization:
-          typeof metrics.memoryUtilization === "number"
-            ? metrics.memoryUtilization
-            : 0,
-        maxMemoryUtilization:
-          typeof metrics.maxMemoryUtilization === "number"
-            ? metrics.maxMemoryUtilization
-            : 0,
-        gpuCount:
-          typeof metrics.gpuCount === "number" && metrics.gpuCount > 0
-            ? Math.round(metrics.gpuCount)
-            : 1,
+        gpuUtilization: gpuUtilization,
+        currentUtilization: metrics.currentUtilization || 0,
+        historicalUtilization: metrics.historicalUtilization || 0,
+        memoryUtilization: metrics.memoryUtilization || 0,
+        maxMemoryUtilization: metrics.maxMemoryUtilization || 0,
+        // Ensure gpuCount is at least 1 and is an integer
+        gpuCount: Math.max(1, Math.round(metrics.gpuCount || 1)),
         startTime,
         timeWindow,
         isNewJob,
