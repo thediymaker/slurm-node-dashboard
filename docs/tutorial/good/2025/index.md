@@ -139,7 +139,7 @@ PROMETHEUS_URL="http://192.168.1.233:9090"
 npm run dev
 ```
 
-The dashboard will now display power information and additional node data.
+After this, you will now see power data on the dashboard, after selecting the "Show Detail" checkbox. This power data is fake power data, pushed to prometheus from each node since they are VMs. In a production environment, you would also see power data for each node when hovering.
 
 ## Production Setup
 
@@ -219,7 +219,7 @@ cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch
 2. Edit the script to specify your node:
 
 ```bash
-#SBATCH -w r8-good-tutorial-c3
+#SBATCH -w good-c3
 ```
 
 3. Monitor jobs using:
