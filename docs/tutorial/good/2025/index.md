@@ -43,12 +43,90 @@ Ensure you have the following:
 
 ### SSH Connection
 
-Connect to your VM using SSH:
+To get started, you will need to copy the SSH key provided by the tutorial host through a web link. This key will allow you to securely connect to your virtual machine.
 
-```bash
-chmod 600 /path/to/your/ssh_key
-ssh -i /path/to/your/ssh_key rocky@your_vm_public_ip
-```
+> **Important**: The SSH key is password-protected with the password: `good-tutorial-2025!`
+
+#### For Mac Users
+
+1. **Copy the SSH key**:
+   - Click on the web link provided by the tutorial host
+   - The page will display the SSH private key text
+   - Select all the text and copy it to your clipboard (Cmd+C)
+2. **Create the SSH key file**:
+
+   - Open Terminal
+   - Create a directory for your SSH keys if it doesn't exist:
+     ```bash
+     mkdir -p ~/.ssh
+     ```
+   - Create a new file for your SSH key:
+     ```bash
+     nano ~/.ssh/tutorial_key
+     ```
+   - Paste the copied key text into the file (Cmd+V)
+   - Save the file (Ctrl+O, then Enter) and exit the editor (Ctrl+X)
+
+3. **Set proper permissions**:
+
+   - Open Terminal
+   - Navigate to the directory containing your downloaded key:
+     ```bash
+     cd /path/to/directory/containing/key
+     ```
+   - Set the correct permissions on the key file (SSH requires private keys to be readable only by you):
+     ```bash
+     chmod 600 your_ssh_key_filename
+     ```
+
+4. **Connect to your VM**:
+   ```bash
+   ssh -i ~/.ssh/tutorial_key rocky@your_vm_public_ip
+   ```
+   - Replace `your_vm_public_ip` with the IP address provided by the tutorial host
+   - When prompted for a passphrase, enter: `good-tutorial-2025!`
+
+#### For Windows Users
+
+The easiest way to connect from Windows is using PuTTY:
+
+1. **Download and install PuTTY**:
+
+   - If you don't already have it, download PuTTY from [https://www.putty.org/](https://www.putty.org/)
+   - Install it by following the installation wizard
+
+2. **Set up your SSH key**:
+
+   - Open PuTTYgen (it comes with PuTTY installation)
+   - Click in the text area at the bottom of the window labeled "Key"
+   - Paste the copied SSH key text (Ctrl+V)
+   - When prompted for the key passphrase, enter: `good-tutorial-2025!`
+   - Click "Save private key" and save the file with a .ppk extension (e.g., `tutorial_key.ppk`)
+
+3. **Connect to your VM**:
+   - Open PuTTY
+   - In the "Host Name" field, enter your VM's IP address
+   - In the "Connection type" section, make sure "SSH" is selected
+   - In the left sidebar, navigate to Connection → SSH → Auth → Credentials
+   - Click the "Browse" button next to "Private key file for authentication"
+   - Select the .ppk file you saved in the previous step
+   - Go back to the "Session" category (top of the left sidebar)
+   - Enter a name in the "Saved Sessions" field and click "Save" to save these settings for future use
+   - Click "Open" to connect
+   - When prompted, enter the username: `rocky`
+   - If prompted for the passphrase, enter: `good-tutorial-2025!`
+
+#### Troubleshooting SSH Connection
+
+- **Passphrase issues**: Ensure you're using the correct passphrase: `good-tutorial-2025!`
+- **Permission denied errors**: Ensure your key file has the correct permissions
+- **Connection refused**: Verify you're using the correct IP address and that the VM is running
+- **Host key verification failed**: If you've previously connected to a different VM with the same IP address, you may need to remove the old entry from your `known_hosts` file:
+  ```bash
+  ssh-keygen -R your_vm_public_ip
+  ```
+
+Once connected, you should see a command prompt indicating you're logged in to the VM. You can proceed with the repository setup as outlined in the next section.
 
 ## Repository Setup
 
@@ -57,8 +135,7 @@ After logging in, switch to root and clone the repository:
 ```bash
 sudo su -
 cd /var/www/
-git clone -b tutorial2025 https://github.com/thediymaker/slurm-node-dashboard.git
-cd slurm-node-dashboard
+git clone -b tutorial2025 https://github.com/thediymaker/slurm-node-dashboard.git && cd slurm-node-dashboard
 ```
 
 ## Configuration
@@ -168,8 +245,7 @@ Open OnDemand is pre-installed on the VM. Default credentials:
 
 ```bash
 cd /var/www/ood/apps/sys/
-git clone https://github.com/thediymaker/ood-status-iframe.git
-cd ood-status-iframe
+git clone https://github.com/thediymaker/ood-status-iframe.git && cd ood-status-iframe
 ```
 
 2. Set up the Python environment:
