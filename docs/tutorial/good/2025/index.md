@@ -50,9 +50,11 @@ To get started, you will need to copy the SSH key provided by the tutorial host 
 #### For Mac Users
 
 1. **Copy the SSH key**:
+
    - Click on the web link provided by the tutorial host
    - The page will display the SSH private key text
    - Select all the text and copy it to your clipboard (Cmd+C)
+
 2. **Create the SSH key file**:
 
    - Open Terminal
@@ -69,14 +71,9 @@ To get started, you will need to copy the SSH key provided by the tutorial host 
 
 3. **Set proper permissions**:
 
-   - Open Terminal
-   - Navigate to the directory containing your downloaded key:
+   - Set the correct permissions on the key file:
      ```bash
-     cd /path/to/directory/containing/key
-     ```
-   - Set the correct permissions on the key file (SSH requires private keys to be readable only by you):
-     ```bash
-     chmod 600 your_ssh_key_filename
+     chmod 600 ~/.ssh/tutorial_key
      ```
 
 4. **Connect to your VM**:
@@ -130,13 +127,17 @@ Once connected, you should see a command prompt indicating you're logged in to t
 
 ## Repository Setup
 
-After logging in, switch to root and clone the repository:
+After logging in, switch to root and set up the dashboard:
 
 ```bash
 sudo su -
 cd /var/www/
-git clone -b tutorial2025 https://github.com/thediymaker/slurm-node-dashboard.git && cd slurm-node-dashboard
+npx create-slurm-dashboard slurm-node-dashboard && cd slurm-node-dashboard
 ```
+
+Follow the prompts to select "Good HPC Tutorial 2025"
+
+> If you accidentally select the wrong version, simply delete the slurm-node-dashboard directory and run the command again.
 
 ## Configuration
 
@@ -204,19 +205,16 @@ To enable Prometheus:
 
 1. Stop the development server (Ctrl+C)
 2. Update the `.env` file:
-
-```bash
-# Change this line
-PROMETHEUS_URL="http://192.168.1.233:9090"
-```
-
+   ```bash
+   # Change this line
+   PROMETHEUS_URL="http://192.168.1.233:9090"
+   ```
 3. Restart the development server:
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm run dev
-```
-
-After this, you will now see power data on the dashboard, after selecting the "Show Detail" checkbox. This power data is fake power data, pushed to prometheus from each node since they are VMs. In a production environment, you would also see power data for each node when hovering.
+After this, you will see power data on the dashboard after selecting the "Show Detail" checkbox. This power data is simulated since the nodes are VMs. In a production environment, you would also see real power data for each node when hovering.
 
 ## Production Setup
 
@@ -243,38 +241,36 @@ Open OnDemand is pre-installed on the VM. Default credentials:
 
 1. Clone the integration repository:
 
-```bash
-cd /var/www/ood/apps/sys/
-git clone https://github.com/thediymaker/ood-status-iframe.git && cd ood-status-iframe
-```
+   ```bash
+   cd /var/www/ood/apps/sys/
+   git clone https://github.com/thediymaker/ood-status-iframe.git && cd ood-status-iframe
+   ```
 
 2. Set up the Python environment:
-
-```bash
-python3 -m venv ood-status-iframe
-source ood-status-iframe/bin/activate
-python3 -m pip install -r requirements.txt
-chmod +x bin/python
-```
+   ```bash
+   python3 -m venv ood-status-iframe
+   source ood-status-iframe/bin/activate
+   python3 -m pip install -r requirements.txt
+   chmod +x bin/python
+   ```
 
 ### Configuration Steps
 
 1. Update the iframe URL in `templates/layout.html`:
 
-```html
-<iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...></iframe>
-```
+   ```html
+   <iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...></iframe>
+   ```
 
 2. Configure `manifest.yml`:
-
-```yaml
-name: System Status
-description: HPC Status Page
-category: System
-subcategory: System Information
-icon: fa://bar-chart
-show_in_menu: true
-```
+   ```yaml
+   name: System Status
+   description: HPC Status Page
+   category: System
+   subcategory: System Information
+   icon: fa://bar-chart
+   show_in_menu: true
+   ```
 
 Access Open OnDemand at `http://{your_vm_public_hostname.rc.asu.edu}/`
 
@@ -286,23 +282,22 @@ To submit a test job:
 
 1. Switch to the tutorial user and prepare the batch script:
 
-```bash
-su - tutorial
-cd /scratch
-cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch
-```
+   ```bash
+   su - tutorial
+   cd /scratch
+   cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch
+   ```
 
 2. Edit the script to specify your node:
 
-```bash
-#SBATCH -w good-c3
-```
+   ```bash
+   #SBATCH -w good-c3
+   ```
 
 3. Monitor jobs using:
-
-```bash
-scontrol show jobs
-```
+   ```bash
+   scontrol show jobs
+   ```
 
 ## Best Practices
 
