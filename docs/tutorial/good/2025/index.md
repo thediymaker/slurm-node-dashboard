@@ -7,21 +7,49 @@ permalink: /tutorial/good/2025/
 <style>
 .code-container {
   position: relative;
-  background-color: var(--code-bg);
-  border-radius: 5px;
-  margin-bottom: 16px;
+  background-color: var(--darker-bg);
+  border-radius: 4px;
+  margin: 16px 0;
   border: 1px solid var(--border-color);
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.code-container:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: var(--accent-color);
 }
 
 .code-block {
-  padding: 16px;
+  padding: 14px 16px;
   padding-right: 40px; /* Make room for the copy icon */
   overflow-x: auto;
-  font-family: inherit;
-  line-height: 1.45;
-  margin-bottom: 0;
+  font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace;
+  line-height: 1.5;
+  margin: 0;
   color: #ff9800;
+  background-color: var(--darker-bg);
+  transition: background-color 0.3s ease;
+}
+
+.code-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background-color: var(--accent-color);
+  opacity: 0.7;
+}
+
+.code-block pre, .code-block code {
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 0;
 }
 
 .copy-button {
@@ -34,42 +62,84 @@ permalink: /tutorial/good/2025/
   border: none;
   cursor: pointer;
   color: var(--highlight);
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
+  opacity: 0.6;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .copy-button:hover {
   opacity: 1;
+  transform: scale(1.1);
+}
+
+.copy-button:active {
+  transform: scale(0.95);
 }
 
 .copy-button svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   fill: currentColor;
 }
 
 .copy-success {
   position: absolute;
   top: 8px;
-  right: 8px;
+  right: 32px;
   background-color: var(--accent-color);
   color: white;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-size: 11px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transform: translateX(10px);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .copy-success.visible {
   opacity: 1;
+  transform: translateX(0);
+}
+
+.copied {
+  background-color: rgba(255, 64, 129, 0.05) !important;
+}
+
+/* Terminal-like $ prompt before commands */
+.code-block code::before {
+  content: "$ ";
+  color: #4caf50;
+  user-select: none;
+}
+
+/* No prompt for config files */
+.code-block code.config-code::before {
+  content: "";
 }
 </style>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Process code blocks to enhance terminal look
+  document.querySelectorAll('.code-block code').forEach(function(codeElement) {
+    // Add terminal code class
+    codeElement.classList.add('terminal-code');
+    
+    // For config files or non-command blocks, remove the terminal prompt
+    if (codeElement.textContent.includes('=') || 
+        codeElement.textContent.includes('#SBATCH') ||
+        codeElement.textContent.includes('<iframe') ||
+        codeElement.textContent.includes('name:') ||
+        codeElement.textContent.includes('PROMETHEUS_URL')) {
+      codeElement.classList.add('config-code');
+    }
+  });
+});
+
 function copyToClipboard(buttonElement) {
   const codeBlock = buttonElement.parentElement.querySelector('code');
   const text = codeBlock.textContent;
@@ -89,10 +159,16 @@ function copyToClipboard(buttonElement) {
     // Show success message
     successMsg.classList.add('visible');
     
-    // Hide after 2 seconds
+    // Highlight the code block briefly
+    codeBlock.parentElement.classList.add('copied');
+    setTimeout(() => {
+      codeBlock.parentElement.classList.remove('copied');
+    }, 500);
+    
+    // Hide after 1.5 seconds
     setTimeout(() => {
       successMsg.classList.remove('visible');
-    }, 2000);
+    }, 1500);
   }).catch(err => {
     console.error('Failed to copy: ', err);
   });
