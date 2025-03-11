@@ -4,6 +4,58 @@ title: GOOD 2025 HPC Dashboard Tutorial
 permalink: /tutorial/good/2025/
 ---
 
+<style>
+.code-container {
+  position: relative;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.code-block {
+  padding: 16px;
+  overflow-x: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 85%;
+  line-height: 1.45;
+  border-radius: 6px;
+  margin-bottom: 0;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background-color: #e1e4e8;
+  border: 1px solid #d1d5da;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.copy-button:hover {
+  background-color: #d1d5da;
+}
+</style>
+
+<script>
+function copyToClipboard(buttonElement) {
+  const codeBlock = buttonElement.parentElement.querySelector('code');
+  const text = codeBlock.textContent;
+  
+  navigator.clipboard.writeText(text).then(() => {
+    const originalText = buttonElement.textContent;
+    buttonElement.textContent = 'Copied!';
+    setTimeout(() => {
+      buttonElement.textContent = originalText;
+    }, 2000);
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+  });
+}
+</script>
+
 # HPC Dashboard Getting Started Guide
 
 Welcome to the **HPC Dashboard Tutorial**! This guide will walk you through deploying and running the HPC Dashboard on your provided virtual machine (VM).
@@ -59,27 +111,38 @@ To get started, you will need to copy the SSH key provided by the tutorial host 
 
    - Open Terminal
    - Create a directory for your SSH keys if it doesn't exist:
-     ```bash
-     mkdir -p ~/.ssh
-     ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>mkdir -p ~/.ssh</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
+
    - Create a new file for your SSH key:
-     ```bash
-     nano ~/.ssh/tutorial_key
-     ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>nano ~/.ssh/tutorial_key</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
+
    - Paste the copied key text into the file (Cmd+V)
    - Save the file (Ctrl+O, then Enter) and exit the editor (Ctrl+X)
 
 3. **Set proper permissions**:
 
    - Set the correct permissions on the key file:
-     ```bash
-     chmod 600 ~/.ssh/tutorial_key
-     ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>chmod 600 ~/.ssh/tutorial_key</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 4. **Connect to your VM**:
-   ```bash
-   ssh -i ~/.ssh/tutorial_key rocky@your_vm_public_ip
-   ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>ssh -i ~/.ssh/tutorial_key rocky@your_vm_public_ip</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
+
    - Replace `your_vm_public_ip` with the IP address provided by the tutorial host
    - No passphrase will be required for the SSH connection
 
@@ -119,9 +182,11 @@ The easiest way to connect from Windows is using PuTTY:
 - **Permission denied errors**: Ensure your key file has the correct permissions
 - **Connection refused**: Verify you're using the correct IP address and that the VM is running
 - **Host key verification failed**: If you've previously connected to a different VM with the same IP address, you may need to remove the old entry from your `known_hosts` file:
-  ```bash
-  ssh-keygen -R your_vm_public_ip
-  ```
+
+  <div class="code-container">
+  <pre class="code-block"><code>ssh-keygen -R your_vm_public_ip</code></pre>
+  <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+  </div>
 
 Once connected, you should see a command prompt indicating you're logged in to the VM. You can proceed with the repository setup as outlined in the next section.
 
@@ -129,15 +194,16 @@ Once connected, you should see a command prompt indicating you're logged in to t
 
 After logging in, switch to root and set up the dashboard:
 
-```bash
-sudo su -
+<div class="code-container">
+<pre class="code-block"><code>sudo su -
 cd /var/www/
-npx create-slurm-dashboard slurm-node-dashboard
-```
+npx create-slurm-dashboard slurm-node-dashboard</code></pre>
+<button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+</div>
 
 Follow the prompts to select "Good HPC Tutorial 2025"
 
-> If you accidentally select the wrong version, simply delete the slurm-node-dashboard directory and run the command again.
+> **Important**: If you accidentally select the wrong version, simply delete the slurm-node-dashboard directory and run the command again.
 
 ## Configuration
 
@@ -145,23 +211,25 @@ Follow the prompts to select "Good HPC Tutorial 2025"
 
 Change in to the dashboard directory, and install required Node.js packages:
 
-```bash
-cd slurm-node-dashboard
-npm install
-```
+<div class="code-container">
+<pre class="code-block"><code>cd slurm-node-dashboard
+npm install</code></pre>
+<button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+</div>
 
 ### Environment Configuration
 
 Set up the production environment:
 
-```bash
-mv .env.production .env
-```
+<div class="code-container">
+<pre class="code-block"><code>mv .env.production .env</code></pre>
+<button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+</div>
 
 Update `.env` with your configuration:
 
-```env
-COMPANY_NAME="Tutorial"
+<div class="code-container">
+<pre class="code-block"><code>COMPANY_NAME="Tutorial"
 VERSION=1.1.2
 CLUSTER_NAME="Tutorial"
 CLUSTER_LOGO="/logo.png"
@@ -174,9 +242,11 @@ REACT_EDITOR="code"
 
 SLURM_API_VERSION="v0.0.40"
 SLURM_SERVER="192.168.1.233"
-SLURM_API_TOKEN="your_slurm_api_token"  # Located at /packages/slurm/config/key
-SLURM_API_ACCOUNT="slurm"
-```
+SLURM_API_TOKEN="your_slurm_api_token" # Located at /packages/slurm/config/key
+SLURM_API_ACCOUNT="slurm"</code></pre>
+<button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+
+</div>
 
 ## Dashboard Deployment
 
@@ -184,9 +254,10 @@ SLURM_API_ACCOUNT="slurm"
 
 Start the development server:
 
-```bash
-npm run dev
-```
+<div class="code-container">
+<pre class="code-block"><code>npm run dev</code></pre>
+<button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+</div>
 
 Access the dashboard at `http://your_vm_public_ip:3020`
 
@@ -206,14 +277,19 @@ To enable Prometheus:
 
 1. Stop the development server (Ctrl+C)
 2. Update the `.env` file:
-   ```bash
-   # Change this line
-   PROMETHEUS_URL="http://192.168.1.233:9090"
-   ```
+
+   <div class="code-container">
+   <pre class="code-block"><code># Change this line
+PROMETHEUS_URL="http://192.168.1.233:9090"</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
+
 3. Restart the development server:
-   ```bash
-   npm run dev
-   ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>npm run dev</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 After this, you will see power data on the dashboard after selecting the "Show Detail" checkbox. This power data is simulated since the nodes are VMs. In a production environment, you would also see real power data for each node when hovering.
 
@@ -221,15 +297,18 @@ After this, you will see power data on the dashboard after selecting the "Show D
 
 For production deployment, use PM2 to manage the dashboard:
 
-```bash
-# Install PM2
+<div class="code-container">
+<pre class="code-block"><code># Install PM2
 npm install -g pm2
 
 # Build and start the application
+
 npm run build
 pm2 start npm --name "hpc-dashboard" -- start -- --port 3020
-pm2 save
-```
+pm2 save</code></pre>
+<button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+
+</div>
 
 ## Open OnDemand Integration
 
@@ -242,36 +321,42 @@ Open OnDemand is pre-installed on the VM. Default credentials:
 
 1. Clone the integration repository:
 
-   ```bash
-   cd /var/www/ood/apps/sys/
-   git clone https://github.com/thediymaker/ood-status-iframe.git && cd ood-status-iframe
-   ```
+   <div class="code-container">
+   <pre class="code-block"><code>cd /var/www/ood/apps/sys/
+git clone https://github.com/thediymaker/ood-status-iframe.git && cd ood-status-iframe</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 2. Set up the Python environment:
-   ```bash
-   python3 -m venv ood-status-iframe
-   source ood-status-iframe/bin/activate
-   python3 -m pip install -r requirements.txt
-   chmod +x bin/python
-   ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>python3 -m venv ood-status-iframe
+source ood-status-iframe/bin/activate
+python3 -m pip install -r requirements.txt
+chmod +x bin/python</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 ### Configuration Steps
 
 1. Update the iframe URL in `templates/layout.html`:
 
-   ```html
-   <iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...></iframe>
-   ```
+   <div class="code-container">
+   <pre class="code-block"><code>&lt;iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...&gt;&lt;/iframe&gt;</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 2. Configure `manifest.yml`:
-   ```yaml
-   name: System Status
-   description: HPC Status Page
-   category: System
-   subcategory: System Information
-   icon: fa://bar-chart
-   show_in_menu: true
-   ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>name: System Status
+description: HPC Status Page
+category: System
+subcategory: System Information
+icon: fa://bar-chart
+show_in_menu: true</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 Access Open OnDemand at `http://{your_vm_public_hostname.rc.asu.edu}/`
 
@@ -283,22 +368,26 @@ To submit a test job:
 
 1. Switch to the tutorial user and prepare the batch script:
 
-   ```bash
-   su - tutorial
-   cd /scratch
-   cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch
-   ```
+   <div class="code-container">
+   <pre class="code-block"><code>su - tutorial
+cd /scratch
+cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 2. Edit the script to specify your node:
 
-   ```bash
-   #SBATCH -w good-c3
-   ```
+   <div class="code-container">
+   <pre class="code-block"><code>#SBATCH -w good-c3</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 3. Monitor jobs using:
-   ```bash
-   scontrol show jobs
-   ```
+
+   <div class="code-container">
+   <pre class="code-block"><code>scontrol show jobs</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+   </div>
 
 ## Best Practices
 
