@@ -1,21 +1,4 @@
-For production deployment, use PM2 to manage the dashboard:
-
-<div class="code-container">
-<pre class="code-block"><code># Install PM2
-npm install -g pm2
-
-# Build and start the application
-
-npm run build
-pm2 start npm --name "hpc-dashboard" -- start -- --port 3020
-pm2 save</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-</svg>
-</button>
-
-</div>---
+---
 layout: mac
 title: GOOD 2025 HPC Dashboard Tutorial
 permalink: /tutorial/good/2025/
@@ -31,15 +14,6 @@ permalink: /tutorial/good/2025/
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
-  max-width: 100%;
-  /* Remove any indentation from lists */
-  margin-left: 0 !important;
-}
-
-/* Override any list item indentation that might affect code blocks */
-li .code-container {
-  margin-left: 0 !important;
-  width: 100%;
 }
 
 .code-container:hover {
@@ -257,55 +231,55 @@ To get started, you will need to copy the SSH key provided by the tutorial host 
    - Open Terminal
    - Create a directory for your SSH keys if it doesn't exist:
 
-<div class="code-container">
-<pre class="code-block"><code>mkdir -p ~/.ssh</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>mkdir -p ~/.ssh</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
-- Create a new file for your SSH key:
+   - Create a new file for your SSH key:
 
-<div class="code-container">
-<pre class="code-block"><code>nano ~/.ssh/tutorial_key</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>nano ~/.ssh/tutorial_key</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
-- Paste the copied key text into the file (Cmd+V)
-- Save the file (Ctrl+O, then Enter) and exit the editor (Ctrl+X)
+   - Paste the copied key text into the file (Cmd+V)
+   - Save the file (Ctrl+O, then Enter) and exit the editor (Ctrl+X)
 
 3. **Set proper permissions**:
 
    - Set the correct permissions on the key file:
 
-<div class="code-container">
-<pre class="code-block"><code>chmod 600 ~/.ssh/tutorial_key</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>chmod 600 ~/.ssh/tutorial_key</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 4. **Connect to your VM**:
 
-<div class="code-container">
-<pre class="code-block"><code>ssh -i ~/.ssh/tutorial_key rocky@your_vm_public_ip</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>ssh -i ~/.ssh/tutorial_key rocky@your_vm_public_ip</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
-- Replace `your_vm_public_ip` with the IP address provided by the tutorial host
-- No passphrase will be required for the SSH connection
+   - Replace `your_vm_public_ip` with the IP address provided by the tutorial host
+   - No passphrase will be required for the SSH connection
 
 #### For Windows Users
 
@@ -342,16 +316,16 @@ The easiest way to connect from Windows is using PuTTY:
 - **Access issues**: The SSH key does not require a passphrase for use (only for download from the URL)
 - **Permission denied errors**: Ensure your key file has the correct permissions
 - **Connection refused**: Verify you're using the correct IP address and that the VM is running
-  - **Host key verification failed**: If you've previously connected to a different VM with the same IP address, you may need to remove the old entry from your `known_hosts` file:
+- **Host key verification failed**: If you've previously connected to a different VM with the same IP address, you may need to remove the old entry from your `known_hosts` file:
 
-<div class="code-container">
-<pre class="code-block"><code>ssh-keygen -R your_vm_public_ip</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+  <div class="code-container">
+  <pre class="code-block"><code>ssh-keygen -R your_vm_public_ip</code></pre>
+  <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+    </svg>
+  </button>
+  </div>
 
 Once connected, you should see a command prompt indicating you're logged in to the VM. You can proceed with the repository setup as outlined in the next section.
 
@@ -406,7 +380,7 @@ Set up the production environment:
 Update `.env` with your configuration:
 
 <div class="code-container">
-<pre class="code-block"><code class="config-code">COMPANY_NAME="Tutorial"
+<pre class="code-block"><code>COMPANY_NAME="Tutorial"
 VERSION=1.1.2
 CLUSTER_NAME="Tutorial"
 CLUSTER_LOGO="/logo.png"
@@ -463,26 +437,26 @@ To enable Prometheus:
 1. Stop the development server (Ctrl+C)
 2. Update the `.env` file:
 
-<div class="code-container">
-<pre class="code-block"><code class="config-code"># Change this line
+   <div class="code-container">
+   <pre class="code-block"><code># Change this line
 PROMETHEUS_URL="http://192.168.1.233:9090"</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 3. Restart the development server:
 
-<div class="code-container">
-<pre class="code-block"><code>npm run dev</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>npm run dev</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 After this, you will see power data on the dashboard after selecting the "Show Detail" checkbox. This power data is simulated since the nodes are VMs. In a production environment, you would also see real power data for each node when hovering.
 
@@ -546,30 +520,30 @@ chmod +x bin/python</code></pre>
 
 1. Update the iframe URL in `templates/layout.html`:
 
-<div class="code-container">
-<pre class="code-block"><code class="config-code">&lt;iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...&gt;&lt;/iframe&gt;</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>&lt;iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...&gt;&lt;/iframe&gt;</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 2. Configure `manifest.yml`:
 
-<div class="code-container">
-<pre class="code-block"><code class="config-code">name: System Status
+   <div class="code-container">
+   <pre class="code-block"><code>name: System Status
 description: HPC Status Page
 category: System
 subcategory: System Information
 icon: fa://bar-chart
 show_in_menu: true</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 Access Open OnDemand at `http://{your_vm_public_hostname.rc.asu.edu}/`
 
@@ -581,38 +555,38 @@ To submit a test job:
 
 1. Switch to the tutorial user and prepare the batch script:
 
-<div class="code-container">
-<pre class="code-block"><code>su - tutorial
+   <div class="code-container">
+   <pre class="code-block"><code>su - tutorial
 cd /scratch
 cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 2. Edit the script to specify your node:
 
-<div class="code-container">
-<pre class="code-block"><code class="config-code">#SBATCH -w good-c3</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>#SBATCH -w good-c3</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 3. Monitor jobs using:
 
-<div class="code-container">
-<pre class="code-block"><code>scontrol show jobs</code></pre>
-<button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-  </svg>
-</button>
-</div>
+   <div class="code-container">
+   <pre class="code-block"><code>scontrol show jobs</code></pre>
+   <button class="copy-button" onclick="copyToClipboard(this)" aria-label="Copy code">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+     </svg>
+   </button>
+   </div>
 
 ## Best Practices
 
