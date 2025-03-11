@@ -132,7 +132,7 @@ After logging in, switch to root and set up the dashboard:
 ```bash
 sudo su -
 cd /var/www/
-npx create-slurm-dashboard slurm-node-dashboard && cd slurm-node-dashboard
+npx create-slurm-dashboard slurm-node-dashboard
 ```
 
 Follow the prompts to select "Good HPC Tutorial 2025"
@@ -143,9 +143,10 @@ Follow the prompts to select "Good HPC Tutorial 2025"
 
 ### Install Dependencies
 
-Install required Node.js packages:
+Change in to the dashboard directory, and install required Node.js packages:
 
 ```bash
+cd slurm-node-dashboard
 npm install
 ```
 
