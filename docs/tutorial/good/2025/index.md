@@ -45,7 +45,7 @@ Ensure you have the following:
 
 To get started, you will need to copy the SSH key provided by the tutorial host through a web link. This key will allow you to securely connect to your virtual machine.
 
-> **Important**: The SSH key is password-protected with the password: `good-tutorial-2025!`
+> **Important**: When downloading the SSH key from the provided URL, you'll need to use the password: `good-tutorial-2025!`. The SSH key itself is not passphrase-protected.
 
 #### For Mac Users
 
@@ -81,7 +81,7 @@ To get started, you will need to copy the SSH key provided by the tutorial host 
    ssh -i ~/.ssh/tutorial_key rocky@your_vm_public_ip
    ```
    - Replace `your_vm_public_ip` with the IP address provided by the tutorial host
-   - When prompted for a passphrase, enter: `good-tutorial-2025!`
+   - No passphrase will be required for the SSH connection
 
 #### For Windows Users
 
@@ -97,7 +97,7 @@ The easiest way to connect from Windows is using PuTTY:
    - Open PuTTYgen (it comes with PuTTY installation)
    - Click in the text area at the bottom of the window labeled "Key"
    - Paste the copied SSH key text (Ctrl+V)
-   - When prompted for the key passphrase, enter: `good-tutorial-2025!`
+   - No passphrase is needed as the key is not passphrase-protected
    - Click "Save private key" and save the file with a .ppk extension (e.g., `tutorial_key.ppk`)
 
 3. **Connect to your VM**:
@@ -111,11 +111,11 @@ The easiest way to connect from Windows is using PuTTY:
    - Enter a name in the "Saved Sessions" field and click "Save" to save these settings for future use
    - Click "Open" to connect
    - When prompted, enter the username: `rocky`
-   - If prompted for the passphrase, enter: `good-tutorial-2025!`
+   - You should connect without being prompted for a passphrase
 
 #### Troubleshooting SSH Connection
 
-- **Passphrase issues**: Ensure you're using the correct passphrase: `good-tutorial-2025!`
+- **Access issues**: The SSH key does not require a passphrase for use (only for download from the URL)
 - **Permission denied errors**: Ensure your key file has the correct permissions
 - **Connection refused**: Verify you're using the correct IP address and that the VM is running
 - **Host key verification failed**: If you've previously connected to a different VM with the same IP address, you may need to remove the old entry from your `known_hosts` file:
