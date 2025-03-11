@@ -1,259 +1,570 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page.title }}</title>
-    <style>
-      :root {
-        --terminal-text: #fff;
-        --terminal-bg: #2d2d2d;
-        --darker-bg: #1e1e1e;
-        --accent-color: #ff4081;
-        --highlight: #00b7c3;
-        --code-bg: #363636;
-        --border-color: #404040;
-      }
+---
+layout: mac
+title: GOOD 2025 HPC Dashboard Tutorial
+permalink: /tutorial/good/2025/
+---
 
-      @keyframes cursor-blink {
-        0%,
-        100% {
-          opacity: 0;
+<style>
+  .code-container {
+    position: relative;
+    background-color: var(--code-bg);
+    border-radius: 5px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+  }
+
+  .code-block {
+    padding: 16px;
+    padding-right: 40px; /* Make room for the copy icon */
+    overflow-x: auto;
+    font-family: inherit;
+    line-height: 1.45;
+    margin-bottom: 0;
+    color: #ff9800;
+  }
+
+  .copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--highlight);
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .copy-button:hover {
+    opacity: 1;
+  }
+
+  .copy-button svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  .copy-success {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: var(--accent-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .copy-success.visible {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  function copyToClipboard(buttonElement) {
+    const codeBlock = buttonElement.parentElement.querySelector("code");
+    const text = codeBlock.textContent;
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        // Get success message element
+        let successMsg =
+          buttonElement.parentElement.querySelector(".copy-success");
+
+        // Create one if it doesn't exist
+        if (!successMsg) {
+          successMsg = document.createElement("div");
+          successMsg.className = "copy-success";
+          successMsg.textContent = "Copied!";
+          buttonElement.parentElement.appendChild(successMsg);
         }
-        50% {
-          opacity: 1;
-        }
-      }
 
-      body {
-        background-color: var(--terminal-bg);
-        color: var(--terminal-text);
-        font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace;
-        line-height: 1.6;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        position: relative;
-        overflow-x: hidden;
-        display: flex;
-        flex-direction: column;
-      }
+        // Show success message
+        successMsg.classList.add("visible");
 
-      /* Subtle matrix-like background pattern */
-      body::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(rgba(45, 45, 45, 0.05) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(45, 45, 45, 0.05) 1px, transparent 1px);
-        background-size: 20px 20px;
-        z-index: -1;
-      }
+        // Hide after 2 seconds
+        setTimeout(() => {
+          successMsg.classList.remove("visible");
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+      });
+  }
+</script>
 
-      .container {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 0 2rem 2rem;
-        background-color: var(--terminal-bg);
-        position: relative;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-        flex: 1;
-        margin-bottom: 40px;
-      }
+# HPC Dashboard Getting Started Guide Welcome to the **HPC Dashboard Tutorial**!
+This guide will walk you through deploying and running the HPC Dashboard on your
+provided virtual machine (VM). ## Table of Contents 1.
+[Introduction](#introduction) 2. [Prerequisites](#prerequisites) 3. [Environment
+Setup](#environment-setup) 4. [Repository Setup](#repository-setup) 5.
+[Configuration](#configuration) 6. [Dashboard Deployment](#dashboard-deployment)
+7. [Production Setup](#production-setup) 8. [Open OnDemand
+Integration](#open-ondemand-integration) 9. [Best Practices](#best-practices)
+10. [Additional Resources](#additional-resources) ## Introduction The **HPC
+Dashboard** is a Next.js application designed for real-time monitoring of SLURM
+nodes. It provides detailed insights into CPU/GPU utilization, node status, job
+histories, and more. This tutorial will guide you through: - Deploying the
+dashboard on a VM with a public IP - Connecting to a remote SLURM API and
+Prometheus instance - Setting up the Open OnDemand integration ## Prerequisites
+Ensure you have the following: - **VM Access** - VM with public IP (provided by
+tutorial host) - SSH key for secure access (provided by tutorial host) - SLURM
+API key (located at `/packages/slurm/config/key`) - SLURM and Prometheus IP
+addresses (provided by tutorial host) ## Environment Setup ### SSH Connection To
+get started, you will need to copy the SSH key provided by the tutorial host
+through a web link. This key will allow you to securely connect to your virtual
+machine. > **Important**: When downloading the SSH key from the provided URL,
+you'll need to use the password: `good-tutorial-2025!`. The SSH key itself is
+not passphrase-protected. #### For Mac Users 1. **Copy the SSH key**: - Click on
+the web link provided by the tutorial host - The page will display the SSH
+private key text - Select all the text and copy it to your clipboard (Cmd+C) 2.
+**Create the SSH key file**: - Open Terminal - Create a directory for your SSH
+keys if it doesn't exist:
 
-      .terminal-header {
-        background-color: var(--darker-bg);
-        padding: 8px;
-        font-family: inherit;
-        color: var(--terminal-text);
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        border-bottom: 1px solid var(--border-color);
-      }
+<div class="code-container">
+  <pre class="code-block"><code>mkdir -p ~/.ssh</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      .terminal-header-content {
-        max-width: 900px;
-        width: 100%;
-        text-align: left;
-        color: #a0a0a0;
-      }
+- Create a new file for your SSH key:
 
-      .terminal-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: var(--darker-bg);
-        border-top: 1px solid var(--border-color);
-        padding: 8px;
-        font-family: inherit;
-        color: #a0a0a0;
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        z-index: 1000;
-      }
+<div class="code-container">
+  <pre class="code-block"><code>nano ~/.ssh/tutorial_key</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      .terminal-prompt {
-        margin-right: 8px;
-      }
+- Paste the copied key text into the file (Cmd+V) - Save the file (Ctrl+O, then
+Enter) and exit the editor (Ctrl+X) 3. **Set proper permissions**: - Set the
+correct permissions on the key file:
 
-      .terminal-cursor {
-        display: inline-block;
-        width: 8px;
-        height: 15px;
-        background-color: var(--accent-color);
-        animation: cursor-blink 1s infinite;
-        vertical-align: middle;
-      }
+<div class="code-container">
+  <pre class="code-block"><code>chmod 600 ~/.ssh/tutorial_key</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      h1,
-      h2,
-      h3,
-      h4,
-      h5,
-      h6 {
-        color: var(--accent-color);
-        border-bottom: 1px solid var(--border-color);
-        padding-bottom: 0.3em;
-        position: relative;
-      }
+4. **Connect to your VM**:
 
-      h1::before {
-        content: "# ";
-        color: var(--highlight);
-      }
-      h2::before {
-        content: "## ";
-        color: var(--highlight);
-      }
-      h3::before {
-        content: "### ";
-        color: var(--highlight);
-      }
+<div class="code-container">
+  <pre
+    class="code-block"
+  ><code>ssh -i ~/.ssh/tutorial_key rocky@your_vm_public_ip</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      a {
-        color: var(--highlight);
-        text-decoration: none;
-        border-bottom: 1px dashed var(--highlight);
-        transition: all 0.3s ease;
-      }
+- Replace `your_vm_public_ip` with the IP address provided by the tutorial host
+- No passphrase will be required for the SSH connection #### For Windows Users
+The easiest way to connect from Windows is using PuTTY: 1. **Download and
+install PuTTY**: - If you don't already have it, download PuTTY from
+[https://www.putty.org/](https://www.putty.org/) - Install it by following the
+installation wizard 2. **Set up your SSH key**: - Open PuTTYgen (it comes with
+PuTTY installation) - Click in the text area at the bottom of the window labeled
+"Key" - Paste the copied SSH key text (Ctrl+V) - No passphrase is needed as the
+key is not passphrase-protected - Click "Save private key" and save the file
+with a .ppk extension (e.g., `tutorial_key.ppk`) 3. **Connect to your VM**: -
+Open PuTTY - In the "Host Name" field, enter your VM's IP address - In the
+"Connection type" section, make sure "SSH" is selected - In the left sidebar,
+navigate to Connection → SSH → Auth → Credentials - Click the "Browse" button
+next to "Private key file for authentication" - Select the .ppk file you saved
+in the previous step - Go back to the "Session" category (top of the left
+sidebar) - Enter a name in the "Saved Sessions" field and click "Save" to save
+these settings for future use - Click "Open" to connect - When prompted, enter
+the username: `rocky` - You should connect without being prompted for a
+passphrase #### Troubleshooting SSH Connection - **Access issues**: The SSH key
+does not require a passphrase for use (only for download from the URL) -
+**Permission denied errors**: Ensure your key file has the correct permissions -
+**Connection refused**: Verify you're using the correct IP address and that the
+VM is running - **Host key verification failed**: If you've previously connected
+to a different VM with the same IP address, you may need to remove the old entry
+from your `known_hosts` file:
 
-      a:hover {
-        background: rgba(0, 183, 195, 0.1);
-        text-shadow: 0 0 5px var(--highlight);
-      }
+<div class="code-container">
+  <pre class="code-block"><code>ssh-keygen -R your_vm_public_ip</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      code {
-        background-color: var(--code-bg);
-        padding: 0.2em 0.4em;
-        border-radius: 3px;
-        font-family: inherit;
-        color: #ff9800;
-        border: 1px solid var(--border-color);
-      }
+Once connected, you should see a command prompt indicating you're logged in to
+the VM. You can proceed with the repository setup as outlined in the next
+section. ## Repository Setup After logging in, switch to root and set up the
+dashboard:
 
-      pre {
-        background-color: var(--code-bg);
-        padding: 1em;
-        border-radius: 5px;
-        overflow-x: auto;
-        border: 1px solid var(--border-color);
-        position: relative;
-      }
+<div class="code-container">
+  <pre class="code-block"><code>sudo su -
+cd /var/www/
+npx create-slurm-dashboard slurm-node-dashboard</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      pre {
-        background-color: var(--code-bg);
-        padding: 1em;
-        border-radius: 5px;
-        overflow-x: auto;
-        border: 1px solid var(--border-color);
-        display: flex;
-      }
+Follow the prompts to select "Good HPC Tutorial 2025" > **Important**: If you
+accidentally select the wrong version, simply delete the slurm-node-dashboard
+directory and run the command again. ## Configuration ### Install Dependencies
+Change in to the dashboard directory, and install required Node.js packages:
 
-      pre .dollar {
-        color: #4caf50;
-        margin-right: 0.5em;
-        user-select: none;
-      }
+<div class="code-container">
+  <pre class="code-block"><code>cd slurm-node-dashboard
+npm install</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      pre code {
-        border: none;
-        padding: 0;
-        flex: 1;
-        color: #ff9800;
-      }
+### Environment Configuration Set up the production environment:
 
-      /* Remove any margin/padding that might affect alignment */
-      pre code > * {
-        margin: 0;
-        padding: 0;
-      }
+<div class="code-container">
+  <pre class="code-block"><code>mv .env.production .env</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      blockquote {
-        border-left: 3px solid var(--accent-color);
-        margin: 1em 0;
-        padding-left: 1em;
-        color: var(--terminal-text);
-        background: rgba(255, 64, 129, 0.05);
-      }
+Update `.env` with your configuration:
 
-      table {
-        border-collapse: collapse;
-        width: 100%;
-        margin: 1em 0;
-        background: var(--darker-bg);
-      }
+<div class="code-container">
+  <pre class="code-block"><code>COMPANY_NAME="Tutorial"
+VERSION=1.1.2
+CLUSTER_NAME="Tutorial"
+CLUSTER_LOGO="/logo.png"
 
-      th,
-      td {
-        border: 1px solid var(--border-color);
-        padding: 0.5em;
-      }
+PROMETHEUS_URL=""
+OPENAI_API_KEY=""
 
-      th {
-        background-color: var(--code-bg);
-        color: var(--accent-color);
-      }
+NODE_ENV="production"
+REACT_EDITOR="code"
 
-      img {
-        max-width: 100%;
-        height: auto;
-        border: 2px solid var(--border-color);
-        border-radius: 4px;
-      }
+SLURM_API_VERSION="v0.0.40"
+SLURM_SERVER="192.168.1.233"
+SLURM_API_TOKEN="your_slurm_api_token"  # Located at /packages/slurm/config/key
+SLURM_API_ACCOUNT="slurm"</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
+## Dashboard Deployment ### Development Mode Start the development server:
 
-      ::-webkit-scrollbar-track {
-        background: var(--darker-bg);
-      }
+<div class="code-container">
+  <pre class="code-block"><code>npm run dev</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
 
-      ::-webkit-scrollbar-thumb {
-        background: var(--border-color);
-        border-radius: 4px;
-      }
+Access the dashboard at `http://your_vm_public_ip:3020` The dashboard displays
+all tutorial systems, which are running as SLURM compute nodes. Hover over nodes
+to view system details including hostname, load, and core usage. Click on nodes
+to view running jobs. The interface includes: - Color scheme options (top right)
+- Menu access to historical data and modules pages - GitHub link for bug reports
+and forking ### Adding Prometheus Integration By default, the nodes have
+`ipmi_exporter` and `node_exporter` running for power and node data collection.
+To enable Prometheus: 1. Stop the development server (Ctrl+C) 2. Update the
+`.env` file:
 
-      ::-webkit-scrollbar-thumb:hover {
-        background: var(--accent-color);
-      }
-    </style>
-  </head>
-  <body>
-    <header class="terminal-header">
-      <div class="terminal-header-content">~ % cat tutorial.md</div>
-    </header>
-    <div class="container">{{ content }}</div>
-    <footer class="terminal-footer">
-      <span class="terminal-prompt">~ % </span>
-      <div class="terminal-cursor"></div>
-    </footer>
-  </body>
-</html>
+<div class="code-container">
+  <pre class="code-block"><code># Change this line
+PROMETHEUS_URL="http://192.168.1.233:9090"</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+3. Restart the development server:
+
+<div class="code-container">
+  <pre class="code-block"><code>npm run dev</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+After this, you will see power data on the dashboard after selecting the "Show
+Detail" checkbox. This power data is simulated since the nodes are VMs. In a
+production environment, you would also see real power data for each node when
+hovering. ## Production Setup For production deployment, use PM2 to manage the
+dashboard:
+
+<div class="code-container">
+  <pre class="code-block"><code># Install PM2
+npm install -g pm2
+
+# Build and start the application
+npm run build
+pm2 start npm --name "hpc-dashboard" -- start -- --port 3020
+pm2 save</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+## Open OnDemand Integration Open OnDemand is pre-installed on the VM. Default
+credentials: - Username: "tutorial" - Password: "good-tutorial-2025!" ###
+Installation Steps 1. Clone the integration repository:
+
+<div class="code-container">
+  <pre class="code-block"><code>cd /var/www/ood/apps/sys/
+git clone https://github.com/thediymaker/ood-status-iframe.git && cd ood-status-iframe</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+2. Set up the Python environment:
+
+<div class="code-container">
+  <pre class="code-block"><code>python3 -m venv ood-status-iframe
+source ood-status-iframe/bin/activate
+python3 -m pip install -r requirements.txt
+chmod +x bin/python</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+### Configuration Steps 1. Update the iframe URL in `templates/layout.html`:
+
+<div class="code-container">
+  <pre
+    class="code-block"
+  ><code>&lt;iframe src="http://your_vm_hostname.rc.asu.edu:3020" ...&gt;&lt;/iframe&gt;</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+2. Configure `manifest.yml`:
+
+<div class="code-container">
+  <pre class="code-block"><code>name: System Status
+description: HPC Status Page
+category: System
+subcategory: System Information
+icon: fa://bar-chart
+show_in_menu: true</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+Access Open OnDemand at `http://{your_vm_public_hostname.rc.asu.edu}/` The
+status page is available under System → System Status. ## Usage To submit a test
+job: 1. Switch to the tutorial user and prepare the batch script:
+
+<div class="code-container">
+  <pre class="code-block"><code>su - tutorial
+cd /scratch
+cp /packages/slurm/submit.sbatch ./$(hostname -s).sbatch</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+2. Edit the script to specify your node:
+
+<div class="code-container">
+  <pre class="code-block"><code>#SBATCH -w good-c3</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+3. Monitor jobs using:
+
+<div class="code-container">
+  <pre class="code-block"><code>scontrol show jobs</code></pre>
+  <button
+    class="copy-button"
+    onclick="copyToClipboard(this)"
+    aria-label="Copy code"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+      />
+    </svg>
+  </button>
+</div>
+
+## Best Practices - Implement SSL certificates - Deploy behind NGINX or HTTPD
+with SSL - Enable authentication for Open OnDemand - Restrict dashboard access -
+Maintain regular security updates ## Additional Resources - [HPC Dashboard
+Repository](https://github.com/thediymaker/slurm-node-dashboard) - [Next.js
+Documentation](https://nextjs.org/) - [Tailwind CSS
+Documentation](https://tailwindcss.com/) - [SLURM
+Documentation](https://slurm.schedmd.com/documentation.html) - [Prometheus
+Documentation](https://prometheus.io/docs/) ### Video Tutorials - [Quick Start
+Guide](https://youtu.be/wVEhPN-IqEA) - [Open OnDemand
+Integration](https://youtu.be/avLUYgMya98) ---
+
+<p align="center">Made with ❤️ for HPC</p>
