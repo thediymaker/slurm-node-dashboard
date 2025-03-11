@@ -4,8 +4,8 @@ title: GOOD 2025 HPC Dashboard Tutorial
 permalink: /tutorial/good/2025/
 ---
 
-<link rel="stylesheet" href="/assets/css/tutorial-style.css">
-<script src="/assets/js/tutorial-script.js" defer></script>
+<link rel="stylesheet" href="tutorial-style.css">
+<script src="tutorial-script.js" defer></script>
 
 # HPC Dashboard Getting Started Guide
 
