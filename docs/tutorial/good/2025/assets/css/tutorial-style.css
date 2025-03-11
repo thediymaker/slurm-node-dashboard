@@ -1,0 +1,122 @@
+/* Code block styling */
+.code-container {
+  position: relative;
+  background-color: var(--darker-bg, #1a1a1a);
+  border-radius: 4px;
+  margin: 16px 0;
+  border: 1px solid var(--border-color, #444);
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.code-container:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: var(--accent-color, #ff9800);
+}
+
+.code-block {
+  padding: 14px 16px;
+  padding-right: 40px; /* Make room for the copy icon */
+  overflow-x: auto;
+  font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace;
+  line-height: 1.5;
+  margin: 0;
+  color: #ff9800;
+  background-color: var(--darker-bg, #1a1a1a);
+  transition: background-color 0.3s ease;
+}
+
+.code-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background-color: var(--accent-color, #ff9800);
+  opacity: 0.7;
+}
+
+.code-block pre,
+.code-block code {
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 0;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--highlight, #ccc);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.copy-button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.copy-button:active {
+  transform: scale(0.95);
+}
+
+/* SVG icon inside the button */
+.copy-button::before {
+  content: "";
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.copy-success {
+  position: absolute;
+  top: 8px;
+  right: 32px;
+  background-color: var(--accent-color, #ff9800);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.copy-success.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.copied {
+  background-color: rgba(255, 64, 129, 0.05) !important;
+}
+
+/* Terminal-like $ prompt before commands */
+.code-block code::before {
+  content: "$ ";
+  color: #4caf50;
+  user-select: none;
+}
+
+/* No prompt for config files */
+.code-block code.config-code::before {
+  content: "";
+}
