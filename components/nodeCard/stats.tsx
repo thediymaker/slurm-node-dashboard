@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from "recharts";
 import { Activity, Cpu, Database, Power, RefreshCw } from "lucide-react";
 import { parseGPUResources } from "@/utils/gpu-parse";
-import { cn } from "@/lib/utils";
 import { CustomTooltip } from "./stats-power-tooltip";
 import useSWR from "swr";
 
@@ -161,9 +160,6 @@ const Stats = memo(({ data }: { data: { nodes: any[] } }) => {
 
   const showPowerCard =
     isValidating || (hasPowerData && (currentTotal > 0 || averagePower > 0));
-
-  const visibleCards =
-    3 + (stats.totalGpu > 0 ? 1 : 0) + (showPowerCard ? 1 : 0);
 
   return (
     <div className="grid gap-4 mb-4 grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
