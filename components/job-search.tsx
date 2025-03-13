@@ -45,6 +45,7 @@ const JobSearch = () => {
     if (searchLoading) return;
 
     setSearchLoading(true);
+    // Start by showing our own loading modal
     setLoadingModalOpen(true);
 
     const trimmedSearchID = data.searchID.trim();
@@ -71,7 +72,9 @@ const JobSearch = () => {
           ) {
             const jobState = activeJobData.jobs[0].job_state[0];
             if (jobState === "RUNNING") {
+              // Close our loading modal before showing the job detail modal
               setLoadingModalOpen(false);
+              // Show the job detail modal - its own loading state will take over
               setJobOpen(true);
               setHistoricalJobOpen(false);
               setUserJobOpen(false);
@@ -247,10 +250,10 @@ const JobSearch = () => {
         </form>
       </Form>
 
-      {/* Loading Modal */}
+      {/* Only show one modal at a time - loading modal takes precedence */}
       {loadingModalOpen && <LoadingModal />}
 
-      {/* Job Detail Modals - Only render when their respective state is true */}
+      {/* Only show these modals when not loading */}
       {!loadingModalOpen && jobOpen && (
         <JobDetailModal
           open={jobOpen}
@@ -274,7 +277,7 @@ const JobSearch = () => {
       {!loadingModalOpen && userJobOpen && (
         <UserJobModal
           open={userJobOpen}
-          setOpen={(open) => {
+          setOpen={(open: boolean | ((prevState: boolean) => boolean)) => {
             setUserJobOpen(open);
             setSearchLoading(false);
           }}

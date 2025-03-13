@@ -7,12 +7,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, Cpu, HardDrive, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RunningJob, JobDetailModalProps } from "@/types/types";
+import PropagateLoader from "react-spinners/PropagateLoader";
 
 const JobDetailModal: React.FC<JobDetailModalProps> = ({
   open,
@@ -26,7 +26,11 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
       },
     }).then((res) => res.json());
 
-  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR<{
+  const {
+    data: jobData,
+    error: jobError,
+    isLoading: jobIsLoading,
+  } = useSWR<{
     jobs: RunningJob[];
   }>(open ? `/api/slurm/job/${searchID}` : null, jobFetcher);
 
@@ -53,11 +57,13 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           aria-describedby={undefined}
-          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none flex items-center justify-center"
         >
-          <DialogTitle></DialogTitle>
-          <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <PropagateLoader color="gray" />
+            <DialogTitle className="text-center pt-2">
+              Loading job details...
+            </DialogTitle>
           </div>
         </DialogContent>
       </Dialog>
