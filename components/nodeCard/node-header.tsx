@@ -280,7 +280,7 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="mb-2"
                         />
-                        <ScrollArea className="h-[200px]">
+                        <ScrollArea className="h-[240px]">
                           <div className="p-2">
                             {/* Selected Features at the top */}
                             {selectedFeatureValues &&
@@ -322,7 +322,7 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
                                       variant="ghost"
                                       size="sm"
                                       onClick={clearFeatures}
-                                      className="w-full mt-1 h-7 text-xs"
+                                      className="w-full mt-2 h-7 text-xs flex items-center justify-center"
                                     >
                                       Clear all ({selectedFeatureValues.length})
                                     </Button>
