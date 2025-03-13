@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { ThreeCircles } from "react-loader-spinner";
+import PropagateLoader from "react-spinners/PropagateLoader";
 import {
   Pagination,
   PaginationContent,
@@ -31,10 +31,11 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
 
   const itemsPerPage = 20;
 
-  const { data: jobData, error: jobError, isLoading: jobIsLoading } = useSWR(
-    open ? `/api/slurm/jobs/user/${searchID}` : null,
-    jobFetcher
-  );
+  const {
+    data: jobData,
+    error: jobError,
+    isLoading: jobIsLoading,
+  } = useSWR(open ? `/api/slurm/jobs/user/${searchID}` : null, jobFetcher);
 
   function convertUnixToHumanReadable(unixTimestamp: any) {
     const date = new Date(unixTimestamp * 1000);
@@ -190,15 +191,7 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
         >
           <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <ThreeCircles
-              visible={true}
-              height="64"
-              width="64"
-              color="white"
-              ariaLabel="three-circles-loading"
-              wrapperStyle={{}}
-              wrapperClass=""
-            />
+            <PropagateLoader color="gray" />
           </div>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { CheckCircle, Loader2, XCircle } from "lucide-react";
+import { CheckCircle, XCircle } from "lucide-react";
 import { AlertTitle, AlertDescription, Alert } from "../ui/alert";
 import {
   Card,
@@ -14,7 +14,7 @@ import {
   InfluxDBPluginMetadata,
 } from "@/actions/plugins";
 
-const AdminPlugins = ({ isLoading, error, handleGenerateEmbeddings }: any) => {
+const AdminPlugins = ({ error }: any) => {
   return (
     <Card>
       <CardHeader>

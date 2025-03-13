@@ -15,6 +15,7 @@ import { LastUpdated } from "../last-updated";
 import { Node } from "@/types/types";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
+import NodeCount from "./node-counts";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
@@ -261,17 +262,18 @@ const Nodes = () => {
           </div>
           <div className="flex justify-end w-full mb-4 gap-2 items-center">
             <div className="flex items-center gap-2 font-extralight">
-              GPU Nodes
-              <Skeleton className="w-[20px]" />
+              <Skeleton className="w-[120px] h-[30px]" />
             </div>
             <div className="flex items-center gap-2 font-extralight">
-              CPU Nodes
-              <Skeleton className="w-[20px]" />
+              <Skeleton className="w-[120px] h-[30px]" />
+            </div>
+            <div className="flex items-center gap-2 font-extralight">
+              <Skeleton className="w-[150px] h-[30px]" />
             </div>
           </div>
         </div>
         <Separator />
-        <CardSkeleton qty={250} size={85} />
+        <CardSkeleton qty={300} size={85} />
       </div>
     );
   }
@@ -310,22 +312,12 @@ const Nodes = () => {
             }}
           />
         </div>
-        <div className="flex justify-end w-full mb-4 gap-2 items-center">
-          <div className="flex items-center gap-2 font-extralight">
-            GPU Nodes
-            <span className="text-blue-400">{totalGpuNodes}</span>
-          </div>
-          <div className="flex items-center gap-2 font-extralight">
-            CPU Nodes
-            <span className="text-blue-400">{totalCpuNodes}</span>
-          </div>
-          <div className="flex items-center gap-2 font-extralight">
-            Showing
-            <span className="text-blue-400">{filteredNodes.length}</span>
-            of
-            <span className="text-blue-400">{systems.length}</span>
-          </div>
-        </div>
+        <NodeCount
+          totalGpuNodes={totalGpuNodes}
+          totalCpuNodes={totalCpuNodes}
+          filteredNodes={filteredNodes.length}
+          totalNodes={systems.length}
+        />
       </div>
       {showStats && nodeData ? <Stats data={nodeData} /> : null}
       <Separator />

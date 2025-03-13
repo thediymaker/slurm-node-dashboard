@@ -11,6 +11,9 @@ import UserJobModal from "./modals/user-job-modal";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MaintModal from "./modals/maint-modal";
+import { Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import PropagateLoader from "react-spinners/PropagateLoader";
 
 const JobSearch = () => {
   const searchSchema = z.object({
@@ -31,86 +34,112 @@ const JobSearch = () => {
   const [historicalJobOpen, setHistoricalJobOpen] = useState(false);
   const [userJobOpen, setUserJobOpen] = useState(false);
   const [maintOpen, setMaintOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [loadingModalOpen, setLoadingModalOpen] = useState(false);
   const [maintenanceData, setMaintenanceData] = useState({});
   const [searchID, setSearchID] = useState("");
   const { errors } = form.formState;
 
   const handleSearch = async (data: SearchFormData) => {
+    // Prevent duplicate searches while loading
+    if (searchLoading) return;
+
+    setSearchLoading(true);
+    setLoadingModalOpen(true);
+
     const trimmedSearchID = data.searchID.trim();
     setSearchID(trimmedSearchID);
 
-    if (/^\d+$/.test(trimmedSearchID)) {
-      // Check for active job
-      try {
-        const activeJobResponse = await fetch(
-          `/api/slurm/job/${trimmedSearchID}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
+    try {
+      if (/^\d+$/.test(trimmedSearchID)) {
+        // Check for active job
+        try {
+          const activeJobResponse = await fetch(
+            `/api/slurm/job/${trimmedSearchID}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const activeJobData = await activeJobResponse.json();
+
+          if (
+            activeJobData &&
+            activeJobData.jobs &&
+            activeJobData.jobs.length > 0
+          ) {
+            const jobState = activeJobData.jobs[0].job_state[0];
+            if (jobState === "RUNNING") {
+              setLoadingModalOpen(false);
+              setJobOpen(true);
+              setHistoricalJobOpen(false);
+              setUserJobOpen(false);
+              setSearchLoading(false);
+              form.reset();
+              return;
+            } else if (jobState === "PENDING") {
+              setLoadingModalOpen(false);
+              alert(
+                "Job is currently pending, Reason: " +
+                  activeJobData.jobs[0].state_reason
+              );
+              setSearchLoading(false);
+              form.reset();
+              return;
+            }
           }
-        );
-        const activeJobData = await activeJobResponse.json();
-        if (
-          activeJobData &&
-          activeJobData.jobs &&
-          activeJobData.jobs.length > 0
-        ) {
-          const jobState = activeJobData.jobs[0].job_state[0];
-          if (jobState === "RUNNING") {
-            setJobOpen(true);
-            setHistoricalJobOpen(false);
+        } catch (error) {
+          console.error("Error fetching active job:", error);
+        }
+
+        // Check for completed job
+        try {
+          const completedJobResponse = await fetch(
+            `/api/slurm/job/completed/${trimmedSearchID}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const completedJobData = await completedJobResponse.json();
+
+          if (
+            completedJobData &&
+            completedJobData.jobs &&
+            completedJobData.jobs.length > 0
+          ) {
+            setLoadingModalOpen(false);
+            setHistoricalJobOpen(true);
+            setJobOpen(false);
             setUserJobOpen(false);
-            return;
-          } else if (jobState === "PENDING") {
-            // Handle pending or suspended states here if needed
-            alert(
-              "Job is currently pending, Reason: " +
-                activeJobData.jobs[0].state_reason
-            );
+            setSearchLoading(false);
+            form.reset();
             return;
           }
+        } catch (error) {
+          console.error("Error fetching completed job:", error);
         }
-      } catch (error) {
-        console.error("Error fetching active job:", error);
+
+        // If neither active nor completed job is found
+        setLoadingModalOpen(false);
+        alert("No job found with the given ID.");
+      } else {
+        // Search by username
+        setLoadingModalOpen(false);
+        setUserJobOpen(true);
+        setJobOpen(false);
+        setHistoricalJobOpen(false);
       }
-
-      // Check for completed job
-      try {
-        const completedJobResponse = await fetch(
-          `/api/slurm/job/completed/${trimmedSearchID}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        const completedJobData = await completedJobResponse.json();
-
-        if (
-          completedJobData &&
-          completedJobData.jobs &&
-          completedJobData.jobs.length > 0
-        ) {
-          setHistoricalJobOpen(true);
-          setJobOpen(false);
-          setUserJobOpen(false);
-          return;
-        }
-      } catch (error) {
-        console.error("Error fetching completed job:", error);
-      }
-
-      // If neither active nor completed job is found
-      alert("No job found with the given ID.");
-    } else {
-      // Search by username
-      setUserJobOpen(true);
-      setJobOpen(false);
-      setHistoricalJobOpen(false);
+    } catch (error) {
+      console.error("Error during search:", error);
+      setLoadingModalOpen(false);
+      alert("An error occurred during search. Please try again.");
+    } finally {
+      setSearchLoading(false);
+      form.reset();
     }
-
-    form.reset();
   };
 
   const fetchMaintenanceData = async () => {
@@ -159,6 +188,23 @@ const JobSearch = () => {
     localStorage.setItem("maintModalLastClosed", now.toString());
   };
 
+  // Loading modal component
+  const LoadingModal = () => (
+    <Dialog open={loadingModalOpen} onOpenChange={setLoadingModalOpen}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="border shadow-xl min-w-[300px] min-h-[150px] max-h-[90%] flex items-center justify-center"
+      >
+        <div className="flex flex-col items-center justify-center space-y-6">
+          <PropagateLoader color="gray" />
+          <DialogTitle className="text-center pt-2">
+            Searching for job {searchID}...
+          </DialogTitle>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <div>
       <Form {...form}>
@@ -180,16 +226,33 @@ const JobSearch = () => {
                     className={`w-full px-2 py-1 text-sm ${
                       errors.searchID ? "border-red-500" : ""
                     }`}
+                    disabled={searchLoading}
                   />
                 </div>
               </FormItem>
             )}
           />
-          <Button className="px-5" variant="outline" type="submit">
-            Search
+          <Button
+            className="px-5"
+            variant="outline"
+            type="submit"
+            disabled={searchLoading}
+          >
+            {searchLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              "Search"
+            )}
           </Button>
         </form>
       </Form>
+
+      {/* Loading Modal */}
+      <LoadingModal />
+
       {jobOpen && (
         <JobDetailModal
           open={jobOpen}

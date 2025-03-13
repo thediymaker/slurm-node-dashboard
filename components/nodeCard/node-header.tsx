@@ -17,14 +17,12 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Badge } from "../ui/badge";
 import { ChevronsUpDown, LayoutGrid, List, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import HeaderMenu from "@/components/header/header-menu";
 import { ThemeToggle } from "../theme-toggle";
 import ColorSchemaSelector from "../color-schema-selector";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
-import { ThreeCircles } from "react-loader-spinner";
+import PropagateLoader from "react-spinners/PropagateLoader";
 
 const rubric: { [key: string]: { threshold: number; color: string } } = {
   A: {
@@ -144,15 +144,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
         >
           <DialogTitle></DialogTitle>
           <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <ThreeCircles
-              visible={true}
-              height="64"
-              width="64"
-              color="white"
-              ariaLabel="three-circles-loading"
-              wrapperStyle={{}}
-              wrapperClass=""
-            />
+            <PropagateLoader color="gray" />
           </div>
         </DialogContent>
       </Dialog>
