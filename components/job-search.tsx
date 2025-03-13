@@ -12,8 +12,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MaintModal from "./modals/maint-modal";
 import { Loader2 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import PropagateLoader from "react-spinners/PropagateLoader";
 
 const JobSearch = () => {
   const searchSchema = z.object({
@@ -35,7 +33,6 @@ const JobSearch = () => {
   const [userJobOpen, setUserJobOpen] = useState(false);
   const [maintOpen, setMaintOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [loadingModalOpen, setLoadingModalOpen] = useState(false);
   const [maintenanceData, setMaintenanceData] = useState({});
   const [searchID, setSearchID] = useState("");
   const { errors } = form.formState;
@@ -45,8 +42,6 @@ const JobSearch = () => {
     if (searchLoading) return;
 
     setSearchLoading(true);
-    // Start by showing our own loading modal
-    setLoadingModalOpen(true);
 
     const trimmedSearchID = data.searchID.trim();
     setSearchID(trimmedSearchID);
@@ -72,21 +67,19 @@ const JobSearch = () => {
           ) {
             const jobState = activeJobData.jobs[0].job_state[0];
             if (jobState === "RUNNING") {
-              // Close our loading modal before showing the job detail modal
-              setLoadingModalOpen(false);
-              // Show the job detail modal - its own loading state will take over
               setJobOpen(true);
               setHistoricalJobOpen(false);
               setUserJobOpen(false);
               form.reset();
+              setSearchLoading(false);
               return;
             } else if (jobState === "PENDING") {
-              setLoadingModalOpen(false);
               alert(
                 "Job is currently pending, Reason: " +
                   activeJobData.jobs[0].state_reason
               );
               form.reset();
+              setSearchLoading(false);
               return;
             }
           }
@@ -111,11 +104,11 @@ const JobSearch = () => {
             completedJobData.jobs &&
             completedJobData.jobs.length > 0
           ) {
-            setLoadingModalOpen(false);
             setHistoricalJobOpen(true);
             setJobOpen(false);
             setUserJobOpen(false);
             form.reset();
+            setSearchLoading(false);
             return;
           }
         } catch (error) {
@@ -123,18 +116,15 @@ const JobSearch = () => {
         }
 
         // If neither active nor completed job is found
-        setLoadingModalOpen(false);
         alert("No job found with the given ID.");
       } else {
         // Search by username
-        setLoadingModalOpen(false);
         setUserJobOpen(true);
         setJobOpen(false);
         setHistoricalJobOpen(false);
       }
     } catch (error) {
       console.error("Error during search:", error);
-      setLoadingModalOpen(false);
       alert("An error occurred during search. Please try again.");
     } finally {
       setSearchLoading(false);
@@ -188,23 +178,6 @@ const JobSearch = () => {
     localStorage.setItem("maintModalLastClosed", now.toString());
   };
 
-  // Loading modal component
-  const LoadingModal = () => (
-    <Dialog open={loadingModalOpen} onOpenChange={setLoadingModalOpen}>
-      <DialogContent
-        aria-describedby={undefined}
-        className="border shadow-xl min-w-[300px] min-h-[150px] max-h-[90%] flex items-center justify-center"
-      >
-        <div className="flex flex-col items-center justify-center space-y-6">
-          <PropagateLoader color="gray" />
-          <DialogTitle className="text-center pt-2">
-            Searching for job {searchID}...
-          </DialogTitle>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
   return (
     <div>
       <Form {...form}>
@@ -233,7 +206,7 @@ const JobSearch = () => {
             )}
           />
           <Button
-            className="px-5"
+            className="px-5 min-w-[100px]"
             variant="outline"
             type="submit"
             disabled={searchLoading}
@@ -250,11 +223,7 @@ const JobSearch = () => {
         </form>
       </Form>
 
-      {/* Only show one modal at a time - loading modal takes precedence */}
-      {loadingModalOpen && <LoadingModal />}
-
-      {/* Only show these modals when not loading */}
-      {!loadingModalOpen && jobOpen && (
+      {jobOpen && (
         <JobDetailModal
           open={jobOpen}
           setOpen={(open) => {
@@ -264,7 +233,7 @@ const JobSearch = () => {
           searchID={searchID}
         />
       )}
-      {!loadingModalOpen && historicalJobOpen && (
+      {historicalJobOpen && (
         <HistoricalJobDetailModal
           open={historicalJobOpen}
           setOpen={(open) => {
@@ -274,7 +243,7 @@ const JobSearch = () => {
           searchID={searchID}
         />
       )}
-      {!loadingModalOpen && userJobOpen && (
+      {userJobOpen && (
         <UserJobModal
           open={userJobOpen}
           setOpen={(open: boolean | ((prevState: boolean) => boolean)) => {

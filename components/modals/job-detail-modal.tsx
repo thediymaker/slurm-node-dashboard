@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, Cpu, HardDrive, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,51 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
     return date.toLocaleString();
   }
 
+  // Skeleton components to display while loading
+  const renderSkeletonOverview = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {[...Array(4)].map((_, idx) => (
+        <Card key={idx}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-4 rounded-full" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-6 w-24 mb-2" />
+            <Skeleton className="h-3 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderSkeletonDetails = () => (
+    <Card className="mt-6">
+      <CardHeader>
+        <Skeleton className="h-5 w-32" />
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(12)].map((_, idx) => (
+            <div key={idx}>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-3 w-full" />
+            </div>
+          ))}
+        </div>
+        <Separator className="my-4" />
+        <div>
+          <Skeleton className="h-4 w-20 mb-2" />
+          <div className="flex flex-wrap gap-2">
+            {[...Array(5)].map((_, idx) => (
+              <Skeleton key={idx} className="h-6 w-16 rounded-full" />
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
@@ -51,10 +97,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
       </Dialog>
     );
 
-  // Don't render anything while loading - rely on parent component's loading state
-  if (jobIsLoading) return null;
-
-  if (!jobData || !jobData?.jobs || jobData?.jobs.length === 0) {
+  if (!jobData && !jobIsLoading) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
@@ -75,8 +118,6 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
       </Dialog>
     );
   }
-
-  const job = jobData?.jobs[0];
 
   const renderJobOverview = (job: RunningJob) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -224,19 +265,39 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
       >
         <DialogHeader>
           <DialogTitle className="text-2xl mb-2 font-extralight flex items-center gap-2">
-            Active Job Details: {searchID}
-            <Badge
-              variant={
-                job.job_state?.includes("RUNNING") ? "default" : "secondary"
-              }
-            >
-              {job.job_state?.[0] || "UNKNOWN"}
-            </Badge>
+            {jobIsLoading ? (
+              <Skeleton className="h-8 w-64" />
+            ) : (
+              <>
+                Active Job Details: {searchID}
+                <Badge
+                  variant={
+                    jobData?.jobs[0].job_state?.includes("RUNNING")
+                      ? "default"
+                      : "secondary"
+                  }
+                >
+                  {jobData?.jobs[0].job_state?.[0] || "UNKNOWN"}
+                </Badge>
+              </>
+            )}
           </DialogTitle>
         </DialogHeader>
         <ScrollArea className="pr-4">
-          {renderJobOverview(job)}
-          {renderJobDetails(job)}
+          {jobIsLoading ? (
+            <>
+              {renderSkeletonOverview()}
+              {renderSkeletonDetails()}
+            </>
+          ) : (
+            jobData?.jobs &&
+            jobData.jobs.length > 0 && (
+              <>
+                {renderJobOverview(jobData.jobs[0])}
+                {renderJobDetails(jobData.jobs[0])}
+              </>
+            )
+          )}
         </ScrollArea>
       </DialogContent>
     </Dialog>

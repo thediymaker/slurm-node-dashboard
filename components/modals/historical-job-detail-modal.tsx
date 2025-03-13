@@ -10,6 +10,7 @@ import { AlertCircle, Clock, Cpu, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 
 const rubric: { [key: string]: { threshold: number; color: string } } = {
@@ -121,6 +122,104 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     return letter;
   }
 
+  // Skeleton components for loading state
+  const renderSkeletonOverview = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {[...Array(4)].map((_, idx) => (
+        <Card key={idx}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-4 rounded-full" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-6 w-24 mb-2" />
+            <Skeleton className="h-3 w-full" />
+            {idx === 2 && (
+              <>
+                <Skeleton className="h-3 w-full mt-1" />
+                <Skeleton className="h-3 w-full mt-1" />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderSkeletonDetails = () => (
+    <div className="mt-6 w-full">
+      <Card className="w-full">
+        <CardHeader>
+          <Skeleton className="h-5 w-32" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(12)].map((_, idx) => (
+              <div key={idx}>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
+          </div>
+          <Separator className="my-4" />
+          <div>
+            <Skeleton className="h-4 w-32 mb-2" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Skeleton className="h-4 w-48 mb-2" />
+                {[...Array(3)].map((_, idx) => (
+                  <Skeleton key={idx} className="h-3 w-full mt-2" />
+                ))}
+              </div>
+              <div>
+                <Skeleton className="h-4 w-48 mb-2" />
+                {[...Array(3)].map((_, idx) => (
+                  <Skeleton key={idx} className="h-3 w-full mt-2" />
+                ))}
+              </div>
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <div>
+            <Skeleton className="h-4 w-20 mb-2" />
+            <div className="flex flex-wrap gap-2">
+              {[...Array(5)].map((_, idx) => (
+                <Skeleton key={idx} className="h-6 w-16 rounded-full" />
+              ))}
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <div>
+            <Skeleton className="h-4 w-48 mb-4" />
+            {[...Array(2)].map((_, stepIdx) => (
+              <div key={stepIdx} className="mb-4">
+                <Skeleton className="h-4 w-48 mb-2" />
+                {[...Array(5)].map((_, lineIdx) => (
+                  <Skeleton key={lineIdx} className="h-3 w-full mt-2" />
+                ))}
+              </div>
+            ))}
+          </div>
+          <Separator className="my-4" />
+          <div className="space-y-4">
+            <div>
+              <Skeleton className="h-4 w-48 mb-2" />
+              <div className="bg-secondary/10 rounded px-3 py-2">
+                <Skeleton className="h-3 w-full" />
+              </div>
+            </div>
+            <div>
+              <Skeleton className="h-4 w-48 mb-2" />
+              <div className="bg-secondary/10 rounded px-3 py-2">
+                <Skeleton className="h-3 w-full" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
@@ -134,10 +233,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       </Dialog>
     );
 
-  // Don't render anything while loading - rely on parent component's loading state
-  if (jobIsLoading) return null;
-
-  if (!jobData || !jobData?.jobs || jobData?.jobs.length === 0) {
+  if (!jobData && !jobIsLoading) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
@@ -158,82 +254,82 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
     );
   }
 
-  const job = jobData?.jobs[0];
+  const renderJobOverview = (job: HistoricalJob) => {
+    const CPUEfficiency = calculateCPUEfficiency(job);
+    const MemEfficiency = calculateMemEfficiency(job);
+    const CPUEffLetter = grade_efficiency(CPUEfficiency);
+    const MemEffLetter = grade_efficiency(MemEfficiency);
 
-  const CPUEfficiency = calculateCPUEfficiency(job);
-  const MemEfficiency = calculateMemEfficiency(job);
-  const CPUEffLetter = grade_efficiency(CPUEfficiency);
-  const MemEffLetter = grade_efficiency(MemEfficiency);
-
-  const renderJobOverview = (job: HistoricalJob) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Job ID</CardTitle>
-          <Cpu className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{job.job_id}</div>
-          <p className="text-xs text-muted-foreground">{job.name}</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">User / Group</CardTitle>
-          <User className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{job.user}</div>
-          <p className="text-xs text-muted-foreground">{job.group}</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Runtime / Efficiency
-          </CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {formatDuration(job.time.elapsed)}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            CPU Efficiency: {calculateCPUEfficiency(job)}(
-            <span style={{ color: rubric[CPUEffLetter].color }}>
-              {CPUEffLetter}
-            </span>
-            )
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Memory Efficiency: {calculateMemEfficiency(job)}(
-            <span
-              style={{
-                color: rubric[MemEffLetter as keyof typeof rubric].color,
-              }}
-            >
-              {MemEffLetter}
-            </span>
-            )
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Exit Status</CardTitle>
-          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {job.exit_code.status.join(", ")}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Code: {job.exit_code.return_code.number}
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Job ID</CardTitle>
+            <Cpu className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{job.job_id}</div>
+            <p className="text-xs text-muted-foreground">{job.name}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">User / Group</CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{job.user}</div>
+            <p className="text-xs text-muted-foreground">{job.group}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Runtime / Efficiency
+            </CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatDuration(job.time.elapsed)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              CPU Efficiency: {CPUEfficiency}(
+              <span style={{ color: rubric[CPUEffLetter].color }}>
+                {CPUEffLetter}
+              </span>
+              )
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Memory Efficiency: {MemEfficiency}(
+              <span
+                style={{
+                  color: rubric[MemEffLetter as keyof typeof rubric].color,
+                }}
+              >
+                {MemEffLetter}
+              </span>
+              )
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Exit Status</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {job.exit_code.status.join(", ")}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Code: {job.exit_code.return_code.number}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   const renderJobDetails = (job: HistoricalJob) => (
     <div className="mt-6 w-full">
@@ -397,21 +493,39 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       >
         <DialogHeader>
           <DialogTitle className="text-2xl mb-2 font-extralight flex items-center gap-2">
-            Completed Job Details: {searchID}
-            <Badge
-              variant={
-                job.state.current.includes("COMPLETED")
-                  ? "default"
-                  : "secondary"
-              }
-            >
-              {job.state.current[0] || "UNKNOWN"}
-            </Badge>
+            {jobIsLoading ? (
+              <Skeleton className="h-8 w-64" />
+            ) : (
+              <>
+                Completed Job Details: {searchID}
+                <Badge
+                  variant={
+                    jobData?.jobs[0].state.current.includes("COMPLETED")
+                      ? "default"
+                      : "secondary"
+                  }
+                >
+                  {jobData?.jobs[0].state.current[0] || "UNKNOWN"}
+                </Badge>
+              </>
+            )}
           </DialogTitle>
         </DialogHeader>
         <div>
-          {renderJobOverview(job)}
-          {renderJobDetails(job)}
+          {jobIsLoading ? (
+            <>
+              {renderSkeletonOverview()}
+              {renderSkeletonDetails()}
+            </>
+          ) : (
+            jobData?.jobs &&
+            jobData.jobs.length > 0 && (
+              <>
+                {renderJobOverview(jobData.jobs[0])}
+                {renderJobDetails(jobData.jobs[0])}
+              </>
+            )
+          )}
         </div>
       </DialogContent>
     </Dialog>
