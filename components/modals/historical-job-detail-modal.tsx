@@ -140,11 +140,13 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           aria-describedby={undefined}
-          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none flex items-center justify-center"
         >
-          <DialogTitle></DialogTitle>
-          <div className="font-bold text-2xl uppercase flex justify-center items-center">
+          <div className="flex flex-col items-center justify-center space-y-6">
             <PropagateLoader color="gray" />
+            <DialogTitle className="text-center pt-2">
+              Loading historical job details...
+            </DialogTitle>
           </div>
         </DialogContent>
       </Dialog>
