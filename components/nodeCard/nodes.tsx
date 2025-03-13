@@ -68,13 +68,28 @@ const Nodes = () => {
     return false;
   };
 
+  const getInitialSelectedFeatures = () => {
+    if (typeof window !== "undefined") {
+      const storedFeatures = localStorage.getItem("selectedNodeFeatures");
+      if (storedFeatures) {
+        try {
+          return JSON.parse(storedFeatures);
+        } catch (e) {
+          return [];
+        }
+      }
+    }
+    return [];
+  };
+
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
   const [selectedNodePartitions, setSelectedNodePartitions] =
     useState<string>("allPartitions");
-  const [selectedNodeFeature, setSelectedNodeFeature] =
-    useState<string>("allFeatures");
+  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(
+    getInitialSelectedFeatures
+  );
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
   const [colorSchema, setColorSchema] = useState<string>(getInitialColorSchema);
@@ -99,6 +114,13 @@ const Nodes = () => {
     localStorage.setItem("isGroupedView", isGroupedView.toString());
   }, [isGroupedView]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      "selectedNodeFeatures",
+      JSON.stringify(selectedNodeFeatures)
+    );
+  }, [selectedNodeFeatures]);
+
   // Set up polling for data updates
   useEffect(() => {
     const interval = setInterval(() => {
@@ -119,7 +141,11 @@ const Nodes = () => {
   const uniqueFeatures = useMemo(() => {
     const features = new Set<string>();
     systems.forEach((node) => {
-      (node.features || []).forEach((feature) => features.add(feature));
+      if (node.features && Array.isArray(node.features)) {
+        node.features.forEach((feature) => {
+          if (feature) features.add(feature);
+        });
+      }
     });
     return Array.from(features);
   }, [systems]);
@@ -143,15 +169,22 @@ const Nodes = () => {
         selectedNodePartitions === "allPartitions" ||
         node.partitions.includes(selectedNodePartitions);
 
-      const nodeMatchesFeature =
-        selectedNodeFeature === "allFeatures" ||
-        (node.features || []).includes(selectedNodeFeature);
+      // Check if node has all of the selected features
+      const nodeMatchesFeatures =
+        !selectedNodeFeatures ||
+        selectedNodeFeatures.length === 0 ||
+        selectedNodeFeatures.every(
+          (feature) =>
+            node.features &&
+            Array.isArray(node.features) &&
+            node.features.includes(feature)
+        );
 
       return (
         nodeMatchesType &&
         nodeMatchesState &&
         nodeMatchesPartitions &&
-        nodeMatchesFeature
+        nodeMatchesFeatures
       );
     });
   }, [
@@ -159,7 +192,7 @@ const Nodes = () => {
     selectedNodeType,
     selectedNodeState,
     selectedNodePartitions,
-    selectedNodeFeature,
+    selectedNodeFeatures,
   ]);
 
   const totalCpuNodes = useMemo(
@@ -183,8 +216,8 @@ const Nodes = () => {
     setSelectedNodePartitions(value);
   };
 
-  const handleNodeFeatureChange = (value: string) => {
-    setSelectedNodeFeature(value);
+  const handleNodeFeatureChange = (features: string[]) => {
+    setSelectedNodeFeatures(features);
   };
 
   const handleColorSchemaChange = (value: string) => {
@@ -256,6 +289,7 @@ const Nodes = () => {
         partitions={uniquePartitions}
         features={uniqueFeatures}
         colorSchema={colorSchema}
+        selectedFeatures={selectedNodeFeatures}
       />
       <div className="flex justify-between">
         <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -284,6 +318,12 @@ const Nodes = () => {
           <div className="flex items-center gap-2 font-extralight">
             CPU Nodes
             <span className="text-blue-400">{totalCpuNodes}</span>
+          </div>
+          <div className="flex items-center gap-2 font-extralight">
+            Showing
+            <span className="text-blue-400">{filteredNodes.length}</span>
+            of
+            <span className="text-blue-400">{systems.length}</span>
           </div>
         </div>
       </div>
