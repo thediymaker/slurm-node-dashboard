@@ -98,7 +98,7 @@ const ClusterStats: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {filteredClusterData.map((item, index) => (
                     <motion.div
-                      key={item.type}
+                      key={`${item.type}-${item.name}`}
                       className="p-4 rounded-lg shadow-md border bg-zinc-900"
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
