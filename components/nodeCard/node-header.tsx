@@ -264,7 +264,7 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
                         variant="outline"
                         role="combobox"
                         aria-expanded={open}
-                        className="w-[200px] justify-between whitespace-nowrap overflow-hidden"
+                        className="w-[240px] justify-between whitespace-nowrap overflow-hidden"
                       >
                         <span className="truncate">
                           {getFeatureDisplayValue()}
@@ -272,7 +272,7 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-0" align="end">
+                    <PopoverContent className="w-[240px] p-0" align="end">
                       <div className="p-2">
                         <Input
                           placeholder="Search features..."
