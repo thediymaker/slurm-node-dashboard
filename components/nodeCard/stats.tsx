@@ -162,189 +162,259 @@ const Stats = memo(({ data }: { data: { nodes: any[] } }) => {
     isValidating || (hasPowerData && (currentTotal > 0 || averagePower > 0));
 
   return (
-    <div className="grid gap-4 mb-4 grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-      {/* CPU Usage Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">CPU Allocation</CardTitle>
-          <Cpu className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{cpuPercentage}%</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.totalCoresUsed} of {stats.totalCores} cores
-          </p>
-          <div className="mt-4 h-2 w-full bg-secondary">
-            <div
-              className="h-2 bg-primary"
-              style={{ width: `${cpuPercentage}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* GPU Usage Card */}
-      {stats.totalGpu > 0 && (
-        <Card>
+    <div className="space-y-4 mb-4">
+      {/* ROW 1: Main Stats */}
+      <div className="flex flex-col lg:flex-row gap-4 overflow-x-auto">
+        {/* CPU Usage Card */}
+        <Card className="flex-shrink-0 md:flex-1 min-w-[240px] w-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              GPU Allocation
+              CPU Allocation
             </CardTitle>
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{gpuPercentage}%</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalGpuUsed} of {stats.totalGpu} GPUs
-            </p>
-            <div className="mt-4 h-2 w-full bg-secondary">
-              <div
-                className="h-2 bg-primary"
-                style={{ width: `${gpuPercentage}%` }}
-              />
+            <div className="flex flex-col space-y-4">
+              <div>
+                <div className="text-2xl font-bold">{cpuPercentage}%</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.totalCoresUsed} of {stats.totalCores} cores
+                </p>
+              </div>
+              <div className="h-2 w-full bg-secondary">
+                <div
+                  className="h-2 bg-primary"
+                  style={{ width: `${cpuPercentage}%` }}
+                />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {stats.totalGpuNodes} nodes with GPUs
-            </p>
           </CardContent>
         </Card>
-      )}
 
-      {/* Memory Usage Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">
-            Memory Allocation
-          </CardTitle>
-          <Database className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{memoryPercentage}%</div>
-          <p className="text-xs text-muted-foreground">
-            {Math.round(stats.totalMemoryUsed / 1024)} of{" "}
-            {Math.round(stats.totalMemory / 1024)} GB
-          </p>
-          <div className="mt-4 h-2 w-full bg-secondary">
-            <div
-              className="h-2 bg-primary"
-              style={{ width: `${memoryPercentage}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+        {/* GPU Usage Card */}
+        {stats.totalGpu > 0 && (
+          <Card className="flex-shrink-0 md:flex-1 min-w-[240px] w-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">
+                GPU Allocation
+              </CardTitle>
+              <Cpu className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col space-y-4">
+                <div>
+                  <div className="text-2xl font-bold">{gpuPercentage}%</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.totalGpuUsed} of {stats.totalGpu} GPUs
+                  </p>
+                </div>
+                <div className="h-2 w-full bg-secondary">
+                  <div
+                    className="h-2 bg-primary"
+                    style={{ width: `${gpuPercentage}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.totalGpuNodes} nodes with GPUs
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Power Usage Card */}
-      {showPowerCard && (
-        <Card>
+        {/* Memory Usage Card */}
+        <Card className="flex-shrink-0 md:flex-1 min-w-[240px] w-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Power Usage</CardTitle>
-            <div className="flex items-center space-x-2">
-              <Power className="h-4 w-4 text-muted-foreground" />
-              <button
-                onClick={() =>
-                  mutate(undefined, {
-                    optimisticData: ipmiData,
-                    rollbackOnError: true,
-                  })
-                }
-                disabled={isValidating}
-                title="Refresh"
-                className="focus:outline-none"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 text-muted-foreground ${
-                    isValidating ? "animate-spin" : "cursor-pointer"
-                  }`}
-                />
-              </button>
-            </div>
+            <CardTitle className="text-sm font-medium">
+              Memory Allocation
+            </CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col space-y-4">
               <div>
-                <div className="text-2xl font-bold">
-                  {(currentTotal / 1000).toFixed(1)} kW
-                </div>
-                <p className="text-xs text-muted-foreground">Total Power</p>
+                <div className="text-2xl font-bold">{memoryPercentage}%</div>
+                <p className="text-xs text-muted-foreground">
+                  {Math.round(stats.totalMemoryUsed / 1024)} of{" "}
+                  {Math.round(stats.totalMemory / 1024)} GB
+                </p>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold">
-                  {Math.round(averagePower)} W
-                </div>
-                <p className="text-xs text-muted-foreground">Per Node Avg</p>
+              <div className="h-2 w-full bg-secondary">
+                <div
+                  className="h-2 bg-primary"
+                  style={{ width: `${memoryPercentage}%` }}
+                />
               </div>
-            </div>
-            <div className="h-[60px] mt-4 relative overflow-visible">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={powerTrendData}>
-                  <YAxis domain={["auto", "auto"]} hide />
-                  {prometheusAvailable && (
-                    <Tooltip
-                      content={CustomTooltip}
-                      cursor={{ stroke: "hsl(var(--muted-foreground))" }}
-                      position={{ x: 0, y: 0 }}
-                      wrapperStyle={{ zIndex: 100 }}
-                      allowEscapeViewBox={{ x: true, y: true }}
-                    />
-                  )}
-                  <Line
-                    type="monotone"
-                    dataKey="watts"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* System Activity Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">System Activity</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+        {/* Power Usage Card */}
+        {showPowerCard && (
+          <Card className="flex-shrink-0 md:flex-1 min-w-[240px] w-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Power Usage</CardTitle>
+              <div className="flex items-center space-x-2">
+                <Power className="h-4 w-4 text-muted-foreground" />
+                <button
+                  onClick={() =>
+                    mutate(undefined, {
+                      optimisticData: ipmiData,
+                      rollbackOnError: true,
+                    })
+                  }
+                  disabled={isValidating}
+                  title="Refresh"
+                  className="focus:outline-none"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 text-muted-foreground ${
+                      isValidating ? "animate-spin" : "cursor-pointer"
+                    }`}
+                  />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="pr-2">
+                    <div className="text-2xl font-bold">
+                      {(currentTotal / 1000).toFixed(1)} kW
+                    </div>
+                    <p className="text-xs text-muted-foreground">Total Power</p>
+                  </div>
+                  <div className="text-right pl-2">
+                    <div className="text-2xl font-bold">
+                      {Math.round(averagePower)} W
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Per Node Avg
+                    </p>
+                  </div>
+                </div>
+                <div className="h-[70px] relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={powerTrendData}>
+                      <YAxis domain={["auto", "auto"]} hide />
+                      {prometheusAvailable && (
+                        <Tooltip
+                          content={CustomTooltip}
+                          cursor={{ stroke: "hsl(var(--muted-foreground))" }}
+                          position={{ x: 0, y: 0 }}
+                          wrapperStyle={{ zIndex: 100 }}
+                          allowEscapeViewBox={{ x: true, y: true }}
+                        />
+                      )}
+                      <Line
+                        type="monotone"
+                        dataKey="watts"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* ROW 2: System Activity Banner */}
+      <Card className="w-full">
+        <CardHeader className="flex flex-row items-center justify-between py-3">
+          <div className="flex items-center space-x-3">
+            <Activity className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-base font-medium">
+              System Activity
+            </CardTitle>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="text-lg font-semibold">{nodes.length}</div>
+            <div className="text-sm text-muted-foreground">Total Nodes</div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{nodes.length}</div>
-          <p className="text-xs text-muted-foreground">Nodes</p>
-          <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-            <div>
-              <div className="font-medium">Idle</div>
-              <div className="text-muted-foreground">
-                {stats.nodeStates.idle} nodes
+        <CardContent className="pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div className="bg-secondary/30 rounded-md p-3">
+              <div className="text-lg font-semibold">
+                {stats.nodeStates.idle}
+              </div>
+              <div className="text-sm font-medium">Idle</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats.nodeStates.idle > 0 && nodes.length > 0
+                  ? Math.round((stats.nodeStates.idle / nodes.length) * 100)
+                  : 0}
+                % of nodes
               </div>
             </div>
-            <div>
-              <div className="font-medium">Mixed</div>
-              <div className="text-muted-foreground">
-                {stats.nodeStates.mixed} nodes
+
+            <div className="bg-secondary/30 rounded-md p-3">
+              <div className="text-lg font-semibold">
+                {stats.nodeStates.mixed}
+              </div>
+              <div className="text-sm font-medium">Mixed</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats.nodeStates.mixed > 0 && nodes.length > 0
+                  ? Math.round((stats.nodeStates.mixed / nodes.length) * 100)
+                  : 0}
+                % of nodes
               </div>
             </div>
-            <div>
-              <div className="font-medium">Allocated</div>
-              <div className="text-muted-foreground">
-                {stats.nodeStates.allocated} nodes
+
+            <div className="bg-secondary/30 rounded-md p-3">
+              <div className="text-lg font-semibold">
+                {stats.nodeStates.allocated}
+              </div>
+              <div className="text-sm font-medium">Allocated</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats.nodeStates.allocated > 0 && nodes.length > 0
+                  ? Math.round(
+                      (stats.nodeStates.allocated / nodes.length) * 100
+                    )
+                  : 0}
+                % of nodes
               </div>
             </div>
-            <div>
-              <div className="font-medium">Down</div>
-              <div className="text-muted-foreground">
-                {stats.nodeStates.down} nodes
+
+            <div className="bg-secondary/30 rounded-md p-3">
+              <div className="text-lg font-semibold">
+                {stats.nodeStates.down}
+              </div>
+              <div className="text-sm font-medium">Down</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats.nodeStates.down > 0 && nodes.length > 0
+                  ? Math.round((stats.nodeStates.down / nodes.length) * 100)
+                  : 0}
+                % of nodes
               </div>
             </div>
-            <div>
-              <div className="font-medium">Drain</div>
-              <div className="text-muted-foreground">
-                {stats.nodeStates.drain} nodes
+
+            <div className="bg-secondary/30 rounded-md p-3">
+              <div className="text-lg font-semibold">
+                {stats.nodeStates.drain}
+              </div>
+              <div className="text-sm font-medium">Drain</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats.nodeStates.drain > 0 && nodes.length > 0
+                  ? Math.round((stats.nodeStates.drain / nodes.length) * 100)
+                  : 0}
+                % of nodes
               </div>
             </div>
-            <div>
-              <div className="font-medium">Unknown</div>
-              <div className="text-muted-foreground">
-                {stats.nodeStates.unknown} nodes
+
+            <div className="bg-secondary/30 rounded-md p-3">
+              <div className="text-lg font-semibold">
+                {stats.nodeStates.unknown}
+              </div>
+              <div className="text-sm font-medium">Unknown</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {stats.nodeStates.unknown > 0 && nodes.length > 0
+                  ? Math.round((stats.nodeStates.unknown / nodes.length) * 100)
+                  : 0}
+                % of nodes
               </div>
             </div>
           </div>
