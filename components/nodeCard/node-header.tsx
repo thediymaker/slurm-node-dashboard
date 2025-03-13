@@ -24,6 +24,7 @@ import HeaderMenu from "@/components/header/header-menu";
 import { ThemeToggle } from "../theme-toggle";
 import ColorSchemaSelector from "../color-schema-selector";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
@@ -281,29 +282,90 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
                         />
                         <ScrollArea className="h-[200px]">
                           <div className="p-2">
+                            {/* Selected Features at the top */}
+                            {selectedFeatureValues &&
+                              selectedFeatureValues.length > 0 && (
+                                <>
+                                  <div className="mb-2">
+                                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                                      Selected
+                                    </div>
+                                    {selectedFeatureValues.map((feature) => (
+                                      <div
+                                        key={`selected-${feature}`}
+                                        className="flex items-center space-x-2 py-1 pl-1 bg-muted/50 rounded-md mb-1"
+                                      >
+                                        <Checkbox
+                                          id={`selected-feature-${feature}`}
+                                          checked={true}
+                                          onCheckedChange={() =>
+                                            toggleFeature(feature)
+                                          }
+                                        />
+                                        <label
+                                          htmlFor={`selected-feature-${feature}`}
+                                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer uppercase flex-grow"
+                                        >
+                                          {feature}
+                                        </label>
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleFeature(feature)}
+                                          className="h-5 w-5 rounded-sm hover:bg-muted flex items-center justify-center"
+                                          aria-label={`Remove ${feature}`}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={clearFeatures}
+                                      className="w-full mt-1 h-7 text-xs"
+                                    >
+                                      Clear all ({selectedFeatureValues.length})
+                                    </Button>
+                                    <div className="border-t my-2"></div>
+                                  </div>
+                                </>
+                              )}
+
+                            {/* Available Features */}
                             {filteredFeatures.length > 0 ? (
-                              filteredFeatures.map((feature) => (
-                                <div
-                                  key={feature}
-                                  className="flex items-center space-x-2 py-1"
-                                >
-                                  <Checkbox
-                                    id={`feature-${feature}`}
-                                    checked={selectedFeatureValues.includes(
-                                      feature
-                                    )}
-                                    onCheckedChange={() =>
-                                      toggleFeature(feature)
-                                    }
-                                  />
-                                  <label
-                                    htmlFor={`feature-${feature}`}
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer uppercase"
-                                  >
-                                    {feature}
-                                  </label>
-                                </div>
-                              ))
+                              <>
+                                {selectedFeatureValues &&
+                                  selectedFeatureValues.length > 0 && (
+                                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                                      Available
+                                    </div>
+                                  )}
+                                {filteredFeatures
+                                  .filter(
+                                    (feature) =>
+                                      !selectedFeatureValues.includes(feature)
+                                  )
+                                  .map((feature) => (
+                                    <div
+                                      key={feature}
+                                      className="flex items-center space-x-2 py-1"
+                                    >
+                                      <Checkbox
+                                        id={`feature-${feature}`}
+                                        checked={false}
+                                        onCheckedChange={() =>
+                                          toggleFeature(feature)
+                                        }
+                                      />
+                                      <label
+                                        htmlFor={`feature-${feature}`}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer uppercase"
+                                      >
+                                        {feature}
+                                      </label>
+                                    </div>
+                                  ))}
+                              </>
                             ) : (
                               <div className="py-6 text-center text-sm">
                                 No features found
@@ -311,45 +373,11 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
                             )}
                           </div>
                         </ScrollArea>
-                        {selectedFeatureValues.length > 0 && (
-                          <div className="border-t p-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={clearFeatures}
-                              className="w-full"
-                            >
-                              Clear selection ({selectedFeatureValues.length})
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </PopoverContent>
                   </Popover>
                 </div>
-                {selectedFeatureValues && selectedFeatureValues.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1.5 max-w-[240px]">
-                    {selectedFeatureValues.map((feature) => (
-                      <Badge
-                        key={feature}
-                        variant="secondary"
-                        className="uppercase gap-1 text-xs"
-                      >
-                        {feature}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFeature(feature);
-                          }}
-                          className="rounded-full outline-none focus:ring-2 focus:ring-offset-1"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+
                 <FormMessage />
               </FormItem>
             )}
