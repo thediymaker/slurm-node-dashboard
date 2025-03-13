@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
-import PropagateLoader from "react-spinners/PropagateLoader";
 
 const rubric: { [key: string]: { threshold: number; color: string } } = {
   A: {
@@ -135,22 +134,8 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
       </Dialog>
     );
 
-  if (jobIsLoading)
-    return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          aria-describedby={undefined}
-          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none flex items-center justify-center"
-        >
-          <div className="flex flex-col items-center justify-center space-y-6">
-            <PropagateLoader color="gray" />
-            <DialogTitle className="text-center pt-2">
-              Loading historical job details...
-            </DialogTitle>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+  // Don't render anything while loading - rely on parent component's loading state
+  if (jobIsLoading) return null;
 
   if (!jobData || !jobData?.jobs || jobData?.jobs.length === 0) {
     return (
