@@ -75,7 +75,6 @@ const JobSearch = () => {
               setJobOpen(true);
               setHistoricalJobOpen(false);
               setUserJobOpen(false);
-              setSearchLoading(false);
               form.reset();
               return;
             } else if (jobState === "PENDING") {
@@ -84,7 +83,6 @@ const JobSearch = () => {
                 "Job is currently pending, Reason: " +
                   activeJobData.jobs[0].state_reason
               );
-              setSearchLoading(false);
               form.reset();
               return;
             }
@@ -114,7 +112,6 @@ const JobSearch = () => {
             setHistoricalJobOpen(true);
             setJobOpen(false);
             setUserJobOpen(false);
-            setSearchLoading(false);
             form.reset();
             return;
           }
@@ -251,26 +248,36 @@ const JobSearch = () => {
       </Form>
 
       {/* Loading Modal */}
-      <LoadingModal />
+      {loadingModalOpen && <LoadingModal />}
 
-      {jobOpen && (
+      {/* Job Detail Modals - Only render when their respective state is true */}
+      {!loadingModalOpen && jobOpen && (
         <JobDetailModal
           open={jobOpen}
-          setOpen={setJobOpen}
+          setOpen={(open) => {
+            setJobOpen(open);
+            setSearchLoading(false);
+          }}
           searchID={searchID}
         />
       )}
-      {historicalJobOpen && (
+      {!loadingModalOpen && historicalJobOpen && (
         <HistoricalJobDetailModal
           open={historicalJobOpen}
-          setOpen={setHistoricalJobOpen}
+          setOpen={(open) => {
+            setHistoricalJobOpen(open);
+            setSearchLoading(false);
+          }}
           searchID={searchID}
         />
       )}
-      {userJobOpen && (
+      {!loadingModalOpen && userJobOpen && (
         <UserJobModal
           open={userJobOpen}
-          setOpen={setUserJobOpen}
+          setOpen={(open) => {
+            setUserJobOpen(open);
+            setSearchLoading(false);
+          }}
           searchID={searchID}
         />
       )}
