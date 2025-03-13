@@ -156,7 +156,9 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
           {jobIsLoading ? (
             // Show skeleton UI while loading
             <>
-              {renderSkeletonHeader()}
+              <DialogTitle className="text-2xl font-extralight mb-3">
+                {nodename}
+              </DialogTitle>
               {renderSkeletonChart()}
               {renderSkeletonTable()}
             </>
