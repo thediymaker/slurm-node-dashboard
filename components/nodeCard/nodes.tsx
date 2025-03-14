@@ -319,7 +319,9 @@ const Nodes = () => {
           totalNodes={systems.length}
         />
       </div>
-      {showStats && nodeData ? <Stats data={nodeData} /> : null}
+      {showStats && nodeData ? (
+        <Stats data={nodeData} colorSchema={colorSchema} />
+      ) : null}
       <Separator />
 
       {isGroupedView ? (
