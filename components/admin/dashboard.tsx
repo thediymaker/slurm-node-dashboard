@@ -47,34 +47,13 @@ export default function AdminDashboard() {
         </div>
       </div>
       <Separator />
-
       <div className="max-w-[90%] mx-auto w-full">
-        <Tabs defaultValue={getDefaultTab()} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="overview" onClick={() => router.push("/admin")}>
-              <Settings className="mr-2 h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="reports"
-              onClick={() => router.push("/admin/reports")}
-            >
-              <BarChart className="mr-2 h-4 w-4" />
-              Reports
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
-            <AdminPlugins error={error} isLoading={isLoading} />
-            <div className="mt-5 m-w-[1000px]">
-              <ClusterStats />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="reports">
-            {pathname.includes("reports") && <JobMetricsDashboard />}
-          </TabsContent>
-        </Tabs>
+        <div className="mb-4 mt-4">
+          <AdminPlugins />
+        </div>
+        <div>
+          <ClusterStats />
+        </div>
       </div>
     </div>
   );
