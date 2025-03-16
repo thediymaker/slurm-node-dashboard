@@ -17,11 +17,7 @@ import {
 const AdminPlugins = ({ error }: any) => {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Plugins Management</CardTitle>
-        <CardDescription>Manage and update plugin settings</CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="mt-6">
         <div className="space-y-4">
           {openaiPluginMetadata.isEnabled ? (
             <Alert>

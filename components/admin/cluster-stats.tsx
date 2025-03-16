@@ -63,13 +63,7 @@ const ClusterStats: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <Card className="text-gray-100">
-          <CardHeader>
-            <CardTitle className="text-gray-100">Cluster Capacities</CardTitle>
-            <CardDescription className="text-gray-400">
-              Overview of current cluster resources
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="mt-6">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-full" />
