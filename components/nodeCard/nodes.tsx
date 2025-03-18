@@ -356,7 +356,7 @@ const Nodes = () => {
         </div>
       )}
       <LastUpdated data={nodeData?.last_update?.number} />
-      {openaiPluginMetadata.isEnabled && <ChatIcon />}
+      {/* {openaiPluginMetadata.isEnabled && <ChatIcon />} */}
     </div>
   );
 };
