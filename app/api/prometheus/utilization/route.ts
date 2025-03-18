@@ -15,11 +15,6 @@ type PrometheusResult = {
   values: PrometheusValue[];
 };
 
-type PrometheusQueryResponse = {
-  result: PrometheusResult[];
-  resultType: string;
-};
-
 type UtilizationResponse = {
   status: number;
   score?: number;
@@ -28,7 +23,7 @@ type UtilizationResponse = {
   error?: string;
 };
 
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
+const PROMETHEUS_URL = process.env.PROMETHEUS_URL!;
 const HOURS_TO_ANALYZE = 24;
 const STEP_INTERVAL = 900; // 15 minutes in seconds
 
