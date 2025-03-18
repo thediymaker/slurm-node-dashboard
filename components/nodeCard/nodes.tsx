@@ -16,6 +16,10 @@ import { Node } from "@/types/types";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
 import NodeCount from "./node-counts";
+import ChatIcon from "../llm/chat-icon";
+import {
+  openaiPluginMetadata,
+} from "@/actions/plugins";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
@@ -352,6 +356,7 @@ const Nodes = () => {
         </div>
       )}
       <LastUpdated data={nodeData?.last_update?.number} />
+      {openaiPluginMetadata.isEnabled && <ChatIcon />}
     </div>
   );
 };
