@@ -111,7 +111,7 @@ export function SlurmNodeDetails({ node }: SlurmNodeDetailsProps) {
                 </span>
               </div>
               <span className="text-sm font-medium text-blue-400">
-                {cpuUsagePercentage.toFixed(1)}%
+                {((parseFloat(cpuUsagePercentage.toFixed(1)) / 100).toFixed(1))}%
               </span>
             </div>
             <Progress value={cpuUsagePercentage} className="h-2 bg-gray-800" />
