@@ -10,7 +10,6 @@ import CardHover from "./card-hover";
 import GPUUsageDisplay from "./gpu-progress";
 import { parseGPUResources } from "@/utils/gpu-parse";
 import { GPUUsageData, NodeCardProps } from "@/types/types";
-import { getStatusColor } from "@/lib/color-schemas";
 
 const calculateTotalGPUUsage = (
   gres: string,
@@ -105,6 +104,108 @@ const LargeCardContent = ({
         </div>
       )}
     </div>
+  );
+};
+
+const getStatusColor = (
+  status: string,
+  colorSchema: string = "default"
+): { bgColor: string; textColor: string } => {
+  const statusLevel = status[1] || status[0];
+  const colorMap: {
+    [key: string]: { [key: string]: { bgColor: string; textColor: string } };
+  } = {
+    default: {
+      DRAIN: { bgColor: "bg-blue-400", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-blue-400", textColor: "text-white" },
+      DOWN: { bgColor: "bg-blue-400", textColor: "text-white" },
+      IDLE: { bgColor: "bg-green-700", textColor: "text-white" },
+      MIXED: { bgColor: "bg-orange-800", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-indigo-500", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-red-900", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-yellow-500", textColor: "text-white" },
+      RESERVED: { bgColor: "bg-indigo-800", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-emerald-500", textColor: "text-white" },
+      REBOOT_REQUESTED: { bgColor: "bg-stone-500", textColor: "text-white" },
+    },
+    neon: {
+      // High contrast neon colors
+      DRAIN: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
+      NOT_RESPONDING: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
+      DOWN: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
+      IDLE: { bgColor: "bg-cyan-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-yellow-400", textColor: "text-black" },
+      PLANNED: { bgColor: "bg-purple-600", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-rose-500", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-lime-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-violet-600", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-teal-400", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-zinc-800", textColor: "text-white" },
+    },
+    nordic: {
+      // Inspired by Nordic design and aurora borealis
+      DRAIN: { bgColor: "bg-teal-600", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-teal-600", textColor: "text-white" },
+      DOWN: { bgColor: "bg-teal-600", textColor: "text-white" },
+      IDLE: { bgColor: "bg-emerald-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-indigo-600", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-cyan-500", textColor: "text-black" },
+      ALLOCATED: { bgColor: "bg-blue-800", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-green-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-violet-800", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-sky-400", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-slate-700", textColor: "text-white" },
+    },
+    candy: {
+      // Bright, candy-inspired colors
+      DRAIN: { bgColor: "bg-pink-500", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-pink-500", textColor: "text-white" },
+      DOWN: { bgColor: "bg-pink-500", textColor: "text-white" },
+      IDLE: { bgColor: "bg-green-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-purple-500", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-yellow-400", textColor: "text-black" },
+      ALLOCATED: { bgColor: "bg-red-600", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-blue-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-violet-500", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-lime-400", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-neutral-600", textColor: "text-white" },
+    },
+    desert: {
+      // Southwestern desert theme
+      DRAIN: { bgColor: "bg-orange-600", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-orange-600", textColor: "text-white" },
+      DOWN: { bgColor: "bg-orange-600", textColor: "text-white" },
+      IDLE: { bgColor: "bg-amber-300", textColor: "text-black" },
+      MIXED: { bgColor: "bg-rose-800", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-red-500", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-purple-800", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-yellow-600", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-red-900", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-amber-500", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-stone-800", textColor: "text-white" },
+    },
+    ocean: {
+      // Deep sea inspired colors
+      DRAIN: { bgColor: "bg-sky-600", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-sky-600", textColor: "text-white" },
+      DOWN: { bgColor: "bg-sky-600", textColor: "text-white" },
+      IDLE: { bgColor: "bg-cyan-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-blue-700", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-teal-500", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-indigo-800", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-emerald-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-blue-900", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-cyan-500", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-slate-800", textColor: "text-white" },
+    },
+  };
+
+  return (
+    colorMap[colorSchema]?.[statusLevel] ||
+    colorMap.default[statusLevel] || {
+      bgColor: "bg-gray-900",
+      textColor: "text-white",
+    }
   );
 };
 
