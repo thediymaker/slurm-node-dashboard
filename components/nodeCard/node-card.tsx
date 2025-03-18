@@ -198,6 +198,20 @@ const getStatusColor = (
       FUTURE: { bgColor: "bg-cyan-500", textColor: "text-black" },
       REBOOT_REQUESTED: { bgColor: "bg-slate-800", textColor: "text-white" },
     },
+    starwars: {
+      // Star Wars inspired colors
+      DRAIN: { bgColor: "bg-red-600", textColor: "text-white" },         // Sith red
+      NOT_RESPONDING: { bgColor: "bg-red-600", textColor: "text-white" }, // Sith red
+      DOWN: { bgColor: "bg-red-600", textColor: "text-white" },          // Sith red
+      IDLE: { bgColor: "bg-emerald-400", textColor: "text-black" },      // Yoda green
+      MIXED: { bgColor: "bg-orange-500", textColor: "text-black" },      // BB-8 orange
+      PLANNED: { bgColor: "bg-purple-700", textColor: "text-white" },    // Mace Windu purple
+      ALLOCATED: { bgColor: "bg-amber-500", textColor: "text-black" },   // C-3PO gold
+      COMPLETING: { bgColor: "bg-blue-400", textColor: "text-black" },   // Light saber blue
+      RESERVED: { bgColor: "bg-indigo-800", textColor: "text-white" },   // Dark side blue
+      FUTURE: { bgColor: "bg-teal-500", textColor: "text-black" },       // Mandalorian armor
+      REBOOT_REQUESTED: { bgColor: "bg-gray-800", textColor: "text-white" }, // Death Star
+    },
   };
 
   return (
