@@ -185,32 +185,6 @@ export const COLOR_SCHEMAS: ColorSchema[] = [
       unknown: "#0284c7", // sky-600
     },
   },
-  {
-    value: "starwars",
-    label: "Star Wars",
-    colors: ["#16a34a", "#dc2626", "#3b82f6", "#fbbf24", "#9333ea", "#0d9488"],
-    stateColors: {
-      IDLE: { bgColor: "bg-green-500", textColor: "text-black" },        // Yoda green
-      MIXED: { bgColor: "bg-amber-500", textColor: "text-black" },       // C-3PO gold
-      ALLOCATED: { bgColor: "bg-stone-900", textColor: "text-amber-300" }, // Death Star with gold text
-      DOWN: { bgColor: "bg-red-600", textColor: "text-white" },          // Sith red
-      DRAIN: { bgColor: "bg-red-600", textColor: "text-white" },         // Sith red
-      NOT_RESPONDING: { bgColor: "bg-red-600", textColor: "text-white" }, // Sith red
-      PLANNED: { bgColor: "bg-purple-700", textColor: "text-white" },    // Mace Windu purple
-      COMPLETING: { bgColor: "bg-blue-500", textColor: "text-white" },   // Light saber blue
-      RESERVED: { bgColor: "bg-orange-500", textColor: "text-black" },   // BB-8 orange
-      FUTURE: { bgColor: "bg-teal-600", textColor: "text-white" },       // Mandalorian armor
-      REBOOT_REQUESTED: { bgColor: "bg-zinc-800", textColor: "text-gray-400" }, // Imperial uniform
-    },
-    progressColors: {
-      idle: "#16a34a",     // Yoda green (green-500)
-      mixed: "#f59e0b",    // BB-8 orange (amber-500)
-      allocated: "#18181b", // Death Star (stone-900)
-      down: "#dc2626",     // Sith red (red-600)
-      drain: "#dc2626",    // Sith red (red-600)
-      unknown: "#6366f1",  // Force blue (indigo-500)
-    },
-  },
 ];
 
 // Helper function to get a color schema by value
