@@ -56,7 +56,7 @@ interface SlurmJobDetailsProps {
 export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  if (!job.jobs.length) {
+  if (job.jobs && !job.jobs.length) {
     return (
       <div className="text-center p-4 text-red-400">
         Sorry, I couldn't find any job details for the job ID you provided.
