@@ -10,6 +10,18 @@ const config = {
     "./src/**/*.{ts,tsx}",
   ],
   prefix: "",
+  safelist: [
+    {
+      pattern: /^bg-/,
+      variants: ["hover"],
+    },
+    {
+      pattern: /^text-/,
+    },
+    {
+      pattern: /^border-/,
+    },
+  ],
   theme: {
     container: {
       center: true,
