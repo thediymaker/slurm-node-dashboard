@@ -11,6 +11,7 @@ import UserJobModal from "./modals/user-job-modal";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MaintModal from "./modals/maint-modal";
+import { Loader2 } from "lucide-react";
 
 const JobSearch = () => {
   const searchSchema = z.object({
@@ -31,86 +32,104 @@ const JobSearch = () => {
   const [historicalJobOpen, setHistoricalJobOpen] = useState(false);
   const [userJobOpen, setUserJobOpen] = useState(false);
   const [maintOpen, setMaintOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [maintenanceData, setMaintenanceData] = useState({});
   const [searchID, setSearchID] = useState("");
   const { errors } = form.formState;
 
   const handleSearch = async (data: SearchFormData) => {
+    // Prevent duplicate searches while loading
+    if (searchLoading) return;
+
+    setSearchLoading(true);
+
     const trimmedSearchID = data.searchID.trim();
     setSearchID(trimmedSearchID);
 
-    if (/^\d+$/.test(trimmedSearchID)) {
-      // Check for active job
-      try {
-        const activeJobResponse = await fetch(
-          `/api/slurm/job/${trimmedSearchID}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
+    try {
+      if (/^\d+$/.test(trimmedSearchID)) {
+        // Check for active job
+        try {
+          const activeJobResponse = await fetch(
+            `/api/slurm/job/${trimmedSearchID}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const activeJobData = await activeJobResponse.json();
+
+          if (
+            activeJobData &&
+            activeJobData.jobs &&
+            activeJobData.jobs.length > 0
+          ) {
+            const jobState = activeJobData.jobs[0].job_state[0];
+            if (jobState === "RUNNING") {
+              setJobOpen(true);
+              setHistoricalJobOpen(false);
+              setUserJobOpen(false);
+              form.reset();
+              setSearchLoading(false);
+              return;
+            } else if (jobState === "PENDING") {
+              alert(
+                "Job is currently pending, Reason: " +
+                  activeJobData.jobs[0].state_reason
+              );
+              form.reset();
+              setSearchLoading(false);
+              return;
+            }
           }
-        );
-        const activeJobData = await activeJobResponse.json();
-        if (
-          activeJobData &&
-          activeJobData.jobs &&
-          activeJobData.jobs.length > 0
-        ) {
-          const jobState = activeJobData.jobs[0].job_state[0];
-          if (jobState === "RUNNING") {
-            setJobOpen(true);
-            setHistoricalJobOpen(false);
+        } catch (error) {
+          console.error("Error fetching active job:", error);
+        }
+
+        // Check for completed job
+        try {
+          const completedJobResponse = await fetch(
+            `/api/slurm/job/completed/${trimmedSearchID}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const completedJobData = await completedJobResponse.json();
+
+          if (
+            completedJobData &&
+            completedJobData.jobs &&
+            completedJobData.jobs.length > 0
+          ) {
+            setHistoricalJobOpen(true);
+            setJobOpen(false);
             setUserJobOpen(false);
-            return;
-          } else if (jobState === "PENDING") {
-            // Handle pending or suspended states here if needed
-            alert(
-              "Job is currently pending, Reason: " +
-                activeJobData.jobs[0].state_reason
-            );
+            form.reset();
+            setSearchLoading(false);
             return;
           }
+        } catch (error) {
+          console.error("Error fetching completed job:", error);
         }
-      } catch (error) {
-        console.error("Error fetching active job:", error);
+
+        // If neither active nor completed job is found
+        alert("No job found with the given ID.");
+      } else {
+        // Search by username
+        setUserJobOpen(true);
+        setJobOpen(false);
+        setHistoricalJobOpen(false);
       }
-
-      // Check for completed job
-      try {
-        const completedJobResponse = await fetch(
-          `/api/slurm/job/completed/${trimmedSearchID}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        const completedJobData = await completedJobResponse.json();
-
-        if (
-          completedJobData &&
-          completedJobData.jobs &&
-          completedJobData.jobs.length > 0
-        ) {
-          setHistoricalJobOpen(true);
-          setJobOpen(false);
-          setUserJobOpen(false);
-          return;
-        }
-      } catch (error) {
-        console.error("Error fetching completed job:", error);
-      }
-
-      // If neither active nor completed job is found
-      alert("No job found with the given ID.");
-    } else {
-      // Search by username
-      setUserJobOpen(true);
-      setJobOpen(false);
-      setHistoricalJobOpen(false);
+    } catch (error) {
+      console.error("Error during search:", error);
+      alert("An error occurred during search. Please try again.");
+    } finally {
+      setSearchLoading(false);
+      form.reset();
     }
-
-    form.reset();
   };
 
   const fetchMaintenanceData = async () => {
@@ -180,34 +199,57 @@ const JobSearch = () => {
                     className={`w-full px-2 py-1 text-sm ${
                       errors.searchID ? "border-red-500" : ""
                     }`}
+                    disabled={searchLoading}
                   />
                 </div>
               </FormItem>
             )}
           />
-          <Button className="px-5" variant="outline" type="submit">
-            Search
+          <Button
+            className="px-5 min-w-[100px]"
+            variant="outline"
+            type="submit"
+            disabled={searchLoading}
+          >
+            {searchLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              "Search"
+            )}
           </Button>
         </form>
       </Form>
+
       {jobOpen && (
         <JobDetailModal
           open={jobOpen}
-          setOpen={setJobOpen}
+          setOpen={(open) => {
+            setJobOpen(open);
+            setSearchLoading(false);
+          }}
           searchID={searchID}
         />
       )}
       {historicalJobOpen && (
         <HistoricalJobDetailModal
           open={historicalJobOpen}
-          setOpen={setHistoricalJobOpen}
+          setOpen={(open) => {
+            setHistoricalJobOpen(open);
+            setSearchLoading(false);
+          }}
           searchID={searchID}
         />
       )}
       {userJobOpen && (
         <UserJobModal
           open={userJobOpen}
-          setOpen={setUserJobOpen}
+          setOpen={(open: boolean | ((prevState: boolean) => boolean)) => {
+            setUserJobOpen(open);
+            setSearchLoading(false);
+          }}
           searchID={searchID}
         />
       )}

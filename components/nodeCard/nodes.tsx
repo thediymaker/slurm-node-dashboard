@@ -15,6 +15,11 @@ import { LastUpdated } from "../last-updated";
 import { Node } from "@/types/types";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
+import NodeCount from "./node-counts";
+import ChatIcon from "../llm/chat-icon";
+import {
+  openaiPluginMetadata,
+} from "@/actions/plugins";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
@@ -68,13 +73,28 @@ const Nodes = () => {
     return false;
   };
 
+  const getInitialSelectedFeatures = () => {
+    if (typeof window !== "undefined") {
+      const storedFeatures = localStorage.getItem("selectedNodeFeatures");
+      if (storedFeatures) {
+        try {
+          return JSON.parse(storedFeatures);
+        } catch (e) {
+          return [];
+        }
+      }
+    }
+    return [];
+  };
+
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
   const [selectedNodePartitions, setSelectedNodePartitions] =
     useState<string>("allPartitions");
-  const [selectedNodeFeature, setSelectedNodeFeature] =
-    useState<string>("allFeatures");
+  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(
+    getInitialSelectedFeatures
+  );
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
   const [colorSchema, setColorSchema] = useState<string>(getInitialColorSchema);
@@ -99,6 +119,13 @@ const Nodes = () => {
     localStorage.setItem("isGroupedView", isGroupedView.toString());
   }, [isGroupedView]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      "selectedNodeFeatures",
+      JSON.stringify(selectedNodeFeatures)
+    );
+  }, [selectedNodeFeatures]);
+
   // Set up polling for data updates
   useEffect(() => {
     const interval = setInterval(() => {
@@ -119,7 +146,11 @@ const Nodes = () => {
   const uniqueFeatures = useMemo(() => {
     const features = new Set<string>();
     systems.forEach((node) => {
-      (node.features || []).forEach((feature) => features.add(feature));
+      if (node.features && Array.isArray(node.features)) {
+        node.features.forEach((feature) => {
+          if (feature) features.add(feature);
+        });
+      }
     });
     return Array.from(features);
   }, [systems]);
@@ -143,15 +174,22 @@ const Nodes = () => {
         selectedNodePartitions === "allPartitions" ||
         node.partitions.includes(selectedNodePartitions);
 
-      const nodeMatchesFeature =
-        selectedNodeFeature === "allFeatures" ||
-        (node.features || []).includes(selectedNodeFeature);
+      // Check if node has all of the selected features
+      const nodeMatchesFeatures =
+        !selectedNodeFeatures ||
+        selectedNodeFeatures.length === 0 ||
+        selectedNodeFeatures.every(
+          (feature) =>
+            node.features &&
+            Array.isArray(node.features) &&
+            node.features.includes(feature)
+        );
 
       return (
         nodeMatchesType &&
         nodeMatchesState &&
         nodeMatchesPartitions &&
-        nodeMatchesFeature
+        nodeMatchesFeatures
       );
     });
   }, [
@@ -159,7 +197,7 @@ const Nodes = () => {
     selectedNodeType,
     selectedNodeState,
     selectedNodePartitions,
-    selectedNodeFeature,
+    selectedNodeFeatures,
   ]);
 
   const totalCpuNodes = useMemo(
@@ -183,8 +221,8 @@ const Nodes = () => {
     setSelectedNodePartitions(value);
   };
 
-  const handleNodeFeatureChange = (value: string) => {
-    setSelectedNodeFeature(value);
+  const handleNodeFeatureChange = (features: string[]) => {
+    setSelectedNodeFeatures(features);
   };
 
   const handleColorSchemaChange = (value: string) => {
@@ -228,17 +266,18 @@ const Nodes = () => {
           </div>
           <div className="flex justify-end w-full mb-4 gap-2 items-center">
             <div className="flex items-center gap-2 font-extralight">
-              GPU Nodes
-              <Skeleton className="w-[20px]" />
+              <Skeleton className="w-[120px] h-[30px]" />
             </div>
             <div className="flex items-center gap-2 font-extralight">
-              CPU Nodes
-              <Skeleton className="w-[20px]" />
+              <Skeleton className="w-[120px] h-[30px]" />
+            </div>
+            <div className="flex items-center gap-2 font-extralight">
+              <Skeleton className="w-[150px] h-[30px]" />
             </div>
           </div>
         </div>
         <Separator />
-        <CardSkeleton qty={250} size={85} />
+        <CardSkeleton qty={300} size={85} />
       </div>
     );
   }
@@ -256,6 +295,7 @@ const Nodes = () => {
         partitions={uniquePartitions}
         features={uniqueFeatures}
         colorSchema={colorSchema}
+        selectedFeatures={selectedNodeFeatures}
       />
       <div className="flex justify-between">
         <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -276,18 +316,16 @@ const Nodes = () => {
             }}
           />
         </div>
-        <div className="flex justify-end w-full mb-4 gap-2 items-center">
-          <div className="flex items-center gap-2 font-extralight">
-            GPU Nodes
-            <span className="text-blue-400">{totalGpuNodes}</span>
-          </div>
-          <div className="flex items-center gap-2 font-extralight">
-            CPU Nodes
-            <span className="text-blue-400">{totalCpuNodes}</span>
-          </div>
-        </div>
+        <NodeCount
+          totalGpuNodes={totalGpuNodes}
+          totalCpuNodes={totalCpuNodes}
+          filteredNodes={filteredNodes.length}
+          totalNodes={systems.length}
+        />
       </div>
-      {showStats && nodeData ? <Stats data={nodeData} /> : null}
+      {showStats && nodeData ? (
+        <Stats data={nodeData} colorSchema={colorSchema} />
+      ) : null}
       <Separator />
 
       {isGroupedView ? (
@@ -318,6 +356,7 @@ const Nodes = () => {
         </div>
       )}
       <LastUpdated data={nodeData?.last_update?.number} />
+      {openaiPluginMetadata.isEnabled && <ChatIcon />}
     </div>
   );
 };

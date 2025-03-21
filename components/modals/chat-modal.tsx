@@ -115,10 +115,10 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                   <div
                     className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
                     onClick={() => {
-                      form.setValue("message", "Show me details about c001");
+                      form.setValue("message", "Show me details about sc020");
                     }}
                   >
-                    Show me details about c001
+                    Show me details about sc020
                   </div>
                   <div
                     className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
