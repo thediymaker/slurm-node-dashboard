@@ -17,9 +17,8 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
 import NodeCount from "./node-counts";
 import ChatIcon from "../llm/chat-icon";
-import {
-  openaiPluginMetadata,
-} from "@/actions/plugins";
+import { openaiPluginMetadata } from "@/actions/plugins";
+import { LogicType } from "@/components/feature-selector";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
@@ -87,6 +86,14 @@ const Nodes = () => {
     return [];
   };
 
+  const getInitialFeatureLogicType = () => {
+    if (typeof window !== "undefined") {
+      const logicType = localStorage.getItem("featureLogicType") as LogicType;
+      return logicType === "OR" ? "OR" : "AND";
+    }
+    return "AND";
+  };
+
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
@@ -94,6 +101,9 @@ const Nodes = () => {
     useState<string>("allPartitions");
   const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(
     getInitialSelectedFeatures
+  );
+  const [featureLogicType, setFeatureLogicType] = useState<LogicType>(
+    getInitialFeatureLogicType
   );
   const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
   const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
@@ -125,6 +135,10 @@ const Nodes = () => {
       JSON.stringify(selectedNodeFeatures)
     );
   }, [selectedNodeFeatures]);
+
+  useEffect(() => {
+    localStorage.setItem("featureLogicType", featureLogicType);
+  }, [featureLogicType]);
 
   // Set up polling for data updates
   useEffect(() => {
@@ -174,16 +188,27 @@ const Nodes = () => {
         selectedNodePartitions === "allPartitions" ||
         node.partitions.includes(selectedNodePartitions);
 
-      // Check if node has all of the selected features
-      const nodeMatchesFeatures =
-        !selectedNodeFeatures ||
-        selectedNodeFeatures.length === 0 ||
-        selectedNodeFeatures.every(
-          (feature) =>
-            node.features &&
-            Array.isArray(node.features) &&
-            node.features.includes(feature)
-        );
+      // Check if node has features based on selected logic type
+      let nodeMatchesFeatures = true;
+      if (selectedNodeFeatures && selectedNodeFeatures.length > 0) {
+        if (featureLogicType === "AND") {
+          // Node must have ALL selected features
+          nodeMatchesFeatures = selectedNodeFeatures.every(
+            (feature) =>
+              node.features &&
+              Array.isArray(node.features) &&
+              node.features.includes(feature)
+          );
+        } else {
+          // Node must have AT LEAST ONE of the selected features (OR logic)
+          nodeMatchesFeatures = selectedNodeFeatures.some(
+            (feature) =>
+              node.features &&
+              Array.isArray(node.features) &&
+              node.features.includes(feature)
+          );
+        }
+      }
 
       return (
         nodeMatchesType &&
@@ -198,6 +223,7 @@ const Nodes = () => {
     selectedNodeState,
     selectedNodePartitions,
     selectedNodeFeatures,
+    featureLogicType,
   ]);
 
   const totalCpuNodes = useMemo(
@@ -221,8 +247,12 @@ const Nodes = () => {
     setSelectedNodePartitions(value);
   };
 
-  const handleNodeFeatureChange = (features: string[]) => {
+  const handleNodeFeatureChange = (
+    features: string[],
+    logicType: LogicType
+  ) => {
     setSelectedNodeFeatures(features);
+    setFeatureLogicType(logicType);
   };
 
   const handleColorSchemaChange = (value: string) => {
@@ -296,6 +326,7 @@ const Nodes = () => {
         features={uniqueFeatures}
         colorSchema={colorSchema}
         selectedFeatures={selectedNodeFeatures}
+        featureLogicType={featureLogicType}
       />
       <div className="flex justify-between">
         <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
