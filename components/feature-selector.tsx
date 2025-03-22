@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Popover,
   PopoverContent,
@@ -32,53 +32,75 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
   className,
 }) => {
   const [open, setOpen] = useState(false);
-  const [selectedFeatureValues, setSelectedFeatureValues] =
+  const [localSelectedFeatures, setLocalSelectedFeatures] =
     useState<string[]>(selectedFeatures);
+  const [localLogicType, setLocalLogicType] = useState<LogicType>(logicType);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLogicType, setSelectedLogicType] =
-    useState<LogicType>(logicType);
 
+  // Flag to prevent infinite loops
+  const [isInternalChange, setIsInternalChange] = useState(false);
+
+  // Sync props to local state when props change (but not during internal changes)
   useEffect(() => {
-    setSelectedFeatureValues(selectedFeatures);
-  }, [selectedFeatures]);
-
-  // Only notify parent when values actually change and not on every render
-  const notifyParentRef = useRef(false);
-
-  useEffect(() => {
-    // Skip the initial render
-    if (notifyParentRef.current) {
-      onFeaturesChange(selectedFeatureValues, selectedLogicType);
-    } else {
-      notifyParentRef.current = true;
+    if (!isInternalChange) {
+      setLocalSelectedFeatures(selectedFeatures);
     }
-  }, [selectedFeatureValues, selectedLogicType]);
+  }, [selectedFeatures, isInternalChange]);
 
+  useEffect(() => {
+    if (!isInternalChange) {
+      setLocalLogicType(logicType);
+    }
+  }, [logicType, isInternalChange]);
+
+  // Notify parent of changes with debounce logic to prevent infinite loops
+  const notifyParent = (features: string[], logic: LogicType) => {
+    setIsInternalChange(true);
+    onFeaturesChange(features, logic);
+
+    // Reset the flag after a short delay
+    setTimeout(() => {
+      setIsInternalChange(false);
+    }, 50);
+  };
+
+  // Feature toggle handler
   const toggleFeature = (feature: string) => {
-    setSelectedFeatureValues((current) => {
-      if (current.includes(feature)) {
-        return current.filter((item) => item !== feature);
-      } else {
-        return [...current, feature];
-      }
-    });
+    const updatedFeatures = localSelectedFeatures.includes(feature)
+      ? localSelectedFeatures.filter((item) => item !== feature)
+      : [...localSelectedFeatures, feature];
+
+    setLocalSelectedFeatures(updatedFeatures);
+    notifyParent(updatedFeatures, localLogicType);
   };
 
+  // Clear selected features
   const clearFeatures = () => {
-    setSelectedFeatureValues([]);
+    setLocalSelectedFeatures([]);
+    notifyParent([], localLogicType);
   };
 
+  // Logic type change handler
+  const handleLogicTypeChange = (value: string) => {
+    if (value) {
+      const newLogicType = value as LogicType;
+      setLocalLogicType(newLogicType);
+      notifyParent(localSelectedFeatures, newLogicType);
+    }
+  };
+
+  // Get display value for the button
   const getFeatureDisplayValue = () => {
-    if (!selectedFeatureValues || selectedFeatureValues.length === 0) {
+    if (!localSelectedFeatures || localSelectedFeatures.length === 0) {
       return "All Features";
     }
 
-    if (selectedFeatureValues.length === 1) {
-      return selectedFeatureValues[0].toUpperCase();
+    if (localSelectedFeatures.length === 1) {
+      return localSelectedFeatures[0].toUpperCase();
     }
 
-    return `${selectedFeatureValues.length} features ${
-      selectedLogicType === "AND" ? "(AND)" : "(OR)"
+    return `${localSelectedFeatures.length} features ${
+      localLogicType === "AND" ? "(AND)" : "(OR)"
     }`;
   };
 
@@ -113,10 +135,8 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
               />
               <ToggleGroup
                 type="single"
-                value={selectedLogicType}
-                onValueChange={(value) =>
-                  value && setSelectedLogicType(value as LogicType)
-                }
+                value={localLogicType}
+                onValueChange={handleLogicTypeChange}
               >
                 <ToggleGroupItem value="AND" className="px-3 py-1 text-xs">
                   AND
@@ -129,13 +149,13 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
             <ScrollArea className="h-[240px]">
               <div className="p-2">
                 {/* Selected Features at the top */}
-                {selectedFeatureValues.length > 0 && (
+                {localSelectedFeatures.length > 0 && (
                   <>
                     <div className="mb-2">
                       <div className="text-xs font-medium text-muted-foreground mb-1">
                         Selected
                       </div>
-                      {selectedFeatureValues.map((feature) => (
+                      {localSelectedFeatures.map((feature) => (
                         <div
                           key={`selected-${feature}`}
                           className="flex items-center space-x-2 py-1 pl-1 bg-muted/50 rounded-md mb-1"
@@ -167,7 +187,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
                         onClick={clearFeatures}
                         className="w-full mt-2 h-7 text-xs flex items-center justify-center"
                       >
-                        Clear all ({selectedFeatureValues.length})
+                        Clear all ({localSelectedFeatures.length})
                       </Button>
                       <div className="border-t my-2"></div>
                     </div>
@@ -177,14 +197,14 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
                 {/* Available Features */}
                 {filteredFeatures.length > 0 ? (
                   <>
-                    {selectedFeatureValues.length > 0 && (
+                    {localSelectedFeatures.length > 0 && (
                       <div className="text-xs font-medium text-muted-foreground mb-1">
                         Available
                       </div>
                     )}
                     {filteredFeatures
                       .filter(
-                        (feature) => !selectedFeatureValues.includes(feature)
+                        (feature) => !localSelectedFeatures.includes(feature)
                       )
                       .map((feature) => (
                         <div
