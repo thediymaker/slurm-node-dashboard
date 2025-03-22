@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import PropagateLoader from "react-spinners/PropagateLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Pagination,
   PaginationContent,
@@ -20,7 +20,17 @@ import {
 } from "@/components/ui/pagination";
 import { useState } from "react";
 
-const UserJobModal = ({ open, setOpen, searchID }: any) => {
+interface UserJobModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  searchID: string;
+}
+
+const UserJobModal: React.FC<UserJobModalProps> = ({
+  open,
+  setOpen,
+  searchID,
+}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const jobFetcher = () =>
     fetch(`/api/slurm/jobs/user/${searchID}`, {
@@ -37,26 +47,105 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
     isLoading: jobIsLoading,
   } = useSWR(open ? `/api/slurm/jobs/user/${searchID}` : null, jobFetcher);
 
-  function convertUnixToHumanReadable(unixTimestamp: any) {
+  function convertUnixToHumanReadable(unixTimestamp: number) {
     const date = new Date(unixTimestamp * 1000);
-    const formattedDate = date.toLocaleString();
-    return formattedDate;
+    return date.toLocaleString();
   }
 
-  const pageCount = Math.ceil(jobData?.jobs?.length / itemsPerPage);
+  const pageCount = Math.ceil((jobData?.jobs?.length || 0) / itemsPerPage);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
   const currentItems = jobData?.jobs?.slice(indexOfFirstItem, indexOfLastItem);
 
-  const paginate = (pageNumber: React.SetStateAction<number>) =>
-    setCurrentPage(pageNumber);
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  const pageNumbers: any = [];
-  for (let i = 1; i <= pageCount; i++) {
-    pageNumbers.push(i);
-  }
+  // Render skeleton loader for the table
+  const renderSkeletonTable = () => (
+    <div>
+      <Skeleton className="h-8 w-48 mb-2" />
+      <Skeleton className="h-6 w-36 mb-5" />
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>
+              <Skeleton className="h-4 w-12" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-12" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-20" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-20" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-14" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-10" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-24" />
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(10)].map((_, index) => (
+            <TableRow key={index}>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-18" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-14" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-10" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-32" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell colSpan={8} className="text-right">
+              <Skeleton className="h-4 w-64 ml-auto" />
+            </TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
+      <div className="mt-2">
+        <Pagination>
+          <PaginationContent className="flex justify-center">
+            {[...Array(5)].map((_, index) => (
+              <PaginationItem key={index}>
+                <Skeleton className="h-8 w-8 mx-1" />
+              </PaginationItem>
+            ))}
+          </PaginationContent>
+        </Pagination>
+      </div>
+    </div>
+  );
 
   const TablePagination = () => {
     const renderPageNumbers = () => {
@@ -171,28 +260,12 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
   if (jobError)
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTitle>Error</DialogTitle>
         <DialogContent
           aria-describedby={undefined}
-          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+          className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
         >
-          <DialogTitle></DialogTitle>
+          <DialogTitle>Error</DialogTitle>
           <div>Failed to load, or session expired, please try again.</div>
-        </DialogContent>
-      </Dialog>
-    );
-
-  if (jobIsLoading)
-    return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          aria-describedby={undefined}
-          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
-        >
-          <DialogTitle></DialogTitle>
-          <div className="font-bold text-2xl uppercase flex justify-center items-center">
-            <PropagateLoader color="gray" />
-          </div>
         </DialogContent>
       </Dialog>
     );
@@ -203,9 +276,12 @@ const UserJobModal = ({ open, setOpen, searchID }: any) => {
         aria-describedby={undefined}
         className="border shadow-xl w-[1200px] max-w-[90%] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
       >
-        {jobData &&
-        jobData?.errors?.length === 0 &&
-        jobData?.jobs?.length > 0 ? (
+        <DialogTitle className="sr-only">User Job Information</DialogTitle>
+        {jobIsLoading ? (
+          renderSkeletonTable()
+        ) : jobData &&
+          jobData?.errors?.length === 0 &&
+          jobData?.jobs?.length > 0 ? (
           <div>
             <h1 className="text-2xl mb-2 font-extralight uppercase">
               {searchID}
