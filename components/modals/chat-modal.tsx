@@ -69,7 +69,6 @@ export default function ChatModal({ showChat, setShowChat }: any) {
   };
 
   useEffect(() => {
-    // Set initial message when the component mounts
     setMessages([
       {
         id: Date.now(),
@@ -97,11 +96,14 @@ export default function ChatModal({ showChat, setShowChat }: any) {
     <>
       {showChat && (
         <Dialog open={showChat} onOpenChange={setShowChat}>
-          <DialogContent aria-describedby={undefined} className="border-2 border-black shadow-xl w-[1200px] max-w-[80%] h-[1200px] max-h-[80%] flex flex-col p-0">
-            <div className="p-3 px-5 mx-5">
-              <h1 className="text-2xl mb-2 font-extralight">Slurm Chat</h1>
-              <Separator />
+          <DialogContent
+            aria-describedby={undefined}
+            className="border-2 border-black w-[1000px] max-w-[80%] h-[1200px] max-h-[80%] flex flex-col p-0 pt-2"
+          >
+            <div className="pt-2  mx-5">
+              <h1 className="text-2xl font-extralight">Slurm Chat</h1>
             </div>
+            <Separator className="bg-black" />
             <div
               ref={chatContainerRef}
               className="flex-grow overflow-y-auto scrollbar-none mx-auto"
@@ -110,10 +112,10 @@ export default function ChatModal({ showChat, setShowChat }: any) {
               <ChatScrollAnchor />
             </div>
             <div className="bg-gradient-to-b from-background/0 to-black/60 to-50% pt-5">
-              <div className="mx-auto sm:max-w-2xl sm:px-4">
+              <div className="mx-auto w-[90%] sm:px-4">
                 <div className="flex gap-2 items-center justify-center">
                   <div
-                    className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
+                    className="text-sm border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
                     onClick={() => {
                       form.setValue("message", "Show me details about sc020");
                     }}
@@ -121,7 +123,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                     Show me details about sc020
                   </div>
                   <div
-                    className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
+                    className="text-sm border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
                     onClick={() => {
                       form.setValue("message", "Show me details for job 1234");
                     }}
@@ -129,7 +131,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                     Show me details for job 1234
                   </div>
                   <div
-                    className="text-xs border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
+                    className="text-sm border rounded-lg p-2 mb-2 w-[33%] text-center cursor-pointer hover:bg-blue-500 transition-transform ease-in-out duration-200 transform hover:scale-105 bg-background border-black"
                     onClick={() => {
                       form.setValue(
                         "message",
@@ -164,7 +166,7 @@ export default function ChatModal({ showChat, setShowChat }: any) {
                           type="submit"
                           size="icon"
                           disabled={form.watch("message") === ""}
-                          className="text-sm"
+                          className="text-lg"
                         >
                           <ArrowUp className="h-5 w-5" />
                           <span className="sr-only">Send Message</span>
