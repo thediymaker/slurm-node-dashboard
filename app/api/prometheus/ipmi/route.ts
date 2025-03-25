@@ -15,18 +15,64 @@ if (PROMETHEUS_URL) {
   });
 }
 
+async function fetchClusterNodes(): Promise<string[]> {
+  try {
+    // Use the existing API endpoint to get the node data
+    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
+    const response = await fetch(`${baseURL}/api/slurm/nodes`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to fetch nodes: ${response.statusText}`);
+      return [];
+    }
+
+    const data = await response.json();
+
+    // Extract node names from the response
+    if (data && data.nodes && Array.isArray(data.nodes)) {
+      return data.nodes.map((node: any) => node.name);
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching cluster nodes:", error);
+    return [];
+  }
+}
+
 export async function GET(req: Request) {
   if (!prom) {
     return NextResponse.json({ status: 404 });
   }
 
   try {
+    // Fetch the list of nodes that belong to the cluster
+    const clusterNodes = await fetchClusterNodes();
+
+    if (clusterNodes.length === 0) {
+      console.warn("No cluster nodes found, proceeding with unfiltered query");
+    } else {
+      console.log(
+        `Found ${clusterNodes.length} cluster nodes: ${clusterNodes.join(", ")}`
+      );
+    }
+
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const stepSize = 900;
 
-    const powerQuery =
+    // Modify the query to filter by hostname if we have cluster nodes
+    let powerQuery =
       'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m])';
+
+    if (clusterNodes.length > 0) {
+      // Create a regex pattern for the hostnames that looks like:
+      // hostname=~"sc001|sc002|sc003"
+      const hostnamePattern = clusterNodes.join("|");
+      powerQuery = `avg_over_time(ipmi_power_watts{name="Pwr Consumption", hostname=~"${hostnamePattern}"}[15m])`;
+    }
 
     const historicalRes: PrometheusQueryResponse = await prom.rangeQuery(
       powerQuery,
