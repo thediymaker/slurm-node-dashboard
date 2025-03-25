@@ -41,7 +41,10 @@ const Stats = memo(
         setIsPrometheusAvailable(false);
       },
       onSuccess: (data) => {
-        setIsPrometheusAvailable(data.status === 200);
+        // Only consider Prometheus available if we got actual data
+        setIsPrometheusAvailable(
+          data.status === 200 && !data.summary?.noPrometheusData
+        );
       },
     });
 
@@ -106,18 +109,22 @@ const Stats = memo(
       }, initialStats);
     }, [nodes, prometheusAvailable]);
 
-    // Determine power totals and averages based on availability of Prometheus
-    const currentTotal = prometheusAvailable
-      ? powerSummary?.currentTotal || 0
-      : stats.totalPowerUsage;
-    const averagePower = prometheusAvailable
-      ? powerSummary?.currentAverage || 0
-      : stats.totalPowerNodes > 0
-      ? stats.totalPowerUsage / stats.totalPowerNodes
-      : 0;
+    const currentTotal =
+      prometheusAvailable && !ipmiData?.summary?.noPrometheusData
+        ? powerSummary?.currentTotal || 0
+        : stats.totalPowerUsage;
+
+    const averagePower =
+      prometheusAvailable && !ipmiData?.summary?.noPrometheusData
+        ? powerSummary?.currentAverage || 0
+        : stats.totalPowerNodes > 0
+        ? stats.totalPowerUsage / stats.totalPowerNodes
+        : 0;
 
     const hasPowerData =
-      (prometheusAvailable && currentTotal > 0) ||
+      (prometheusAvailable &&
+        !ipmiData?.summary?.noPrometheusData &&
+        currentTotal > 0) ||
       (!prometheusAvailable && stats.totalPowerUsage > 0);
 
     const cpuPercentage =
