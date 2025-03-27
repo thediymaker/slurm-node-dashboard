@@ -100,17 +100,25 @@ export async function GET(req: Request) {
       // Prometheus metrics might store node identifiers in different label names
       const patterns = [
         // Try matching on hostname
-        `avg_over_time(ipmi_power_watts{name="Pwr Consumption" or ipmi_dcmi_power_consumption_watts, hostname=~"${clusterNodes.join(
+        `avg_over_time((ipmi_power_watts{name="Pwr Consumption", hostname=~"${clusterNodes.join(
           "|"
-        )}"}[15m])`,
-        // Try matching on instance (which might contain hostname)
-        `avg_over_time(ipmi_power_watts{name="Pwr Consumption" or ipmi_dcmi_power_consumption_watts, instance=~"${clusterNodes.join(
+        )}"} or ipmi_dcmi_power_consumption_watts{hostname=~"${clusterNodes.join(
           "|"
-        )}"}[15m])`,
-        // Try matching on node field if exists
-        `avg_over_time(ipmi_power_watts{name="Pwr Consumption" or ipmi_dcmi_power_consumption_watts, node=~"${clusterNodes.join(
+        )}"})[15m])`,
+
+        // Try matching on instance
+        `avg_over_time((ipmi_power_watts{name="Pwr Consumption", instance=~"${clusterNodes.join(
           "|"
-        )}"}[15m])`,
+        )}"} or ipmi_dcmi_power_consumption_watts{instance=~"${clusterNodes.join(
+          "|"
+        )}"})[15m])`,
+
+        // Try matching on node field
+        `avg_over_time((ipmi_power_watts{name="Pwr Consumption", node=~"${clusterNodes.join(
+          "|"
+        )}"} or ipmi_dcmi_power_consumption_watts{node=~"${clusterNodes.join(
+          "|"
+        )}"})[15m])`,
       ];
 
       // Try each pattern until we get results
