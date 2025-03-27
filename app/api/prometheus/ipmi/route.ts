@@ -102,27 +102,21 @@ export async function GET(req: Request) {
         // Try matching on hostname
         `avg_over_time(ipmi_power_watts{name="Pwr Consumption", hostname=~"${clusterNodes.join(
           "|"
-        )}"}[15m]) or on(hostname) avg_over_time(ipmi_dcmi_power_consumption_watts{hostname=~"${clusterNodes.join(
-          "|"
-        )}"}[15m]) unless on(hostname) avg_over_time(ipmi_power_watts{name="Pwr Consumption", hostname=~"${clusterNodes.join(
+        )}"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts{hostname=~"${clusterNodes.join(
           "|"
         )}"}[15m])`,
 
         // Try matching on instance
         `avg_over_time(ipmi_power_watts{name="Pwr Consumption", instance=~"${clusterNodes.join(
           "|"
-        )}"}[15m]) or on(instance) avg_over_time(ipmi_dcmi_power_consumption_watts{instance=~"${clusterNodes.join(
-          "|"
-        )}"}[15m]) unless on(instance) avg_over_time(ipmi_power_watts{name="Pwr Consumption", instance=~"${clusterNodes.join(
+        )}"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts{instance=~"${clusterNodes.join(
           "|"
         )}"}[15m])`,
 
         // Try matching on node field
         `avg_over_time(ipmi_power_watts{name="Pwr Consumption", node=~"${clusterNodes.join(
           "|"
-        )}"}[15m]) or on(node) avg_over_time(ipmi_dcmi_power_consumption_watts{node=~"${clusterNodes.join(
-          "|"
-        )}"}[15m]) unless on(node) avg_over_time(ipmi_power_watts{name="Pwr Consumption", node=~"${clusterNodes.join(
+        )}"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts{node=~"${clusterNodes.join(
           "|"
         )}"}[15m])`,
       ];
@@ -158,7 +152,7 @@ export async function GET(req: Request) {
         "No results with filtered queries, trying unfiltered query as fallback"
       );
       powerQuery =
-        'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m]) or on() avg_over_time(ipmi_dcmi_power_consumption_watts[15m]) unless on() avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m])';
+        'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts[15m])';
       unfilteredFallback = true;
 
       try {
@@ -211,13 +205,20 @@ export async function GET(req: Request) {
       );
     }
 
-    const timeSeriesMap = new Map<
+    // Track metrics by time and node to avoid double counting
+    const metricsTracker = new Map<
       number,
-      { totalWatts: number; nodeCount: number }
+      Map<
+        string,
+        {
+          watts: number;
+          metricType: string;
+        }
+      >
     >();
 
     historicalRes.result.forEach((series) => {
-      // If using unfiltered fallback, check if this series belongs to a cluster node
+      // Skip nodes not in our cluster if using unfiltered query
       if (unfilteredFallback && clusterNodes.length > 0) {
         const nodeInCluster = Object.values(series.metric?.labels || {}).some(
           (label) =>
@@ -230,31 +231,83 @@ export async function GET(req: Request) {
         }
       }
 
+      // Determine metric type
+      const metricName = series.metric?.name || "";
+      const isIPMI = metricName.includes("ipmi_power_watts");
+      const metricType = isIPMI
+        ? "ipmi_power_watts"
+        : "ipmi_dcmi_power_consumption_watts";
+
+      // Get node identifier
+      let nodeId = null;
+      for (const label of ["hostname", "instance", "node"]) {
+        if (series.metric?.labels?.[label]) {
+          nodeId = series.metric.labels[label];
+          break;
+        }
+      }
+
+      if (!nodeId) return; // Skip if no node identifier
+
       series.values.forEach(({ time, value }) => {
         const timeKey = Number(time);
-        const existing = timeSeriesMap.get(timeKey) || {
-          totalWatts: 0,
-          nodeCount: 0,
-        };
 
-        existing.totalWatts += parseFloat(value.toString());
-        existing.nodeCount += 1;
-        timeSeriesMap.set(timeKey, existing);
+        // Initialize time entry if needed
+        if (!metricsTracker.has(timeKey)) {
+          metricsTracker.set(timeKey, new Map());
+        }
+
+        const nodesAtTime = metricsTracker.get(timeKey)!;
+
+        // If we already have ipmi_power_watts for this node, skip
+        if (
+          nodesAtTime.has(nodeId) &&
+          nodesAtTime.get(nodeId)!.metricType === "ipmi_power_watts" &&
+          metricType !== "ipmi_power_watts"
+        ) {
+          return;
+        }
+
+        // Otherwise, store this metric (overwriting ipmi_dcmi if we now have ipmi_power_watts)
+        nodesAtTime.set(nodeId, {
+          watts: parseFloat(value.toString()),
+          metricType,
+        });
       });
     });
 
-    const timeSeriesData = Array.from(timeSeriesMap.entries())
-      .map(([time, { totalWatts, nodeCount }]) => ({
-        time,
+    // Now build timeSeriesMap from our deduplicated data
+    const timeSeriesData: Array<{
+      time: number;
+      watts: number;
+      averageWatts: number;
+      nodesReporting: number;
+    }> = [];
+
+    for (const [timeKey, nodesMap] of metricsTracker.entries()) {
+      let totalWatts = 0;
+      const nodeCount = nodesMap.size;
+
+      for (const nodeData of nodesMap.values()) {
+        totalWatts += nodeData.watts;
+      }
+
+      const averageWatts = nodeCount ? Math.round(totalWatts / nodeCount) : 0;
+
+      timeSeriesData.push({
+        time: timeKey,
         watts: Math.round(totalWatts),
-        averageWatts: nodeCount ? Math.round(totalWatts / nodeCount) : 0,
+        averageWatts,
         nodesReporting: nodeCount,
-      }))
-      .sort((a, b) => a.time - b.time)
-      .slice(-MAX_DATA_POINTS);
+      });
+    }
+
+    // Sort the time series data and limit to max data points
+    timeSeriesData.sort((a, b) => a.time - b.time);
+    const limitedData = timeSeriesData.slice(-MAX_DATA_POINTS);
 
     // Check if we have any processed data
-    if (!timeSeriesData.length) {
+    if (!limitedData.length) {
       return NextResponse.json({
         status: 200,
         data: [],
@@ -267,11 +320,11 @@ export async function GET(req: Request) {
       });
     }
 
-    const lastPoint = timeSeriesData[timeSeriesData.length - 1];
+    const lastPoint = limitedData[limitedData.length - 1];
 
     return NextResponse.json({
       status: 200,
-      data: timeSeriesData,
+      data: limitedData,
       summary: {
         currentTotal: lastPoint.watts,
         currentAverage: lastPoint.averageWatts,
