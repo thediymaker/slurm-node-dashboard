@@ -144,7 +144,7 @@ export async function GET(req: Request) {
         "No results with filtered queries, trying unfiltered query as fallback"
       );
       powerQuery =
-        'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m])';
+        'avg_over_time((ipmi_power_watts{name="Pwr Consumption"} or ipmi_dcmi_power_consumption_watts)[15m])';
       unfilteredFallback = true;
 
       try {
