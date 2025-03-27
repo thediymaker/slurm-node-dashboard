@@ -102,21 +102,27 @@ export async function GET(req: Request) {
         // Try matching on hostname
         `avg_over_time(ipmi_power_watts{name="Pwr Consumption", hostname=~"${clusterNodes.join(
           "|"
-        )}"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts{hostname=~"${clusterNodes.join(
+        )}"}[15m]) or on(hostname) avg_over_time(ipmi_dcmi_power_consumption_watts{hostname=~"${clusterNodes.join(
+          "|"
+        )}"}[15m]) unless on(hostname) avg_over_time(ipmi_power_watts{name="Pwr Consumption", hostname=~"${clusterNodes.join(
           "|"
         )}"}[15m])`,
 
         // Try matching on instance
         `avg_over_time(ipmi_power_watts{name="Pwr Consumption", instance=~"${clusterNodes.join(
           "|"
-        )}"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts{instance=~"${clusterNodes.join(
+        )}"}[15m]) or on(instance) avg_over_time(ipmi_dcmi_power_consumption_watts{instance=~"${clusterNodes.join(
+          "|"
+        )}"}[15m]) unless on(instance) avg_over_time(ipmi_power_watts{name="Pwr Consumption", instance=~"${clusterNodes.join(
           "|"
         )}"}[15m])`,
 
         // Try matching on node field
         `avg_over_time(ipmi_power_watts{name="Pwr Consumption", node=~"${clusterNodes.join(
           "|"
-        )}"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts{node=~"${clusterNodes.join(
+        )}"}[15m]) or on(node) avg_over_time(ipmi_dcmi_power_consumption_watts{node=~"${clusterNodes.join(
+          "|"
+        )}"}[15m]) unless on(node) avg_over_time(ipmi_power_watts{name="Pwr Consumption", node=~"${clusterNodes.join(
           "|"
         )}"}[15m])`,
       ];
@@ -152,7 +158,7 @@ export async function GET(req: Request) {
         "No results with filtered queries, trying unfiltered query as fallback"
       );
       powerQuery =
-        'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts[15m])';
+        'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m]) or on() avg_over_time(ipmi_dcmi_power_consumption_watts[15m]) unless on() avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m])';
       unfilteredFallback = true;
 
       try {
