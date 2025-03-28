@@ -3,7 +3,7 @@
 import { createAI, getMutableAIState, streamUI } from "ai/rsc";
 import type { CoreMessage, ToolInvocation } from "ai";
 import type { ReactNode } from "react";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { BotCard, BotMessage } from "@/components/llm/message";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
@@ -42,8 +42,13 @@ export const sendMessage = async (
     },
   ]);
 
+  const openai = createOpenAI({
+    baseURL: process.env.OPENAI_API_URL, // Allows to set API other than just openai's
+    compatibility: 'compatible' // Allows Use of third party OpenAI APIS (Self hosted)
+  })
+
   const reply = await streamUI({
-    model: openai("gpt-4o-mini"),
+    model: openai(`${process.env.OPENAI_API_MODEL}`),
     messages: [
       { role: "system", content, toolInvocations: [] },
       ...history.get(),
