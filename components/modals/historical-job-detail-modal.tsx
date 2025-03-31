@@ -69,94 +69,56 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   }
 
   function calculateMemEfficiency(job: HistoricalJob) {
-    try {
-      // In this Slurm configuration, we don't have step-level memory data
-      // Instead, show the allocated vs requested memory as a basic efficiency indicator
-      const allocMem_MiB =
-        job.tres.allocated.find((t) => t.type === "mem")?.count || 0;
-
-      const reqMem_MiB =
-        job.tres.requested.find((t) => t.type === "mem")?.count || 0;
-
-      if (allocMem_MiB === 0 || reqMem_MiB === 0) {
-        return "No memory data";
-      }
-
-      // Simple efficiency: allocated memory as a percentage of requested
-      // This isn't a true efficiency measure but gives some indication of resource allocation
-      const efficiency = (allocMem_MiB / reqMem_MiB) * 100;
-      return `${efficiency.toFixed(2)}%`;
-    } catch (error) {
-      console.error("Error calculating memory allocation:", error);
-      return "N/A";
-    }
+    const maxUsedMem_Bytes = job.steps.reduce((max, step) => {
+      const maxRAM =
+        step.tres.requested.max.find((t: any) => t.type === "mem")?.count || 0;
+      return maxRAM > max ? maxRAM : max;
+    }, 0);
+    const allocMem_MiB =
+      job.tres.requested.find((t) => t.type === "mem")?.count || 0;
+    // compute percent ratio by converting denominator to bytes
+    const efficiency = (maxUsedMem_Bytes / (allocMem_MiB * 1048576)) * 100;
+    return `${efficiency.toFixed(2)}%`;
   }
 
   function calculateCPUEfficiency(job: HistoricalJob) {
-    try {
-      // For clusters without step-level CPU data, we calculate efficiency differently
-      // We'll use a proxy measurement based on general job info
+    const allocatedCPUs =
+      job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
+    const elapsedTime = job.time.elapsed;
 
-      const allocatedCPUs =
-        job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
+    const totalCPUTime = job.steps.reduce((sum, step) => {
+      const stepUserTime =
+        step.time.user.seconds + step.time.user.microseconds / 1e6;
+      const stepSystemTime =
+        step.time.system.seconds + step.time.system.microseconds / 1e6;
+      const stepTotalSeconds = stepUserTime + stepSystemTime;
 
-      const requestedCPUs =
-        job.tres.requested.find((t) => t.type === "cpu")?.count || 0;
+      return sum + stepTotalSeconds;
+    }, 0);
 
-      const elapsedTime = job.time.elapsed;
+    if (allocatedCPUs === 0 || elapsedTime === 0) return "N/A";
+    if (totalCPUTime === 0) return "No CPU usage recorded";
 
-      if (allocatedCPUs === 0 || requestedCPUs === 0 || elapsedTime === 0) {
-        return "No CPU data";
-      }
+    const coreWallTime = allocatedCPUs * elapsedTime;
+    const efficiency = (totalCPUTime / coreWallTime) * 100;
 
-      // Since we don't have CPU time measurements, we'll use CPU utilization percentage
-      // This assumes 100% utilization during job runtime as an approximation
-      const efficiency = (allocatedCPUs / requestedCPUs) * 100;
-
-      return `${efficiency.toFixed(2)}%`;
-    } catch (error) {
-      console.error("Error calculating CPU allocation:", error);
-      return "N/A";
-    }
+    return `${efficiency.toFixed(2)}%`;
   }
 
-  function get_letter_grade(score: number) {
-    try {
-      if (isNaN(score)) return "N/A";
-
-      var letter = "E";
-      for (var [key, subobj] of Object.entries(rubric)) {
-        if (score >= subobj.threshold) {
-          letter = key;
-          break;
-        }
+  function get_letter_grade(score: number): keyof typeof rubric {
+    let letter: keyof typeof rubric = "E";
+    for (const [key, subobj] of Object.entries(rubric)) {
+      if (score >= subobj.threshold) {
+        letter = key as keyof typeof rubric;
+        break;
       }
-      return letter;
-    } catch (error) {
-      console.error("Error in grade calculation:", error);
-      return "N/A";
     }
+    return letter;
   }
 
-  function grade_efficiency(efficiencyStr: string) {
-    try {
-      if (
-        efficiencyStr === "N/A" ||
-        efficiencyStr === "No step data" ||
-        efficiencyStr === "No CPU usage recorded"
-      ) {
-        return "N/A";
-      }
-
-      const eff = Number(efficiencyStr.replace("%", ""));
-      if (isNaN(eff)) return "N/A";
-
-      const letter = get_letter_grade(eff);
-      return letter;
-    } catch (error) {
-      console.error("Error grading efficiency:", error);
-      return "N/A";
-    }
+  function grade_efficiency(efficiencyStr: string): keyof typeof rubric {
+    const eff = Number(efficiencyStr.replace("%", ""));
+    return get_letter_grade(eff);
   }
 
   // Skeleton components for loading state
@@ -331,20 +293,18 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
               {formatDuration(job.time.elapsed)}
             </div>
             <p className="text-xs text-muted-foreground">
-              CPU Efficiency: {CPUEfficiency}
-              {CPUEffLetter !== "N/A" && (
-                <span style={{ color: rubric[CPUEffLetter].color }}>
-                  ({CPUEffLetter})
-                </span>
-              )}
+              CPU Efficiency: {CPUEfficiency}(
+              <span style={{ color: rubric[CPUEffLetter].color }}>
+                {CPUEffLetter}
+              </span>
+              )
             </p>
             <p className="text-xs text-muted-foreground">
-              Memory Efficiency: {MemEfficiency}
-              {MemEffLetter !== "N/A" && (
-                <span style={{ color: rubric[MemEffLetter].color }}>
-                  ({MemEffLetter})
-                </span>
-              )}
+              Memory Efficiency: {MemEfficiency}(
+              <span style={{ color: rubric[MemEffLetter].color }}>
+                {MemEffLetter}
+              </span>
+              )
             </p>
           </CardContent>
         </Card>
@@ -463,96 +423,37 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
           <Separator className="my-4" />
           <div>
             <p className="font-semibold mb-2">Job Steps</p>
-            {job.steps && job.steps.length > 0 ? (
-              job.steps.map((step, index) => {
-                try {
-                  // Check if step has required data structure
-                  const stepId = step.step?.id || `Unknown-${index}`;
-                  const stepName = step.step?.name || `Step-${stepId}`;
-                  return (
-                    <div key={index} className="mb-4">
-                      <p className="font-semibold">
-                        {stepName} (ID: {stepId})
-                      </p>
-                      {step.nodes && (
-                        <p>
-                          Nodes: {step.nodes.count} ({step.nodes.range || "N/A"}
-                          )
-                        </p>
-                      )}
-                      {step.tasks && <p>Tasks: {step.tasks.count}</p>}
-                      {step.time && step.time.start && (
-                        <p>
-                          Start Time:{" "}
-                          {convertUnixToHumanReadable(step.time.start.number)}
-                        </p>
-                      )}
-                      {step.time && step.time.end && (
-                        <p>
-                          End Time:{" "}
-                          {convertUnixToHumanReadable(step.time.end.number)}
-                        </p>
-                      )}
-                      <p>
-                        Memory Used/Allocated:{" "}
-                        {(() => {
-                          try {
-                            const memUsed =
-                              step.tres?.requested?.max?.find(
-                                (t: { type: string }) => t.type === "mem"
-                              )?.count || 0;
-
-                            const allocMem =
-                              job.tres.requested.find((t) => t.type === "mem")
-                                ?.count || 0;
-
-                            const memUsedGB = (memUsed / 1073741824).toFixed(3);
-                            const allocMemGB = (allocMem / 1024).toFixed(3);
-
-                            return `${memUsedGB} / ${allocMemGB} GiB`;
-                          } catch (error) {
-                            console.error(
-                              "Error calculating memory usage:",
-                              error
-                            );
-                            return "N/A";
-                          }
-                        })()}
-                      </p>
-                    </div>
-                  );
-                } catch (error) {
-                  console.error("Error rendering step:", error);
-                  return (
-                    <div key={index} className="mb-4">
-                      <p className="font-semibold">Step {index + 1}</p>
-                      <p>Error displaying step data</p>
-                    </div>
-                  );
-                }
-              })
-            ) : (
-              <div className="p-4 bg-secondary/10 rounded">
-                <p className="font-semibold">Job Summary</p>
-                <p>Total runtime: {formatDuration(job.time.elapsed)}</p>
-                <p>
-                  Allocated CPUs:{" "}
-                  {job.tres.allocated.find((t) => t.type === "cpu")?.count ||
-                    "N/A"}
+            {job.steps.map((step, index) => (
+              <div key={index} className="mb-4">
+                <p className="font-semibold">
+                  {step.step.name} (ID: {step.step.id})
                 </p>
                 <p>
-                  Allocated Memory:{" "}
+                  Nodes: {step.nodes.count} ({step.nodes.range})
+                </p>
+                <p>Tasks: {step.tasks.count}</p>
+                <p>
+                  Start Time:{" "}
+                  {convertUnixToHumanReadable(step.time.start.number)}
+                </p>
+                <p>
+                  End Time: {convertUnixToHumanReadable(step.time.end.number)}
+                </p>
+                <p>
+                  Memory Used/Allocated:{" "}
                   {(
-                    (job.tres.allocated.find((t) => t.type === "mem")?.count ||
+                    (step.tres.requested.max.find((t: any) => t.type === "mem")
+                      ?.count || 0) / 1073741824
+                  ).toFixed(3)}{" "}
+                  /{" "}
+                  {(
+                    (job.tres.requested.find((t) => t.type === "mem")?.count ||
                       0) / 1024
-                  ).toFixed(2)}{" "}
-                  GB
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Note: Detailed step data is not available for this job.
+                  ).toFixed(3)}{" "}
+                  GiB
                 </p>
               </div>
-            )}
+            ))}
           </div>
           <Separator className="my-4" />
           <div className="space-y-4">
