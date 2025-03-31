@@ -69,57 +69,140 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   }
 
   function calculateMemEfficiency(job: HistoricalJob) {
-    const maxUsedMem_Bytes = job.steps.reduce((max, step) => {
-      const maxRAM =
-        step.tres.requested.max.find((t: any) => t.type === "mem")?.count || 0;
-      return maxRAM > max ? maxRAM : max;
-    }, 0);
-    const allocMem_MiB =
-      job.tres.requested.find((t) => t.type === "mem")?.count || 0;
-    // compute percent ratio by converting denominator to bytes
-    const efficiency = (maxUsedMem_Bytes / (allocMem_MiB * 1048576)) * 100;
-    return `${efficiency.toFixed(2)}%`;
+    try {
+      // First verify steps exists
+      if (!job.steps || !Array.isArray(job.steps) || job.steps.length === 0) {
+        return "N/A";
+      }
+
+      const maxUsedMem_Bytes = job.steps.reduce((max, step) => {
+        try {
+          // Check if the necessary properties exist
+          if (!step.tres || !step.tres.requested || !step.tres.requested.max) {
+            return max;
+          }
+
+          const maxRAM =
+            step.tres.requested.max.find(
+              (t: { type: string }) => t.type === "mem"
+            )?.count || 0;
+
+          return maxRAM > max ? maxRAM : max;
+        } catch (error) {
+          console.error("Error in memory efficiency step calculation:", error);
+          return max;
+        }
+      }, 0);
+
+      if (maxUsedMem_Bytes === 0) {
+        return "N/A";
+      }
+
+      const allocMem_MiB =
+        job.tres.requested.find((t) => t.type === "mem")?.count || 0;
+
+      if (allocMem_MiB === 0) {
+        return "N/A";
+      }
+
+      // compute percent ratio by converting denominator to bytes
+      const efficiency = (maxUsedMem_Bytes / (allocMem_MiB * 1048576)) * 100;
+      return `${efficiency.toFixed(2)}%`;
+    } catch (error) {
+      console.error("Error calculating memory efficiency:", error);
+      return "N/A";
+    }
   }
 
   function calculateCPUEfficiency(job: HistoricalJob) {
-    const allocatedCPUs =
-      job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
-    const elapsedTime = job.time.elapsed;
+    try {
+      // First verify steps exists
+      if (!job.steps || !Array.isArray(job.steps) || job.steps.length === 0) {
+        return "N/A";
+      }
 
-    const totalCPUTime = job.steps.reduce((sum, step) => {
-      const stepUserTime =
-        step.time.user.seconds + step.time.user.microseconds / 1e6;
-      const stepSystemTime =
-        step.time.system.seconds + step.time.system.microseconds / 1e6;
-      const stepTotalSeconds = stepUserTime + stepSystemTime;
+      const allocatedCPUs =
+        job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
 
-      return sum + stepTotalSeconds;
-    }, 0);
+      const elapsedTime = job.time.elapsed;
 
-    if (allocatedCPUs === 0 || elapsedTime === 0) return "N/A";
-    if (totalCPUTime === 0) return "No CPU usage recorded";
+      if (allocatedCPUs === 0 || elapsedTime === 0) {
+        return "N/A";
+      }
 
-    const coreWallTime = allocatedCPUs * elapsedTime;
-    const efficiency = (totalCPUTime / coreWallTime) * 100;
+      const totalCPUTime = job.steps.reduce((sum, step) => {
+        try {
+          // Check if the necessary properties exist
+          if (!step.time || !step.time.user || !step.time.system) {
+            return sum;
+          }
 
-    return `${efficiency.toFixed(2)}%`;
+          const stepUserTime =
+            step.time.user.seconds + step.time.user.microseconds / 1e6;
+
+          const stepSystemTime =
+            step.time.system.seconds + step.time.system.microseconds / 1e6;
+
+          const stepTotalSeconds = stepUserTime + stepSystemTime;
+
+          return sum + stepTotalSeconds;
+        } catch (error) {
+          console.error("Error in CPU efficiency step calculation:", error);
+          return sum;
+        }
+      }, 0);
+
+      if (totalCPUTime === 0) {
+        return "No CPU usage recorded";
+      }
+
+      const coreWallTime = allocatedCPUs * elapsedTime;
+      const efficiency = (totalCPUTime / coreWallTime) * 100;
+
+      return `${efficiency.toFixed(2)}%`;
+    } catch (error) {
+      console.error("Error calculating CPU efficiency:", error);
+      return "N/A";
+    }
   }
 
   function get_letter_grade(score: number) {
-    var letter = "E";
-    for (var [key, subobj] of Object.entries(rubric)) {
-      if (score >= subobj.threshold) {
-        letter = key;
-        break;
+    try {
+      if (isNaN(score)) return "N/A";
+
+      var letter = "E";
+      for (var [key, subobj] of Object.entries(rubric)) {
+        if (score >= subobj.threshold) {
+          letter = key;
+          break;
+        }
       }
+      return letter;
+    } catch (error) {
+      console.error("Error in grade calculation:", error);
+      return "N/A";
     }
-    return letter;
   }
 
   function grade_efficiency(efficiencyStr: string) {
-    const eff = Number(efficiencyStr.replace("%", ""));
-    const letter = get_letter_grade(eff);
-    return letter;
+    try {
+      if (
+        efficiencyStr === "N/A" ||
+        efficiencyStr === "No step data" ||
+        efficiencyStr === "No CPU usage recorded"
+      ) {
+        return "N/A";
+      }
+
+      const eff = Number(efficiencyStr.replace("%", ""));
+      if (isNaN(eff)) return "N/A";
+
+      const letter = get_letter_grade(eff);
+      return letter;
+    } catch (error) {
+      console.error("Error grading efficiency:", error);
+      return "N/A";
+    }
   }
 
   // Skeleton components for loading state
@@ -294,22 +377,20 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
               {formatDuration(job.time.elapsed)}
             </div>
             <p className="text-xs text-muted-foreground">
-              CPU Efficiency: {CPUEfficiency}(
-              <span style={{ color: rubric[CPUEffLetter].color }}>
-                {CPUEffLetter}
-              </span>
-              )
+              CPU Efficiency: {CPUEfficiency}
+              {CPUEffLetter !== "N/A" && (
+                <span style={{ color: rubric[CPUEffLetter].color }}>
+                  ({CPUEffLetter})
+                </span>
+              )}
             </p>
             <p className="text-xs text-muted-foreground">
-              Memory Efficiency: {MemEfficiency}(
-              <span
-                style={{
-                  color: rubric[MemEffLetter as keyof typeof rubric].color,
-                }}
-              >
-                {MemEffLetter}
-              </span>
-              )
+              Memory Efficiency: {MemEfficiency}
+              {MemEffLetter !== "N/A" && (
+                <span style={{ color: rubric[MemEffLetter].color }}>
+                  ({MemEffLetter})
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -428,37 +509,77 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
           <Separator className="my-4" />
           <div>
             <p className="font-semibold mb-2">Job Steps</p>
-            {job.steps.map((step, index) => (
-              <div key={index} className="mb-4">
-                <p className="font-semibold">
-                  {step.step.name} (ID: {step.step.id})
-                </p>
-                <p>
-                  Nodes: {step.nodes.count} ({step.nodes.range})
-                </p>
-                <p>Tasks: {step.tasks.count}</p>
-                <p>
-                  Start Time:{" "}
-                  {convertUnixToHumanReadable(step.time.start.number)}
-                </p>
-                <p>
-                  End Time: {convertUnixToHumanReadable(step.time.end.number)}
-                </p>
-                <p>
-                  Memory Used/Allocated:{" "}
-                  {(
-                    (step.tres.requested.max.find((t: any) => t.type === "mem")
-                      ?.count || 0) / 1073741824
-                  ).toFixed(3)}{" "}
-                  /{" "}
-                  {(
-                    (job.tres.requested.find((t) => t.type === "mem")?.count ||
-                      0) / 1024
-                  ).toFixed(3)}{" "}
-                  GiB
-                </p>
-              </div>
-            ))}
+            {job.steps && job.steps.length > 0 ? (
+              job.steps.map((step, index) => {
+                try {
+                  // Check if step has required data structure
+                  const stepId = step.step?.id || `Unknown-${index}`;
+                  const stepName = step.step?.name || `Step-${stepId}`;
+                  return (
+                    <div key={index} className="mb-4">
+                      <p className="font-semibold">
+                        {stepName} (ID: {stepId})
+                      </p>
+                      {step.nodes && (
+                        <p>
+                          Nodes: {step.nodes.count} ({step.nodes.range || "N/A"}
+                          )
+                        </p>
+                      )}
+                      {step.tasks && <p>Tasks: {step.tasks.count}</p>}
+                      {step.time && step.time.start && (
+                        <p>
+                          Start Time:{" "}
+                          {convertUnixToHumanReadable(step.time.start.number)}
+                        </p>
+                      )}
+                      {step.time && step.time.end && (
+                        <p>
+                          End Time:{" "}
+                          {convertUnixToHumanReadable(step.time.end.number)}
+                        </p>
+                      )}
+                      <p>
+                        Memory Used/Allocated:{" "}
+                        {(() => {
+                          try {
+                            const memUsed =
+                              step.tres?.requested?.max?.find(
+                                (t: { type: string }) => t.type === "mem"
+                              )?.count || 0;
+
+                            const allocMem =
+                              job.tres.requested.find((t) => t.type === "mem")
+                                ?.count || 0;
+
+                            const memUsedGB = (memUsed / 1073741824).toFixed(3);
+                            const allocMemGB = (allocMem / 1024).toFixed(3);
+
+                            return `${memUsedGB} / ${allocMemGB} GiB`;
+                          } catch (error) {
+                            console.error(
+                              "Error calculating memory usage:",
+                              error
+                            );
+                            return "N/A";
+                          }
+                        })()}
+                      </p>
+                    </div>
+                  );
+                } catch (error) {
+                  console.error("Error rendering step:", error);
+                  return (
+                    <div key={index} className="mb-4">
+                      <p className="font-semibold">Step {index + 1}</p>
+                      <p>Error displaying step data</p>
+                    </div>
+                  );
+                }
+              })
+            ) : (
+              <p>No step data available</p>
+            )}
           </div>
           <Separator className="my-4" />
           <div className="space-y-4">

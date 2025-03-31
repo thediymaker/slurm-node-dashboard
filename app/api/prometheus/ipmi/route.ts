@@ -5,7 +5,7 @@ import { PrometheusDriver } from "prometheus-query";
 export const revalidate = 0;
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
 const MAX_DATA_POINTS = 200;
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes cache for node list
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache for node list
 
 let prom: PrometheusDriver | null = null;
 if (PROMETHEUS_URL) {
@@ -63,9 +63,6 @@ async function getClusterNodes(): Promise<string[]> {
       nodes: nodeNames,
     };
 
-    console.log(
-      `Refreshed cluster nodes list: ${nodeNames.length} nodes found`
-    );
     return nodeNames;
   } catch (error) {
     console.error("Error fetching cluster nodes:", error);
