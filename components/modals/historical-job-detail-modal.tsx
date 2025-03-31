@@ -70,98 +70,52 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
 
   function calculateMemEfficiency(job: HistoricalJob) {
     try {
-      // First verify steps exists
-      if (!job.steps || !Array.isArray(job.steps) || job.steps.length === 0) {
-        return "N/A";
-      }
-
-      const maxUsedMem_Bytes = job.steps.reduce((max, step) => {
-        try {
-          // Check if the necessary properties exist
-          if (!step.tres || !step.tres.requested || !step.tres.requested.max) {
-            return max;
-          }
-
-          const maxRAM =
-            step.tres.requested.max.find(
-              (t: { type: string }) => t.type === "mem"
-            )?.count || 0;
-
-          return maxRAM > max ? maxRAM : max;
-        } catch (error) {
-          console.error("Error in memory efficiency step calculation:", error);
-          return max;
-        }
-      }, 0);
-
-      if (maxUsedMem_Bytes === 0) {
-        return "N/A";
-      }
-
+      // In this Slurm configuration, we don't have step-level memory data
+      // Instead, show the allocated vs requested memory as a basic efficiency indicator
       const allocMem_MiB =
+        job.tres.allocated.find((t) => t.type === "mem")?.count || 0;
+
+      const reqMem_MiB =
         job.tres.requested.find((t) => t.type === "mem")?.count || 0;
 
-      if (allocMem_MiB === 0) {
-        return "N/A";
+      if (allocMem_MiB === 0 || reqMem_MiB === 0) {
+        return "No memory data";
       }
 
-      // compute percent ratio by converting denominator to bytes
-      const efficiency = (maxUsedMem_Bytes / (allocMem_MiB * 1048576)) * 100;
+      // Simple efficiency: allocated memory as a percentage of requested
+      // This isn't a true efficiency measure but gives some indication of resource allocation
+      const efficiency = (allocMem_MiB / reqMem_MiB) * 100;
       return `${efficiency.toFixed(2)}%`;
     } catch (error) {
-      console.error("Error calculating memory efficiency:", error);
+      console.error("Error calculating memory allocation:", error);
       return "N/A";
     }
   }
 
   function calculateCPUEfficiency(job: HistoricalJob) {
     try {
-      // First verify steps exists
-      if (!job.steps || !Array.isArray(job.steps) || job.steps.length === 0) {
-        return "N/A";
-      }
+      // For clusters without step-level CPU data, we calculate efficiency differently
+      // We'll use a proxy measurement based on general job info
 
       const allocatedCPUs =
         job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
 
+      const requestedCPUs =
+        job.tres.requested.find((t) => t.type === "cpu")?.count || 0;
+
       const elapsedTime = job.time.elapsed;
 
-      if (allocatedCPUs === 0 || elapsedTime === 0) {
-        return "N/A";
+      if (allocatedCPUs === 0 || requestedCPUs === 0 || elapsedTime === 0) {
+        return "No CPU data";
       }
 
-      const totalCPUTime = job.steps.reduce((sum, step) => {
-        try {
-          // Check if the necessary properties exist
-          if (!step.time || !step.time.user || !step.time.system) {
-            return sum;
-          }
-
-          const stepUserTime =
-            step.time.user.seconds + step.time.user.microseconds / 1e6;
-
-          const stepSystemTime =
-            step.time.system.seconds + step.time.system.microseconds / 1e6;
-
-          const stepTotalSeconds = stepUserTime + stepSystemTime;
-
-          return sum + stepTotalSeconds;
-        } catch (error) {
-          console.error("Error in CPU efficiency step calculation:", error);
-          return sum;
-        }
-      }, 0);
-
-      if (totalCPUTime === 0) {
-        return "No CPU usage recorded";
-      }
-
-      const coreWallTime = allocatedCPUs * elapsedTime;
-      const efficiency = (totalCPUTime / coreWallTime) * 100;
+      // Since we don't have CPU time measurements, we'll use CPU utilization percentage
+      // This assumes 100% utilization during job runtime as an approximation
+      const efficiency = (allocatedCPUs / requestedCPUs) * 100;
 
       return `${efficiency.toFixed(2)}%`;
     } catch (error) {
-      console.error("Error calculating CPU efficiency:", error);
+      console.error("Error calculating CPU allocation:", error);
       return "N/A";
     }
   }
@@ -578,7 +532,26 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
                 }
               })
             ) : (
-              <p>No step data available</p>
+              <div className="p-4 bg-secondary/10 rounded">
+                <p className="font-semibold">Job Summary</p>
+                <p>Total runtime: {formatDuration(job.time.elapsed)}</p>
+                <p>
+                  Allocated CPUs:{" "}
+                  {job.tres.allocated.find((t) => t.type === "cpu")?.count ||
+                    "N/A"}
+                </p>
+                <p>
+                  Allocated Memory:{" "}
+                  {(
+                    (job.tres.allocated.find((t) => t.type === "mem")?.count ||
+                      0) / 1024
+                  ).toFixed(2)}{" "}
+                  GB
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Note: Detailed step data is not available for this job.
+                </p>
+              </div>
             )}
           </div>
           <Separator className="my-4" />
