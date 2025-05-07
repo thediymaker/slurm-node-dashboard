@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { env } from "process";
 
 export async function GET() {
+  if (!process.env.SLURM_SERVER) {
+    return NextResponse.json(
+      { error: "Server configuration not available during build" },
+      { status: 503 }
+    );
+  }
+  
   const res = await fetch(
     `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/diag`,
     {
