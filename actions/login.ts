@@ -15,12 +15,16 @@ export async function authenticate(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      switch (error.type) {
-        case "CredentialsSignin":
-          return "Invalid credentials.";
-        default:
-          return "Something went wrong.";
+      const isCredentialsError =
+        error.name === "CredentialsSignin" ||
+        (typeof error.message === "string" &&
+          error.message.includes("CredentialsSignin"));
+
+      if (isCredentialsError) {
+        return "Invalid credentials.";
       }
+
+      return "Something went wrong.";
     }
     throw error;
   }
