@@ -20,7 +20,8 @@ import ChatIcon from "../llm/chat-icon";
 import { openaiPluginMetadata } from "@/actions/plugins";
 import { LogicType } from "@/components/feature-selector";
 
-const nodeURL = "/api/slurm/nodes";
+const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";;
+const nodeURL = `${baseURL}/api/slurm/nodes`;
 const nodeFetcher = async () => {
   const res = await fetch(nodeURL, {
     headers: {

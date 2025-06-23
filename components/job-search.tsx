@@ -37,6 +37,7 @@ const JobSearch = () => {
   const [searchID, setSearchID] = useState("");
   const { errors } = form.formState;
 
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
   const handleSearch = async (data: SearchFormData) => {
     // Prevent duplicate searches while loading
     if (searchLoading) return;
@@ -51,7 +52,7 @@ const JobSearch = () => {
         // Check for active job
         try {
           const activeJobResponse = await fetch(
-            `/api/slurm/job/${trimmedSearchID}`,
+            `${baseURL}/api/slurm/job/${trimmedSearchID}`,
             {
               headers: {
                 "Content-Type": "application/json",
@@ -134,7 +135,7 @@ const JobSearch = () => {
 
   const fetchMaintenanceData = async () => {
     try {
-      const response = await fetch(`/api/slurm/reservations`, {
+      const response = await fetch(`${baseURL}/api/slurm/reservations`, {
         headers: {
           "Content-Type": "application/json",
         },

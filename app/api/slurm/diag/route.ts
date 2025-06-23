@@ -1,9 +1,11 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { env } from "process";
 
 export async function GET() {
   const res = await fetch(
-    `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/diag`,
+    `http://${env.SLURM_SERVER}/slurm/${env.SLURM_API_VERSION}/diag`,
     {
       headers: {
         "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,

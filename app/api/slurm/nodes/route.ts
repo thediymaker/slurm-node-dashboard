@@ -3,7 +3,7 @@ import { env } from "process";
 
 export async function GET() {
   const res = await fetch(
-    `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/nodes`,
+    `http://${env.SLURM_SERVER}/slurm/${env.SLURM_API_VERSION}/nodes`,
     {
       headers: {
         "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,

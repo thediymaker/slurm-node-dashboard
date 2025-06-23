@@ -30,6 +30,8 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
   const [metricValue, setMetricValue] = useState("node_load15");
   const [daysValue, setDaysValue] = useState("3");
 
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
+
   const slurmURL = `/api/slurm/jobs/node/${nodename}`;
   const jobFetcher = () =>
     fetch(slurmURL, {
@@ -69,7 +71,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
     error: jobDetailsError,
     isLoading: jobDetailsIsLoading,
   } = useSWR<{ jobs: JobDetails[] }>(
-    expandedJobId ? `/api/slurm/job/${expandedJobId}` : null,
+    expandedJobId ? `${baseURL}/api/slurm/job/${expandedJobId}` : null,
     (url: any) =>
       fetch(url, {
         headers: { "Content-Type": "application/json" },
@@ -239,7 +241,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
                           {job.qos}
                         </TableCell>
                         <TableCell>
-                          {convertUnixToHumanReadable(job.time.start)}
+			                    {convertUnixToHumanReadable(job?.time?.start)}
                         </TableCell>
                         <TableCell className="flex justify-end">
                           {expandedJobId === job.job_id ? (
@@ -308,9 +310,11 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
                                     <div>
                                       <p className="font-semibold">State</p>
                                       <p>
-                                        {jobDetails.jobs[0].job_state.join(
-                                          ", "
-                                        )}
+                                        {
+                                            Array.isArray(jobDetails?.jobs?.[0]?.job_state)
+                                              ? jobDetails.jobs[0].job_state.join(", ")
+                                              : jobDetails?.jobs?.[0]?.job_state ?? ""
+                                        }	
                                       </p>
                                     </div>
                                     <div>
@@ -417,7 +421,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
                       Total Number of jobs running on system:{" "}
                       {
                         jobData?.jobs.filter((job: Job) =>
-                          job.state.current.includes("RUNNING")
+                          job?.state?.current.includes("RUNNING")
                         ).length
                       }
                     </TableCell>

@@ -28,13 +28,14 @@ const Stats = memo(
       boolean | null
     >(null);
     const shouldFetch = isPrometheusAvailable !== false;
+    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
 
     const {
       data: ipmiData,
       error,
       isValidating,
       mutate,
-    } = useSWR(shouldFetch ? "/api/prometheus/ipmi" : null, fetcher, {
+    } = useSWR(shouldFetch ? `${baseURL}/api/prometheus/ipmi` : null, fetcher, {
       fallbackData: { status: 404, data: [], summary: null },
       onError: (err) => {
         console.error("Prometheus endpoint error:", err);

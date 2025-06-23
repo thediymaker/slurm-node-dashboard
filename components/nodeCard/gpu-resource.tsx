@@ -31,10 +31,11 @@ const GPUResourcesDisplay: React.FC<GPUResourcesDisplayProps> = ({
   if (!gpuResources) return null;
 
   useEffect(() => {
+    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
     const fetchUtilization = async () => {
       try {
         const response = await fetch(
-          `/api/prometheus/dcgm?node=${encodeURIComponent(hostname)}`
+          `${baseURL}/api/prometheus/dcgm?node=${encodeURIComponent(hostname)}`
         );
         const result = await response.json();
         if (result.status === 200 && result.data?.length > 0) {

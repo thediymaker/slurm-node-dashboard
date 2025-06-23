@@ -46,6 +46,8 @@ export const sendMessage = async (
     baseURL: process.env.OPENAI_API_URL, // Allows to set API other than just openai's
     compatibility: 'compatible' // Allows Use of third party OpenAI APIS (Self hosted)
   })
+  
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   const reply = await streamUI({
     model: openai(`${process.env.OPENAI_API_MODEL}`),
@@ -76,7 +78,6 @@ export const sendMessage = async (
         }),
         generate: async function* ({ job }: { job: string }) {
           yield <BotCard>Getting job details for job {job}...</BotCard>;
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           try {
             const response = await fetch(`${baseURL}/api/slurm/job/${job}`);
             if (!response.ok) {
@@ -115,7 +116,6 @@ export const sendMessage = async (
         }),
         generate: async function* ({ node }: { node: string }) {
           yield <BotCard>Getting node details for node {node}...</BotCard>;
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           try {
             const response = await fetch(
               `${baseURL}/api/slurm/nodes/state/${node}`

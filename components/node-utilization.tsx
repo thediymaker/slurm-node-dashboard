@@ -11,8 +11,9 @@ export default function NodeUtilization({
   nodeName,
   className,
 }: NodeUtilizationProps) {
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
   const { data, error, isLoading } = useSWR(
-    `/api/prometheus/utilization?node=${nodeName}`,
+    `${baseURL}/api/prometheus/utilization?node=${nodeName}`,
     (url) => fetch(url).then((res) => res.json()),
     {
       refreshInterval: 300000,

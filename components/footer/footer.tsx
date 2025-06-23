@@ -5,7 +5,8 @@ import { Skeleton } from "../ui/skeleton";
 
 // Updated fetcher function with error handling
 const fetcher = async () => {
-  const response = await fetch("/api/slurm/diag", {
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
+  const response = await fetch(`${baseURL}/api/slurm/diag`, {
     headers: { "Content-Type": "application/json" },
   });
   if (!response.ok) {

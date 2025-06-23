@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const res = await fetch(
-    `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/node/${params.id[0]}`,
+    `http://${env.SLURM_SERVER}/slurm/${env.SLURM_API_VERSION}/node/${params.id[0]}`,
     {
       method: "GET",
       headers: {
@@ -30,9 +30,8 @@ export async function POST(
       state: `${body.state}`,
       reason: `${body.reason}`,
     };
-
     const response = await fetch(
-      `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/node/${params.id[0]}`,
+      `http://${env.SLURM_SERVER}/slurm/${env.SLURM_API_VERSION}/node/${params.id[0]}`,
       {
         method: "POST",
         headers: {
