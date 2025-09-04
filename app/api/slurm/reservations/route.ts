@@ -4,6 +4,13 @@ import { NextResponse } from "next/server";
 import { env } from "process";
 
 export async function GET() {
+  const isEnabled =
+    String(env.MAINT_NOTIFICATIONS_ENABLED ?? "true").toLowerCase() === "true";
+
+  if (!isEnabled) {
+    return NextResponse.json({ meta: { enabled: false }, reservations: [] });
+  }
+
   const res = await fetch(
     `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/reservations`,
     {
