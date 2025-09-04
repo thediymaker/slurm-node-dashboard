@@ -144,7 +144,15 @@ const JobSearch = () => {
       }
 
       const data = await response.json();
-      setMaintenanceData(data);
+      const maintReservations = (data?.reservations ?? []).filter((r: any) => {
+        const flags = r?.flags;
+        if (Array.isArray(flags)) return flags.includes("MAINT");
+        if (typeof flags === "string") return flags.includes("MAINT");
+        return false;
+      });
+
+      const filtered = { ...data, reservations: maintReservations };
+      setMaintenanceData(filtered);
 
       const lastClosedTimestamp = localStorage.getItem("maintModalLastClosed");
       const now = new Date().getTime();
@@ -152,16 +160,10 @@ const JobSearch = () => {
       if (lastClosedTimestamp) {
         const elapsed = now - parseInt(lastClosedTimestamp, 10);
         if (elapsed > 24 * 60 * 60 * 1000) {
-          setMaintOpen(
-            data.reservations?.length > 0 &&
-              data.reservations[0].flags.includes("MAINT")
-          );
+          setMaintOpen(maintReservations.length > 0);
         }
       } else {
-        setMaintOpen(
-          data.reservations?.length > 0 &&
-            data.reservations[0].flags.includes("MAINT")
-        );
+        setMaintOpen(maintReservations.length > 0);
       }
     } catch (error) {
       console.error("Error fetching maintenance data:", error);
