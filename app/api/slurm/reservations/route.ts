@@ -11,8 +11,9 @@ export async function GET() {
     return NextResponse.json({ meta: { enabled: false }, reservations: [] });
   }
 
+  const protocol = env.SLURM_PROTOCOL || 'http';
   const res = await fetch(
-    `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/reservations`,
+    `${protocol}://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/reservations`,
     {
       headers: {
         "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,

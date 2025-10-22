@@ -5,8 +5,9 @@ export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  const protocol = env.SLURM_PROTOCOL || 'http';
   const res = await fetch(
-    `http://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/job/${params.id[0]}`,
+    `${protocol}://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/job/${params.id[0]}`,
     {
       headers: {
         "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
