@@ -1,23 +1,18 @@
 import { NextResponse } from "next/server";
-import { env } from "process";
+import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const protocol = env.SLURM_PROTOCOL || 'http';
-  const res = await fetch(
-    `${protocol}://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/node/${params.id[0]}`,
-    {
-      method: "GET",
-      headers: {
-        "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
-        "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-  const data = await res.json();
+  const { data, error, status } = await fetchSlurmData(`/node/${params.id[0]}`, {
+    revalidate: 0
+  });
+
+  if (error) {
+    return NextResponse.json({ error }, { status });
+  }
+
   return NextResponse.json(data);
 }
 
@@ -32,25 +27,16 @@ export async function POST(
       reason: `${body.reason}`,
     };
 
-    const protocol = env.SLURM_PROTOCOL || 'http';
-    const response = await fetch(
-      `${protocol}://${env.SLURM_SERVER}:6820/slurm/${env.SLURM_API_VERSION}/node/${params.id[0]}`,
-      {
-        method: "POST",
-        headers: {
-          "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
-          "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      }
-    );
+    const { data, error, status } = await fetchSlurmData(`/node/${params.id[0]}`, {
+      method: 'POST',
+      body: requestBody,
+      revalidate: 0
+    });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (error) {
+      throw new Error(`HTTP error! status: ${status}`);
     }
 
-    const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error:", error);

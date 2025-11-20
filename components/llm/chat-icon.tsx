@@ -12,16 +12,13 @@ export default function ChatIcon() {
 
   return (
     <div>
-      <div
-        className="fixed bottom-24 sm:bottom-16 right-4 w-[64px] h-[64px] z-50 cursor-pointer hover:scale-110 transition-transform duration-100 ease-in-out"
-        onClick={() => {
-          toggleChat();
-        }}
+      <button
+        className="fixed bottom-20 right-8 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all duration-300 ease-in-out hover:scale-105"
+        onClick={toggleChat}
+        aria-label="Toggle Chat"
       >
-        <div className="rounded-full bg-background p-4 hover:bg-blue-500 border-2 border-gray shadow-xl flex justify-center">
-          <MessageCircleCode className="w-[30px] h-[30px] text-white" />
-        </div>
-      </div>
+        <MessageCircleCode className="h-7 w-7" />
+      </button>
       <ChatModal showChat={showChat} setShowChat={setShowChat} />
     </div>
   );

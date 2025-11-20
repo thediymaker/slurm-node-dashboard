@@ -1,14 +1,14 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: { name: string } }
 ) {
-  const { data, error, status } = await fetchSlurmData(`/job/${params.id[0]}`, {
-    type: 'slurmdb',
-    revalidate: 0
-  });
+  const name = params.name;
+  const { data, error, status } = await fetchSlurmData(`/partition/${name}`);
 
   if (error) {
     return NextResponse.json({ error }, { status });

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET() {
-  const { data, error, status } = await fetchSlurmData('/clusters', 'slurmdb');
+  const { data, error, status } = await fetchSlurmData('/partitions');
 
   if (error) {
     return NextResponse.json({ error }, { status });

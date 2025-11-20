@@ -9,7 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/openai": "^2.0.0",
+    "@ai-sdk/react": "^2.0.97",
     "@hookform/resolvers": "^3.6.0",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-avatar": "^1.1.3",
@@ -35,7 +36,7 @@
     "@radix-ui/react-visually-hidden": "^1.1.0",
     "@tailwindcss/typography": "^0.5.13",
     "@types/fs-extra": "^11.0.4",
-    "ai": "^3.3.0",
+    "ai": "^5.0.97",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "cmdk": "^1.0.0",
@@ -63,7 +64,7 @@
     "swr": "^2.2.5",
     "tailwind-merge": "^2.2.2",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.23.8"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
@@ -73,8 +74,5 @@
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.4.1",
     "typescript": "5.4.5"
-  },
-  "overrides": {
-    "@ai-sdk/provider": "1.0.8"
   }
 }

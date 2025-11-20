@@ -1,15 +1,17 @@
 import { cn } from "@/lib/utils";
-import { SparkleIcon, SparklesIcon, UserIcon } from "lucide-react";
+import { User, Sparkles } from "lucide-react";
 import { ReactNode } from "react";
 
 export function UserMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="group relative flex items-center md:ml-0">
-      <div className="flex h-8 shrink-0 select-none items-center justify-center rounded-md border shadow-sm bg-background w-8">
-        <UserIcon />
+    <div className="group relative flex items-start justify-end gap-2 mb-4 pl-10">
+      <div className="flex-1 space-y-2 overflow-hidden">
+        <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-tr-sm inline-block float-right shadow-sm text-sm">
+          {children}
+        </div>
       </div>
-      <div className="ml-4 w-full flex-1 text-lg space-y-2 overflow-hidden prose break-words dark:prose-invert prose-p:leading-relaxed prose-pre:p-4 px-1 text-gray-300">
-        {children}
+      <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm mt-1">
+        <User className="h-4 w-4" />
       </div>
     </div>
   );
@@ -18,17 +20,22 @@ export function UserMessage({ children }: { children: ReactNode }) {
 export function BotMessage({
   children,
   className,
+  action,
 }: {
   children: ReactNode;
   className?: string;
+  action?: ReactNode;
 }) {
   return (
-    <div className={cn("group relative flex items-center md:ml-0", className)}>
-      <div className="flex h-8 shrink-0 select-none items-center justify-center rounded-md border shadow-sm bg-background w-8">
-        <SparklesIcon />
+    <div className={cn("group relative flex items-start gap-2 mb-4 pr-10", className)}>
+      <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-muted border shadow-sm mt-1">
+        <Sparkles className="h-4 w-4 text-primary" />
       </div>
-      <div className="ml-4 flex-1 space-y-2 text-lg overflow-hidden px-1 prose break-words dark:prose-invert prose-p:leading-relaxed prose-pre:p-4 w-full text-gray-500">
-        {children}
+      <div className="flex-1 space-y-2 overflow-hidden">
+        <div className="bg-muted px-4 py-3 rounded-2xl rounded-tl-sm inline-block shadow-sm text-sm prose dark:prose-invert max-w-none break-words">
+          {children}
+        </div>
+        {action && <div className="mt-2">{action}</div>}
       </div>
     </div>
   );
@@ -37,24 +44,27 @@ export function BotMessage({
 export function BotCard({
   children,
   showAvatar = true,
+  action,
 }: {
   children: ReactNode;
   showAvatar?: boolean;
+  action?: ReactNode;
 }) {
   return (
-    <div className="group relative flex items-start md:ml-0">
-      {showAvatar && (
-        <div
-          className={cn(
-            "flex h-8 shrink-0 select-none items-center justify-center rounded-md border shadow-sm bg-background w-8",
-            !showAvatar && "invisible"
-          )}
-        >
-          <SparklesIcon />
+    <div className="group relative flex items-start gap-2 mb-4 pr-10">
+      <div
+        className={cn(
+          "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-muted border shadow-sm mt-1",
+          !showAvatar && "invisible"
+        )}
+      >
+        <Sparkles className="h-4 w-4 text-primary" />
+      </div>
+      <div className="flex-1 space-y-2 overflow-hidden">
+        <div className="bg-card border px-4 py-3 rounded-xl shadow-sm text-sm w-full">
+          {children}
         </div>
-      )}
-      <div className="ml-4 w-full flex-1 space-y-2 text-lg overflow-hidden px-1 prose break-words dark:prose-invert prose-p:leading-relaxed prose-pre:p-4 text-gray-400">
-        {children}
+        {action && <div className="mt-2">{action}</div>}
       </div>
     </div>
   );
@@ -62,8 +72,8 @@ export function BotCard({
 
 export function AssistantMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-2 flex items-center justify-center gap-2 text-lg prose break-words text-gray-500">
-      <div className="w-full flex-initial p-2 text-lg dark:prose-invert prose-p:leading-relaxed prose-pre:p-4">
+    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground my-4">
+      <div className="flex-initial px-2 py-1 rounded-full bg-muted border">
         {children}
       </div>
     </div>

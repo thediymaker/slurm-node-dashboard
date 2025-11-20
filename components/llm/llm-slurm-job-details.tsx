@@ -53,6 +53,17 @@ interface SlurmJobDetailsProps {
   };
 }
 
+const getStateColor = (state: string) => {
+  const stateMap: Record<string, string> = {
+    RUNNING: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    COMPLETED: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    PENDING: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+    FAILED: "bg-red-500/20 text-red-400 border-red-500/30",
+    CANCELLED: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  };
+  return stateMap[state] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
+};
+
 export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
@@ -67,17 +78,6 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
 
   const jobInfo = job.jobs[0];
 
-  const getStateColor = (state: string) => {
-    const stateMap: Record<string, string> = {
-      RUNNING: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-      COMPLETED: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-      PENDING: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-      FAILED: "bg-red-500/20 text-red-400 border-red-500/30",
-      CANCELLED: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    };
-    return stateMap[state] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
-  };
-
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => setIsRefreshing(false), 1000);
@@ -89,13 +89,13 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
     100;
 
   return (
-    <Card className="w-full mx-auto bg-card border-black border-2 rounded-xl shadow-xl relative overflow-hidden backdrop-blur-sm">
+    <Card className="w-full mx-auto bg-card border rounded-xl shadow-sm relative overflow-hidden">
       <div className="flex items-center justify-between p-6">
         <div className="flex items-center gap-4">
           <div>
-            <CardTitle className="text-3xl text-gray-200 p-1 m-1">
+            <CardTitle className="text-2xl font-semibold">
               Job:{" "}
-              <span className="text-blue-400 font-medium">
+              <span className="text-primary font-mono">
                 {jobInfo.job_id}
               </span>
             </CardTitle>
@@ -104,17 +104,16 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={handleRefresh}
-          className="p-2 hover:bg-gray-800/50 rounded-full transition-colors"
+          className="p-2 hover:bg-muted rounded-full transition-colors"
         >
           <RefreshCw
-            className={`w-5 h-5 text-gray-400 ${
-              isRefreshing ? "animate-spin" : ""
-            }`}
+            className={`w-5 h-5 text-muted-foreground ${isRefreshing ? "animate-spin" : ""
+              }`}
           />
         </motion.button>
       </div>
 
-      <Separator className="bg-black" />
+      <Separator />
 
       <CardContent className="p-4 grid gap-4">
         {/* Job Status Section */}
@@ -123,19 +122,19 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          <div className="p-4 rounded-xl border-2 bg-black/30">
+          <div className="p-4 rounded-xl border bg-muted">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-gray-300">
+                <Cpu className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">
                   CPU Allocation
                 </span>
               </div>
-              <span className="text-sm font-medium text-blue-400">
+              <span className="text-sm font-medium text-primary">
                 {jobInfo.job_resources?.allocated_cores || 0} cores
               </span>
             </div>
-            <Progress value={cpuProgress} className="h-2 bg-gray-800" />
+            <Progress value={cpuProgress} className="h-2" />
             <div className="mt-4 flex gap-2 flex-wrap">
               {jobInfo.job_state.map((state, index) => (
                 <Badge
@@ -156,12 +155,12 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
         <div className="grid sm:grid-cols-2 gap-4">
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="flex items-center gap-3 p-4 rounded-xl border-2 bg-black/30 transition-all group"
+            className="flex items-center gap-3 p-4 rounded-xl border bg-muted transition-all group"
           >
-            <Terminal className="w-4 h-4 text-blue-400 group-hover:text-blue-300" />
+            <Terminal className="w-4 h-4 text-primary group-hover:text-primary/80" />
             <div>
-              <div className="text-sm text-gray-500">Command</div>
-              <div className="font-medium text-gray-200 truncate max-w-xs">
+              <div className="text-sm text-muted-foreground">Command</div>
+              <div className="font-medium truncate max-w-xs font-mono text-sm">
                 {jobInfo.command}
               </div>
             </div>
@@ -169,12 +168,12 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
 
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="flex items-center gap-3 p-4 rounded-xl border-2 bg-black/30 transition-all group"
+            className="flex items-center gap-3 p-4 rounded-xl border bg-muted transition-all group"
           >
-            <HardDrive className="w-4 h-4 text-blue-400 group-hover:text-blue-300" />
+            <HardDrive className="w-4 h-4 text-primary group-hover:text-primary/80" />
             <div>
-              <div className="text-sm text-gray-500">Memory per Node</div>
-              <div className="font-medium text-gray-200">
+              <div className="text-sm text-muted-foreground">Memory per Node</div>
+              <div className="font-medium">
                 {jobInfo.memory_per_node?.number
                   ? `${(jobInfo.memory_per_node.number / 1024).toFixed(2)} GB`
                   : "N/A"}
@@ -185,24 +184,24 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
 
         {/* Time Information */}
         <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-2 p-4 rounded-xl border-2 bg-black/30">
+          <div className="space-y-2 p-4 rounded-xl border bg-muted">
             <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-blue-400" />
-              <div className="text-sm text-gray-500">Start Time</div>
+              <Clock className="w-4 h-4 text-primary" />
+              <div className="text-sm text-muted-foreground">Start Time</div>
             </div>
-            <div className="font-medium text-gray-200">
+            <div className="font-medium">
               {jobInfo.start_time?.number
                 ? convertUnixToHumanReadable(jobInfo.start_time.number)
                 : "N/A"}
             </div>
           </div>
 
-          <div className="space-y-2 p-4 rounded-xl border-2 bg-black/30">
+          <div className="space-y-2 p-4 rounded-xl border bg-muted">
             <div className="flex items-center gap-2 mb-2">
-              <Timer className="w-4 h-4 text-blue-400" />
-              <div className="text-sm text-gray-500">Time Limit</div>
+              <Timer className="w-4 h-4 text-primary" />
+              <div className="text-sm text-muted-foreground">Time Limit</div>
             </div>
-            <div className="font-medium text-gray-200">
+            <div className="font-medium">
               {jobInfo.time_limit?.number
                 ? `${jobInfo.time_limit.number} minutes`
                 : "N/A"}
@@ -214,26 +213,26 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
         <div className="grid sm:grid-cols-2 gap-4">
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="p-4 rounded-xl border-2 bg-black/30 transition-all"
+            className="p-4 rounded-xl border bg-muted transition-all"
           >
             <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-blue-400" />
-              <div className="text-sm text-gray-500">User</div>
+              <User className="w-4 h-4 text-primary" />
+              <div className="text-sm text-muted-foreground">User</div>
             </div>
-            <div className="font-medium text-gray-200 mt-1">
+            <div className="font-medium mt-1">
               {jobInfo.user_name}
             </div>
           </motion.div>
 
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="p-4 rounded-xl border-2 bg-black/30 transition-all"
+            className="p-4 rounded-xl border bg-muted transition-all"
           >
             <div className="flex items-center gap-2">
-              <Group className="w-4 h-4 text-blue-400" />
-              <div className="text-sm text-gray-500">Group</div>
+              <Group className="w-4 h-4 text-primary" />
+              <div className="text-sm text-muted-foreground">Group</div>
             </div>
-            <div className="font-medium text-gray-200 mt-1">
+            <div className="font-medium mt-1">
               {jobInfo.group_name}
             </div>
           </motion.div>
@@ -243,19 +242,19 @@ export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
         <div className="space-y-4">
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="p-4 rounded-xl border-2 bg-black/30 transition-all"
+            className="p-4 rounded-xl border bg-muted transition-all"
           >
             <div className="flex items-center gap-2 mb-2">
-              <FolderOutput className="w-4 h-4 text-blue-400" />
-              <div className="text-sm text-gray-500">Output Paths</div>
+              <FolderOutput className="w-4 h-4 text-primary" />
+              <div className="text-sm text-muted-foreground">Output Paths</div>
             </div>
             <div className="space-y-2">
-              <div className="text-xs text-gray-400">Standard Output</div>
-              <div className="font-medium text-gray-200 text-sm break-all">
+              <div className="text-xs text-muted-foreground">Standard Output</div>
+              <div className="font-medium text-sm break-all font-mono">
                 {jobInfo.standard_output}
               </div>
-              <div className="text-xs text-gray-400 mt-2">Standard Error</div>
-              <div className="font-medium text-gray-200 text-sm break-all">
+              <div className="text-xs text-muted-foreground mt-2">Standard Error</div>
+              <div className="font-medium text-sm break-all font-mono">
                 {jobInfo.standard_error}
               </div>
             </div>
