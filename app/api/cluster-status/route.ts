@@ -2,7 +2,6 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { env } from "process";
-import { NodeState, ClusterStats, ClusterStatusResponse } from "@/types/cluster-status";
 
 async function fetchSlurmData(endpoint: string) {
   const res = await fetch(
@@ -25,8 +24,8 @@ async function fetchSlurmData(endpoint: string) {
   return res.json();
 }
 
-function calculateNodeStates(nodes: any[]): NodeState {
-  const nodeStates: NodeState = {
+function calculateNodeStates(nodes: any[]): any  {
+  const nodeStates: any = {
     idle: 0,
     mixed: 0,
     allocated: 0,
@@ -126,7 +125,7 @@ export async function GET() {
     // Calculate job statistics
     const jobStats = categorizeJobs(jobs);
     
-    const clusters: ClusterStats[] = [];
+    const clusters: any[] = [];
     let totalNodes = 0;
     let totalUtilization = 0;
     
@@ -164,7 +163,7 @@ export async function GET() {
     
     const averageUtilization = clusters.length > 0 ? Math.round(totalUtilization / clusters.length) : 0;
 
-    const response: ClusterStatusResponse = {
+    const response: any = {
       timestamp: new Date().toISOString(),
       clusters: clusters.sort((a, b) => a.name.localeCompare(b.name)),
       summary: {
