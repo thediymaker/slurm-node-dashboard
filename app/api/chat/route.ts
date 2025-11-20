@@ -6,6 +6,7 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   const openai = createOpenAI({
     baseURL: process.env.OPENAI_API_URL,
@@ -43,7 +44,6 @@ export async function POST(req: Request) {
           job: z.string().describe("The Job ID of the job. e.g. 1234567"),
         }),
         execute: async ({ job }) => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/job/${job}`);
           if (!response.ok) {
             return { error: `Error fetching job details: ${response.statusText}` };
@@ -57,7 +57,6 @@ export async function POST(req: Request) {
           node: z.string().describe("The name of the node. e.g. node1"),
         }),
         execute: async ({ node }) => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/nodes/state/${node}`);
           if (!response.ok) {
             const listResponse = await fetch(`${baseURL}/api/slurm/nodes`);
@@ -77,7 +76,6 @@ export async function POST(req: Request) {
           partition: z.string().describe("The name of the partition. e.g. debug"),
         }),
         execute: async ({ partition }) => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/partitions/${partition}`);
           if (!response.ok) {
             const listResponse = await fetch(`${baseURL}/api/slurm/partitions`);
@@ -97,7 +95,6 @@ export async function POST(req: Request) {
           reservation: z.string().describe("The name of the reservation."),
         }),
         execute: async ({ reservation }) => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/reservations/${reservation}`);
           
           let resDetails;
@@ -122,7 +119,6 @@ export async function POST(req: Request) {
           query: z.string().optional().describe("The type of reservation to list, e.g., 'maintenance'."),
         }),
         execute: async ({ query }) => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/reservations`);
           if (!response.ok) {
             return { error: `Error fetching reservations: ${response.statusText}` };
@@ -136,7 +132,6 @@ export async function POST(req: Request) {
           qos: z.string().describe("The name of the QoS."),
         }),
         execute: async ({ qos }) => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/qos/${qos}`);
           if (!response.ok) {
             const listResponse = await fetch(`${baseURL}/api/slurm/qos`);
@@ -154,7 +149,6 @@ export async function POST(req: Request) {
         description: "Get general cluster information and status.",
         inputSchema: z.object({}),
         execute: async () => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/cluster`);
           if (!response.ok) {
             return { error: `Error fetching cluster info: ${response.statusText}` };
@@ -166,7 +160,6 @@ export async function POST(req: Request) {
         description: "List all QoS (Quality of Service) available in the cluster.",
         inputSchema: z.object({}),
         execute: async () => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/qos`);
           if (!response.ok) {
             return { error: `Error fetching QoS list: ${response.statusText}` };
@@ -178,7 +171,6 @@ export async function POST(req: Request) {
         description: "List all partitions in the cluster.",
         inputSchema: z.object({}),
         execute: async () => {
-          const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
           const response = await fetch(`${baseURL}/api/slurm/partitions`);
           if (!response.ok) {
             return { error: `Error fetching partitions: ${response.statusText}` };

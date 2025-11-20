@@ -38,7 +38,7 @@ async function getClusterNodes(): Promise<string[]> {
 
   try {
     // Fetch node information from Slurm API
-    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
+    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const response = await fetch(`${baseURL}/api/slurm/nodes`);
 
     if (!response.ok) {

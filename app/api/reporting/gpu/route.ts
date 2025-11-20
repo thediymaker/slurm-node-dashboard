@@ -118,7 +118,7 @@ const checkJobFreshness = async (jobId: string): Promise<boolean> => {
 // Get the actual running jobs from Slurm
 const getRunningJobsFromSlurm = async (): Promise<Set<string>> => {
   try {
-    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "";
+    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const response = await fetch(`${baseURL}/api/slurm/jobs`);
 
     if (!response.ok) {
