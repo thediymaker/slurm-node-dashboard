@@ -116,7 +116,11 @@ export default function ChatModal({ showChat, setShowChat }: ChatModalProps) {
               ref={chatContainerRef}
               className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
             >
-              <ChatList messages={messages} isLoading={isLoading} onSelectFollowUp={handleFollowUp} />
+              <ChatList 
+                messages={messages} 
+                isLoading={isLoading} 
+                onSelectFollowUp={handleFollowUp}
+              />
               <ChatScrollAnchor />
             </div>
           )}

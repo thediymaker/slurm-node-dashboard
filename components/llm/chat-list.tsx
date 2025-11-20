@@ -8,11 +8,15 @@ import { FollowUpLoading } from "@/components/llm/follow-up-loading";
 import { ToolInvocationRenderer } from "@/components/llm/tool-invocation";
 import { CodeBlock } from "@/components/llm/code-block";
 import { Thinking } from "@/components/llm/thinking";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { MessageActions } from "@/components/llm/message-actions";
 
 interface MessagesProps {
   messages: Message[];
   isLoading?: boolean;
   onSelectFollowUp?: (question: string) => void;
+  reload?: () => void;
 }
 
 function getTextFromParts(parts: Message["parts"]) {
@@ -28,6 +32,7 @@ export function ChatList({
   messages,
   isLoading,
   onSelectFollowUp,
+  reload,
 }: MessagesProps) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +111,17 @@ export function ChatList({
               }
               return null;
             })}
+
+            {!isLoading && (
+              <div className="ml-10">
+                <MessageActions 
+                  message={message} 
+                  isLoading={!!isLoading} 
+                  isLast={isLast} 
+                  reload={reload} 
+                />
+              </div>
+            )}
 
             {isLast && !isLoading && previousMessage?.role === "user" && (
               <div className="mt-2 ml-10">

@@ -1,12 +1,12 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, tool, convertToModelMessages } from "ai";
 import { z } from "zod";
+import { fetchSlurmData } from "@/lib/slurm-api";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
-  const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   const openai = createOpenAI({
     baseURL: process.env.OPENAI_API_URL,
@@ -44,11 +44,11 @@ export async function POST(req: Request) {
           job: z.string().describe("The Job ID of the job. e.g. 1234567"),
         }),
         execute: async ({ job }) => {
-          const response = await fetch(`${baseURL}/api/slurm/job/${job}`);
-          if (!response.ok) {
-            return { error: `Error fetching job details: ${response.statusText}` };
+          const { data, error } = await fetchSlurmData(`/job/${job}`);
+          if (error) {
+            return { error: `Error fetching job details: ${error}` };
           }
-          return await response.json();
+          return data;
         },
       }),
       get_node_details: tool({
@@ -57,17 +57,16 @@ export async function POST(req: Request) {
           node: z.string().describe("The name of the node. e.g. node1"),
         }),
         execute: async ({ node }) => {
-          const response = await fetch(`${baseURL}/api/slurm/nodes/state/${node}`);
-          if (!response.ok) {
-            const listResponse = await fetch(`${baseURL}/api/slurm/nodes`);
-            if (listResponse.ok) {
-              const listData = await listResponse.json();
+          const { data, error } = await fetchSlurmData(`/node/${node}`);
+          if (error) {
+            const { data: listData, error: listError } = await fetchSlurmData(`/nodes`);
+            if (!listError && listData) {
               const nodes = listData.nodes?.map((n: any) => n.name).join(", ");
               return { error: `Node '${node}' not found.`, availableNodes: nodes };
             }
-            return { error: `Error fetching node details: ${response.statusText}` };
+            return { error: `Error fetching node details: ${error}` };
           }
-          return await response.json();
+          return data;
         },
       }),
       get_partition_details: tool({
@@ -76,17 +75,16 @@ export async function POST(req: Request) {
           partition: z.string().describe("The name of the partition. e.g. debug"),
         }),
         execute: async ({ partition }) => {
-          const response = await fetch(`${baseURL}/api/slurm/partitions/${partition}`);
-          if (!response.ok) {
-            const listResponse = await fetch(`${baseURL}/api/slurm/partitions`);
-            if (listResponse.ok) {
-              const listData = await listResponse.json();
+          const { data, error } = await fetchSlurmData(`/partition/${partition}`);
+          if (error) {
+            const { data: listData, error: listError } = await fetchSlurmData(`/partitions`);
+            if (!listError && listData) {
               const partitions = listData.partitions?.map((p: any) => p.name).join(", ");
               return { error: `Partition '${partition}' not found.`, availablePartitions: partitions };
             }
-            return { error: `Error fetching partition details: ${response.statusText}` };
+            return { error: `Error fetching partition details: ${error}` };
           }
-          return await response.json();
+          return data;
         },
       }),
       get_reservation_details: tool({
@@ -95,20 +93,14 @@ export async function POST(req: Request) {
           reservation: z.string().describe("The name of the reservation."),
         }),
         execute: async ({ reservation }) => {
-          const response = await fetch(`${baseURL}/api/slurm/reservations/${reservation}`);
+          const { data: resDetails, error } = await fetchSlurmData(`/reservation/${reservation}`);
           
-          let resDetails;
-          if (response.ok) {
-            resDetails = await response.json();
-          }
-
-          if (!response.ok || !resDetails?.reservations?.length) {
-            const listResponse = await fetch(`${baseURL}/api/slurm/reservations`);
-            if (listResponse.ok) {
-              const listData = await listResponse.json();
+          if (error || !resDetails?.reservations?.length) {
+            const { data: listData, error: listError } = await fetchSlurmData(`/reservations`);
+            if (!listError && listData) {
               return { error: `Reservation '${reservation}' not found.`, availableReservations: listData.reservations };
             }
-            return { error: `Error fetching reservation details: ${response.statusText}` };
+            return { error: `Error fetching reservation details: ${error}` };
           }
           return resDetails;
         },
@@ -119,11 +111,11 @@ export async function POST(req: Request) {
           query: z.string().optional().describe("The type of reservation to list, e.g., 'maintenance'."),
         }),
         execute: async ({ query }) => {
-          const response = await fetch(`${baseURL}/api/slurm/reservations`);
-          if (!response.ok) {
-            return { error: `Error fetching reservations: ${response.statusText}` };
+          const { data, error } = await fetchSlurmData(`/reservations`);
+          if (error) {
+            return { error: `Error fetching reservations: ${error}` };
           }
-          return await response.json();
+          return data;
         },
       }),
       get_qos_details: tool({
@@ -132,50 +124,56 @@ export async function POST(req: Request) {
           qos: z.string().describe("The name of the QoS."),
         }),
         execute: async ({ qos }) => {
-          const response = await fetch(`${baseURL}/api/slurm/qos/${qos}`);
-          if (!response.ok) {
-            const listResponse = await fetch(`${baseURL}/api/slurm/qos`);
-            if (listResponse.ok) {
-              const listData = await listResponse.json();
-              const qosList = listData.qos?.map((q: any) => q.name).join(", ");
+          console.log(`Fetching QoS details for: ${qos}`);
+          // Use slurmdb for specific QoS details as per app/api/slurm/qos/[name]/route.ts
+          const { data, error } = await fetchSlurmData(`/qos/${qos}`, 'slurmdb');
+          console.log(`QoS fetch result: error=${error}`);
+          
+          if (error || (data?.qos && Array.isArray(data.qos) && data.qos.length === 0)) {
+            console.log("QoS not found or error, fetching list...");
+            const { data: listData, error: listError } = await fetchSlurmData(`/qos`, 'slurmdb');
+            console.log(`QoS list result: error=${listError}`);
+            
+            if (!listError && listData?.qos) {
+              const qosList = listData.qos.map((q: any) => q.name).join(", ");
               return { error: `QoS '${qos}' not found.`, availableQoS: qosList };
             }
-            return { error: `Error fetching QoS details: ${response.statusText}` };
+            return { error: `Error fetching QoS details: ${error || 'Not found'}` };
           }
-          return await response.json();
+          return data;
         },
       }),
       get_cluster_info: tool({
         description: "Get general cluster information and status.",
         inputSchema: z.object({}),
         execute: async () => {
-          const response = await fetch(`${baseURL}/api/slurm/cluster`);
-          if (!response.ok) {
-            return { error: `Error fetching cluster info: ${response.statusText}` };
+          const { data, error } = await fetchSlurmData('/clusters', 'slurmdb');
+          if (error) {
+            return { error: `Error fetching cluster info: ${error}` };
           }
-          return await response.json();
+          return data;
         },
       }),
       list_qos: tool({
         description: "List all QoS (Quality of Service) available in the cluster.",
         inputSchema: z.object({}),
         execute: async () => {
-          const response = await fetch(`${baseURL}/api/slurm/qos`);
-          if (!response.ok) {
-            return { error: `Error fetching QoS list: ${response.statusText}` };
+          const { data, error } = await fetchSlurmData(`/qos`, 'slurmdb');
+          if (error) {
+            return { error: `Error fetching QoS list: ${error}` };
           }
-          return await response.json();
+          return data;
         },
       }),
       list_partitions: tool({
         description: "List all partitions in the cluster.",
         inputSchema: z.object({}),
         execute: async () => {
-          const response = await fetch(`${baseURL}/api/slurm/partitions`);
-          if (!response.ok) {
-            return { error: `Error fetching partitions: ${response.statusText}` };
+          const { data, error } = await fetchSlurmData(`/partitions`);
+          if (error) {
+            return { error: `Error fetching partitions: ${error}` };
           }
-          return await response.json();
+          return data;
         },
       }),
     },

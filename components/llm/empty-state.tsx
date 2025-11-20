@@ -9,23 +9,23 @@ export function EmptyState({ setInput }: EmptyStateProps) {
     const starters = [
         {
             heading: "Node Details",
-            message: "Show me details for node sc020",
+            message: 'Show me details for node "sc020"',
         },
         {
             heading: "Job Details",
-            message: "Show me details for job 12345",
+            message: 'Show me details for job "12345"',
         },
         {
             heading: "Partition Info",
-            message: "Show me details for partition debug",
+            message: 'Show me details for the "debug" partition',
         },
         {
             heading: "Reservation Info",
-            message: "Show me details for reservation maintenance",
+            message: 'Show me details for the "maintenance" reservation',
         },
         {
             heading: "QoS Info",
-            message: "Show me details for QoS normal",
+            message: 'Show me details for the "normal" QoS',
         },
     ];
 
