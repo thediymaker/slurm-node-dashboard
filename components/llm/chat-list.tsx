@@ -16,10 +16,12 @@ interface MessagesProps {
 }
 
 function getTextFromParts(parts: Message["parts"]) {
-  return parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text)
-    .join("");
+  return parts.reduce((text, part) => {
+    if (part.type === "text") {
+      return text + part.text;
+    }
+    return text;
+  }, "");
 }
 
 export function ChatList({
