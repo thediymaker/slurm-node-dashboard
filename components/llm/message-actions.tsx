@@ -27,8 +27,7 @@ export function MessageActions({ message, isLoading, isLast, reload }: MessageAc
 
   const handleCopy = () => {
     const text = message.parts
-      .filter((p) => p.type === "text")
-      .map((p) => p.text)
+      .map((p) => (p.type === "text" ? p.text : ""))
       .join("");
     navigator.clipboard.writeText(text);
     setIsCopied(true);
