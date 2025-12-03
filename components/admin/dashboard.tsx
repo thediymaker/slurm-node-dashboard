@@ -28,8 +28,15 @@ import {
 
 import ClusterStats from "./cluster-stats";
 import AdminPlugins from "./plugins";
+import { HierarchyManager } from "@/components/admin/hierarchy/hierarchy-manager";
+import { Organization, Account } from "@/actions/hierarchy";
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  initialOrgs?: Organization[];
+  accounts?: Account[];
+}
+
+export default function AdminDashboard({ initialOrgs = [], accounts = [] }: AdminDashboardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -48,7 +55,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-8 max-w-7xl">
+    <div className="container mx-auto py-6 space-y-8 max-w-[95%]">
       {/* Header section with title and actions */}
       <div className="flex justify-between items-center">
         <div className="space-y-1">
@@ -153,30 +160,7 @@ export default function AdminDashboard() {
 
         {/* Hierarchy Tab Content */}
         <TabsContent value="hierarchy" className="space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-medium">
-                Organization Hierarchy
-              </CardTitle>
-              <CardDescription>
-                Manage departments, colleges, and group mappings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-start gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Configure the organizational structure and map Slurm accounts to departments/colleges.
-                  This hierarchy is used for reporting and metrics aggregation.
-                </p>
-                <Link href="/admin/hierarchy">
-                  <Button>
-                    <Network className="mr-2 h-4 w-4" />
-                    Manage Hierarchy
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+           <HierarchyManager initialOrgs={initialOrgs} accounts={accounts} />
         </TabsContent>
 
         {/* Settings Tab Content */}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import { HierarchyGraph } from "./hierarchy-graph";
+import { HierarchyFlow } from "./hierarchy-flow";
 import { Organization, Account, createOrganization, updateOrganization, deleteOrganization, addAccountMapping, removeAccountMapping, getAccountMappings, deleteAllHierarchy } from "@/actions/hierarchy";
 import { importHierarchyCSV, importMappingCSV, exportHierarchyCSV, exportMappingCSV } from "@/actions/hierarchy-import";
 import { Button } from "@/components/ui/button";
@@ -175,14 +175,10 @@ export function HierarchyManager({ initialOrgs, accounts }: HierarchyManagerProp
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-100px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[900px]">
       <div className="lg:col-span-2 h-full flex flex-col">
-        <Card className="flex-1 flex flex-col overflow-hidden">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Organization Hierarchy</CardTitle>
-                    <CardDescription>Visualize and manage the structure</CardDescription>
-                </div>
+        <Card className="flex-1 flex flex-col overflow-hidden relative">
+            <div className="p-4 flex flex-row items-center justify-end absolute top-0 right-0 z-10">
                 <Dialog open={importOpen} onOpenChange={setImportOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -229,9 +225,9 @@ export function HierarchyManager({ initialOrgs, accounts }: HierarchyManagerProp
                     </div>
                   </DialogContent>
                 </Dialog>
-            </CardHeader>
+            </div>
             <CardContent className="flex-1 p-0 relative">
-                <HierarchyGraph data={initialOrgs} onNodeClick={handleNodeClick} />
+                <HierarchyFlow data={initialOrgs} onNodeClick={handleNodeClick} />
             </CardContent>
         </Card>
       </div>
