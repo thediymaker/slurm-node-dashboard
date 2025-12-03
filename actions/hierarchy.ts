@@ -20,13 +20,13 @@ export interface Account {
 export async function getHierarchy() {
   const pool = getMetricsDb();
   // Fetch all organizations
-  const result = await pool.query<Organization>(`
+  const result = await pool.query(`
     SELECT id, name, type, parent_id, info 
     FROM organizations 
     ORDER BY name
   `);
   
-  const orgs = result.rows;
+  const orgs = result.rows as Organization[];
   
   // Build tree
   const orgMap = new Map<number, Organization>();
@@ -56,12 +56,12 @@ export async function getHierarchy() {
 
 export async function getFlatHierarchy() {
     const pool = getMetricsDb();
-    const result = await pool.query<Organization>(`
+    const result = await pool.query(`
       SELECT id, name, type, parent_id, info 
       FROM organizations 
       ORDER BY name
     `);
-    return result.rows;
+    return result.rows as Organization[];
 }
 
 export async function createOrganization(data: { name: string; type: string; parent_id?: number | null; info?: string }) {
@@ -96,19 +96,19 @@ export async function deleteOrganization(id: number) {
 
 export async function getAccounts() {
     const pool = getMetricsDb();
-    const result = await pool.query<Account>('SELECT id, name FROM accounts ORDER BY name');
-    return result.rows;
+    const result = await pool.query('SELECT id, name FROM accounts ORDER BY name');
+    return result.rows as Account[];
 }
 
 export async function getAccountMappings(orgId: number) {
     const pool = getMetricsDb();
-    const result = await pool.query<{account_id: number, account_name: string}>(`
+    const result = await pool.query(`
         SELECT am.account_id, a.name as account_name
         FROM account_mappings am
         JOIN accounts a ON am.account_id = a.id
         WHERE am.organization_id = $1
     `, [orgId]);
-    return result.rows;
+    return result.rows as {account_id: number, account_name: string}[];
 }
 
 export async function addAccountMapping(orgId: number, accountId: number) {
