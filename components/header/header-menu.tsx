@@ -12,7 +12,8 @@ import {
   Home,
   Box,
   History,
-  BarChart
+  BarChart,
+  ArrowUpCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,6 +30,7 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import packageJson from "@/package.json";
+import { checkUpdate } from "@/actions/check-update";
 
 interface HeaderMenuProps {
   username?: string;
@@ -37,9 +39,19 @@ interface HeaderMenuProps {
 export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [latestVersion, setLatestVersion] = useState("");
+  const [updateUrl, setUpdateUrl] = useState("");
 
   useEffect(() => {
     setMounted(true);
+    checkUpdate().then((result) => {
+      if (result.hasUpdate) {
+        setUpdateAvailable(true);
+        setLatestVersion(result.latestVersion);
+        setUpdateUrl(result.url);
+      }
+    });
   }, []);
 
   const supportUrl = process.env.NEXT_PUBLIC_SUPPORT_URL || "#";
@@ -112,7 +124,14 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
           <DropdownMenuItem>
             <Info className="mr-2 h-4 w-4" />
             <span>About</span>
-            <DropdownMenuShortcut>{packageJson.version}</DropdownMenuShortcut>
+            <DropdownMenuShortcut className="flex items-center gap-2">
+              {packageJson.version}
+              {updateAvailable && (
+                <Link href={updateUrl} target="_blank" title={`Update available: ${latestVersion}`}>
+                  <ArrowUpCircle className="h-4 w-4 text-green-500" />
+                </Link>
+              )}
+            </DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

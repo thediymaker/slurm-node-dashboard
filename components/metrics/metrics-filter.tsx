@@ -13,6 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { getHierarchyLabels } from "@/lib/utils"
 
 interface MetricsFilterProps {
   clusterOptions: string[]
@@ -59,6 +60,8 @@ export function MetricsFilter({
   const [searchQuery, setSearchQuery] = React.useState<string>(
     searchParams.get("search") || ""
   )
+
+  const { level1, level2 } = getHierarchyLabels();
 
   const handleApply = () => {
     const params = new URLSearchParams()
@@ -189,21 +192,21 @@ export function MetricsFilter({
             </div>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label>Colleges</Label>
+                <Label>{level1}s</Label>
                 <MultiSelect
                   options={collegeOptions.map(c => ({ label: c, value: c }))}
                   selected={selectedColleges}
                   onChange={setSelectedColleges}
-                  placeholder="Select colleges"
+                  placeholder={`Select ${level1.toLowerCase()}s`}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Departments</Label>
+                <Label>{level2}s</Label>
                 <MultiSelect
                   options={departmentOptions.map(d => ({ label: d, value: d }))}
                   selected={selectedDepartments}
                   onChange={setSelectedDepartments}
-                  placeholder="Select departments"
+                  placeholder={`Select ${level2.toLowerCase()}s`}
                 />
               </div>
             </div>

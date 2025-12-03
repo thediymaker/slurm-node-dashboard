@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings2 } from "lucide-react";
+import { getHierarchyLabels } from "@/lib/utils";
 
 interface MetricsDashboardProps {
   timeSeriesData: any;
@@ -150,6 +151,7 @@ export function MetricsDashboard({
   ]);
 
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
+  const { level1, level2 } = getHierarchyLabels();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -212,7 +214,7 @@ export function MetricsDashboard({
     },
     usageCollege: {
       id: "usageCollege",
-      title: "Usage by College",
+      title: `Usage by ${level1}`,
       component: (
         <HierarchyDistributionChart
           data={collegeData}
@@ -224,7 +226,7 @@ export function MetricsDashboard({
     },
     usageDept: {
       id: "usageDept",
-      title: "Usage by Department",
+      title: `Usage by ${level2}`,
       component: (
         <HierarchyChart data={deptData} metric={metric} level="department" />
       ),
@@ -232,7 +234,7 @@ export function MetricsDashboard({
     },
     trendCollege: {
       id: "trendCollege",
-      title: "College Trends",
+      title: `${level1} Trends`,
       component: (
         <HierarchyTrendChart
           data={collegeTrendData.data}

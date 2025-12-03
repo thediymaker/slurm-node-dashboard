@@ -4,6 +4,7 @@ import * as React from "react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { getHierarchyLabels } from "@/lib/utils"
 
 interface HierarchyTrendChartProps {
   data: any[];
@@ -27,7 +28,8 @@ export function HierarchyTrendChart({ data, entities, metric, level }: Hierarchy
     },
   } satisfies ChartConfig
 
-  const title = level === 'college' ? "College Usage Trends" : "Department Usage Trends";
+  const { level1, level2 } = getHierarchyLabels();
+  const title = level === 'college' ? `${level1} Usage Trends` : `${level2} Usage Trends`;
   const description = "Usage over time";
 
   return (

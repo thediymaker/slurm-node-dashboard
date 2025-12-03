@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Trash2, Plus, Save, Upload, Download, Database } from "lucide-react";
+import { getHierarchyLabels } from "@/lib/utils";
 
 interface HierarchyManagerProps {
   initialOrgs: Organization[];
@@ -24,6 +25,7 @@ export function HierarchyManager({ initialOrgs, accounts }: HierarchyManagerProp
   const [formData, setFormData] = useState({ name: "", type: "group", parent_id: "null", info: "" });
   const [mappedAccounts, setMappedAccounts] = useState<{account_id: number, account_name: string}[]>([]);
   const [importOpen, setImportOpen] = useState(false);
+  const labels = getHierarchyLabels();
 
   const handleNodeClick = async (node: Organization) => {
     setSelectedNode(node);
@@ -264,8 +266,8 @@ export function HierarchyManager({ initialOrgs, accounts }: HierarchyManagerProp
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="root">Root</SelectItem>
-                      <SelectItem value="department">Department</SelectItem>
-                      <SelectItem value="college">College</SelectItem>
+                      <SelectItem value="department">{labels.level2}</SelectItem>
+                      <SelectItem value="college">{labels.level1}</SelectItem>
                       <SelectItem value="group">Group</SelectItem>
                     </SelectContent>
                   </Select>
