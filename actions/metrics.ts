@@ -170,7 +170,7 @@ export async function getTimeSeriesData(filters: MetricsFilters, metric: 'coreHo
     
     const result = await pool.query(query, params);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       date: row.date.toISOString().split('T')[0],
       value: parseFloat(row.value),
       cluster: row.cluster
@@ -202,7 +202,7 @@ export async function getGroupData(filters: MetricsFilters, metric: 'coreHours' 
     
     const result = await pool.query(query, params);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       name: row.account_name,
       value: parseFloat(row.value)
     }));
@@ -233,7 +233,7 @@ export async function getTopUsers(filters: MetricsFilters, metric: 'coreHours' |
     
     const result = await pool.query(query, params);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       name: row.user_name,
       value: parseFloat(row.value)
     }));
@@ -260,7 +260,7 @@ export async function getJobStateDistribution(filters: MetricsFilters) {
     
     const result = await pool.query(query, params);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       state: row.state,
       count: parseInt(row.count)
     }));
@@ -287,7 +287,7 @@ export async function getWaitTimeData(filters: MetricsFilters) {
     
     const result = await pool.query(query, params);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       date: row.date.toISOString().split('T')[0],
       value: Math.max(0, parseFloat(row.value)), // Ensure no negative values
       cluster: 'all'
@@ -318,7 +318,7 @@ export async function getPartitionUsage(filters: MetricsFilters, metric: 'coreHo
     
     const result = await pool.query(query, params);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       name: row.partition || 'Unknown',
       value: parseFloat(row.value)
     }));
@@ -373,7 +373,7 @@ export async function getJobDurationDistribution(filters: MetricsFilters) {
     
     const result = await pool.query(query, params);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       name: row.duration_bucket,
       value: parseInt(row.count)
     }));
@@ -420,7 +420,7 @@ export async function getHierarchyTimeSeriesData(filters: MetricsFilters, metric
     const dataMap = new Map<string, any>();
     const entities = new Set<string>();
 
-    result.rows.forEach(row => {
+    result.rows.forEach((row: any) => {
         if (!row.name) return;
         // Format date string based on grouping
         const dateObj = new Date(row.date);
@@ -482,8 +482,8 @@ export async function getHierarchyUsage(filters: MetricsFilters, metric: 'coreHo
     const result = await pool.query(query, params);
     
     return result.rows
-      .filter(row => row.name != null) // Filter out nulls if parent doesn't exist
-      .map(row => ({
+      .filter((row: any) => row.name != null) // Filter out nulls if parent doesn't exist
+      .map((row: any) => ({
         name: row.name,
         value: parseFloat(row.value)
       }));
