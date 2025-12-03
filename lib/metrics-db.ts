@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 
-let pool: Pool | undefined;
+let pool: InstanceType<typeof Pool> | undefined;
 
 export function getMetricsDb() {
   if (!pool) {

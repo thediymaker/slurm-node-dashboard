@@ -72,6 +72,7 @@
   "devDependencies": {
     "@types/d3": "^7.4.3",
     "@types/node": "^20",
+    "@types/pg": "^8.15.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "tailwind-scrollbar": "^3.1.0",
