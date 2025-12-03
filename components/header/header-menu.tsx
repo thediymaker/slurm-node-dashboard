@@ -27,6 +27,11 @@ export default function HeaderMenu() {
         <DropdownMenuItem className="font-light cursor-pointer" asChild>
           <Link href={"/rewind"}>Historical</Link>
         </DropdownMenuItem>
+        {process.env.NEXT_PUBLIC_ENABLE_JOB_METRICS_PLUGIN === 'true' && (
+          <DropdownMenuItem className="font-light cursor-pointer" asChild>
+            <Link href={"/metrics"}>Job Metrics</Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem className="font-light cursor-pointer" asChild>
           <Link
             target="_blank"

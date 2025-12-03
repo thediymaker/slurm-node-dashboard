@@ -23,6 +23,7 @@ import {
   ServerCrash,
   Shield,
   Activity,
+  Network,
 } from "lucide-react";
 
 import ClusterStats from "./cluster-stats";
@@ -90,6 +91,10 @@ export default function AdminDashboard() {
               <Shield className="mr-2 h-4 w-4" />
               Plugins
             </TabsTrigger>
+            <TabsTrigger value="hierarchy" className="flex items-center">
+              <Network className="mr-2 h-4 w-4" />
+              Hierarchy
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center">
               <Settings className="mr-2 h-4 w-4" />
               Settings
@@ -142,6 +147,34 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <AdminPlugins />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Hierarchy Tab Content */}
+        <TabsContent value="hierarchy" className="space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl font-medium">
+                Organization Hierarchy
+              </CardTitle>
+              <CardDescription>
+                Manage departments, colleges, and group mappings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-start gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Configure the organizational structure and map Slurm accounts to departments/colleges.
+                  This hierarchy is used for reporting and metrics aggregation.
+                </p>
+                <Link href="/admin/hierarchy">
+                  <Button>
+                    <Network className="mr-2 h-4 w-4" />
+                    Manage Hierarchy
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
