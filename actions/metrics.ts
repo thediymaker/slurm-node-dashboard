@@ -109,11 +109,11 @@ export async function getFilterOptions() {
     ]);
 
     return {
-      clusters: clusters.rows.map(r => r.cluster),
-      accounts: accounts.rows.map(r => r.name),
-      users: users.rows.map(r => r.name),
-      colleges: colleges.rows.map(r => r.name),
-      departments: departments.rows.map(r => r.name)
+      clusters: clusters.rows.map((r: any) => r.cluster),
+      accounts: accounts.rows.map((r: any) => r.name),
+      users: users.rows.map((r: any) => r.name),
+      colleges: colleges.rows.map((r: any) => r.name),
+      departments: departments.rows.map((r: any) => r.name)
     };
   } catch (error) {
     console.error('Error fetching filter options:', error);
