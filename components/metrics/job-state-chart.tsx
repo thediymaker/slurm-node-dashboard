@@ -44,9 +44,9 @@ export function JobStateChart({ data }: JobStateChartProps) {
         <CardTitle>Job Outcome</CardTitle>
         <CardDescription>Distribution of job states</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="mx-auto max-h-[350px] pb-0">
-          <PieChart margin={{ top: 20, right: 80, bottom: 20, left: 80 }}>
+      <CardContent className="flex-1 min-h-0">
+        <ChartContainer config={chartConfig} className="mx-auto h-full w-full pb-0 [&_.recharts-pie-label-text]:fill-foreground">
+          <PieChart>
             <Pie
               data={data}
               dataKey="count"

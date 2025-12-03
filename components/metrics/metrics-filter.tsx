@@ -7,10 +7,12 @@ import { addDays, format } from "date-fns"
 import { DatePickerWithRange } from "./date-range-picker"
 import { MultiSelect, Option } from "./multi-select"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Filter, Calendar } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Filter, Calendar, RotateCcw, Check, Search } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 interface MetricsFilterProps {
   clusterOptions: string[]
@@ -54,6 +56,9 @@ export function MetricsFilter({
   const [metric, setMetric] = React.useState<string>(
     searchParams.get("metric") || "coreHours"
   )
+  const [searchQuery, setSearchQuery] = React.useState<string>(
+    searchParams.get("search") || ""
+  )
 
   const handleApply = () => {
     const params = new URLSearchParams()
@@ -64,6 +69,7 @@ export function MetricsFilter({
     if (selectedUsers.length) params.set("users", selectedUsers.join(","))
     if (selectedColleges.length) params.set("colleges", selectedColleges.join(","))
     if (selectedDepartments.length) params.set("departments", selectedDepartments.join(","))
+    if (searchQuery) params.set("search", searchQuery)
     params.set("metric", metric)
 
     router.push(`/metrics?${params.toString()}`)
@@ -77,6 +83,7 @@ export function MetricsFilter({
     setSelectedColleges([])
     setSelectedDepartments([])
     setMetric("coreHours")
+    setSearchQuery("")
     router.push("/metrics")
   }
 
@@ -102,96 +109,145 @@ export function MetricsFilter({
   };
 
   return (
-    <Card className="mb-6">
-      <CardContent className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 font-semibold text-lg">
-            <Filter className="w-5 h-5" />
-            Filters
+    <Card className="mb-6 shadow-md">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-full">
+              <Filter className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Filters</CardTitle>
+              <p className="text-sm text-muted-foreground">Refine your metrics view</p>
+            </div>
           </div>
-          <ToggleGroup type="single" value={metric} onValueChange={(v) => v && setMetric(v)}>
-            <ToggleGroupItem value="coreHours">Core Hours</ToggleGroupItem>
-            <ToggleGroupItem value="jobCount">Job Count</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Date Range</label>
-            <DatePickerWithRange date={date} setDate={setDate} className="w-full" />
-          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1 justify-end">
+             <div className="relative w-full max-w-sm">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search users, groups, departments..." 
+                  className="pl-8" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApply()}
+                />
+             </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Clusters</label>
-            <MultiSelect
-              options={clusterOptions.map(c => ({ label: c, value: c }))}
-              selected={selectedClusters}
-              onChange={setSelectedClusters}
-              placeholder="Select clusters"
-            />
-          </div>
+             <Select onValueChange={handlePresetChange}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Quick Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24h">Last 24 Hours</SelectItem>
+                  <SelectItem value="7d">Last 7 Days</SelectItem>
+                  <SelectItem value="30d">Last 30 Days</SelectItem>
+                  <SelectItem value="90d">Last 3 Months</SelectItem>
+                  <SelectItem value="1y">Last Year</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <div className="h-8 w-[1px] bg-border hidden sm:block" />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Colleges</label>
-            <MultiSelect
-              options={collegeOptions.map(c => ({ label: c, value: c }))}
-              selected={selectedColleges}
-              onChange={setSelectedColleges}
-              placeholder="Select colleges"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Departments</label>
-            <MultiSelect
-              options={departmentOptions.map(d => ({ label: d, value: d }))}
-              selected={selectedDepartments}
-              onChange={setSelectedDepartments}
-              placeholder="Select departments"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Accounts / Groups</label>
-            <MultiSelect
-              options={accountOptions.map(a => ({ label: a, value: a }))}
-              selected={selectedAccounts}
-              onChange={setSelectedAccounts}
-              placeholder="Select accounts"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Users</label>
-            <MultiSelect
-              options={userOptions.map(u => ({ label: u, value: u }))}
-              selected={selectedUsers}
-              onChange={setSelectedUsers}
-              placeholder="Select users"
-            />
+              <ToggleGroup type="single" value={metric} onValueChange={(v) => v && setMetric(v)} className="border rounded-md p-1 bg-background">
+                <ToggleGroupItem value="coreHours" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Core Hours</ToggleGroupItem>
+                <ToggleGroupItem value="jobCount" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Job Count</ToggleGroupItem>
+              </ToggleGroup>
           </div>
         </div>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Time & Location */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <Calendar className="w-4 h-4" />
+              Time & Location
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Date Range</Label>
+                <DatePickerWithRange date={date} setDate={setDate} className="w-full" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Clusters</Label>
+                <MultiSelect
+                  options={clusterOptions.map(c => ({ label: c, value: c }))}
+                  selected={selectedClusters}
+                  onChange={setSelectedClusters}
+                  placeholder="Select clusters"
+                />
+              </div>
+            </div>
+          </div>
 
-        <div className="flex justify-between items-center pt-2">
-          <Select onValueChange={handlePresetChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Date Preset" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">Last 24 Hours</SelectItem>
-              <SelectItem value="7d">Last 7 Days</SelectItem>
-              <SelectItem value="30d">Last 30 Days</SelectItem>
-              <SelectItem value="90d">Last 3 Months</SelectItem>
-              <SelectItem value="1y">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Organization */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <div className="w-4 h-4 rounded-full border-2 border-current" />
+              Organization
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Colleges</Label>
+                <MultiSelect
+                  options={collegeOptions.map(c => ({ label: c, value: c }))}
+                  selected={selectedColleges}
+                  onChange={setSelectedColleges}
+                  placeholder="Select colleges"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Departments</Label>
+                <MultiSelect
+                  options={departmentOptions.map(d => ({ label: d, value: d }))}
+                  selected={selectedDepartments}
+                  onChange={setSelectedDepartments}
+                  placeholder="Select departments"
+                />
+              </div>
+            </div>
+          </div>
 
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleReset}>Reset</Button>
-            <Button onClick={handleApply}>Apply Filters</Button>
+          {/* Identity */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <div className="w-4 h-4 rounded-sm border-2 border-current" />
+              Identity
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Accounts / Groups</Label>
+                <MultiSelect
+                  options={accountOptions.map(a => ({ label: a, value: a }))}
+                  selected={selectedAccounts}
+                  onChange={setSelectedAccounts}
+                  placeholder="Select accounts"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Users</Label>
+                <MultiSelect
+                  options={userOptions.map(u => ({ label: u, value: u }))}
+                  selected={selectedUsers}
+                  onChange={setSelectedUsers}
+                  placeholder="Select users"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
+      <CardFooter className="flex justify-end gap-3 bg-muted/10 py-4">
+        <Button variant="ghost" onClick={handleReset} className="gap-2 hover:bg-destructive/10 hover:text-destructive">
+          <RotateCcw className="w-4 h-4" />
+          Reset
+        </Button>
+        <Button onClick={handleApply} className="gap-2 min-w-[140px] shadow-sm">
+          <Check className="w-4 h-4" />
+          Apply Filters
+        </Button>
+      </CardFooter>
     </Card>
   )
 }

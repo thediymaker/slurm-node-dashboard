@@ -26,8 +26,8 @@ export function WaitTimeChart({ data }: WaitTimeChartProps) {
           Daily average queue time in minutes
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+      <CardContent className="flex-1 min-h-0">
+        <ChartContainer config={chartConfig} className="h-full w-full">
           <AreaChart
             accessibilityLayer
             data={data}

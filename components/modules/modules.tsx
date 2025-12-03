@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import BaseHeader from "../base-header";
 import { Separator } from "../ui/separator";
 import { ModuleTable } from "./module-table";
 import fs from "fs-extra";
@@ -45,13 +44,7 @@ export default async function Modules() {
 
   return (
     <div className="mx-auto items-center">
-      <div className="flex justify-between items-center mb-3">
-        <h1 className="font-bold text-2xl cursor-pointer">
-          <Link href={"/"}>Modules</Link>
-        </h1>
-        <BaseHeader />
-      </div>
-      <Separator />
+      <Separator className="my-4" />
       <Suspense fallback={<p>Loading modules...</p>}>
         <ModuleContent data={data} />
       </Suspense>

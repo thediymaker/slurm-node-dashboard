@@ -38,8 +38,8 @@ export function HierarchyDistributionChart({ data, metric, level }: HierarchyDis
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+      <CardContent className="flex-1 min-h-0 flex flex-col">
+        <ChartContainer config={chartConfig} className="flex-1 min-h-0 w-full [&_.recharts-pie-label-text]:fill-foreground">
           <PieChart>
             <Pie
               data={data}
@@ -47,9 +47,11 @@ export function HierarchyDistributionChart({ data, metric, level }: HierarchyDis
               nameKey="name"
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={80}
+              innerRadius={45}
+              outerRadius={75}
               paddingAngle={5}
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              labelLine={true}
             >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -58,14 +60,6 @@ export function HierarchyDistributionChart({ data, metric, level }: HierarchyDis
             <ChartTooltip content={<ChartTooltipContent formatter={(value) => typeof value === 'number' ? value.toFixed(2) : value} />} />
           </PieChart>
         </ChartContainer>
-        <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            {data.slice(0, 5).map((entry, index) => (
-                <div key={entry.name} className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                    <span>{entry.name}</span>
-                </div>
-            ))}
-        </div>
       </CardContent>
     </Card>
   )

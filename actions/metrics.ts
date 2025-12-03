@@ -10,6 +10,7 @@ export interface MetricsFilters {
   users?: string[];
   colleges?: string[];
   departments?: string[];
+  search?: string;
 }
 
 export interface TimeSeriesData {
@@ -89,6 +90,24 @@ function buildWhereClause(filters: MetricsFilters, paramOffset: number = 0, tabl
       WHERE o.name = ANY($${idx++})
     )`);
     params.push(filters.departments);
+  }
+
+  if (filters.search) {
+    const searchPattern = `%${filters.search}%`;
+    conditions.push(`(
+      ${p}user_id IN (SELECT id FROM users WHERE name ILIKE $${idx})
+      OR
+      ${p}account_id IN (SELECT id FROM accounts WHERE name ILIKE $${idx})
+      OR
+      ${p}account_id IN (
+        SELECT am.account_id 
+        FROM account_mappings am
+        JOIN organizations o ON am.organization_id = o.id
+        WHERE o.name ILIKE $${idx}
+      )
+    )`);
+    params.push(searchPattern);
+    idx++;
   }
 
   return {

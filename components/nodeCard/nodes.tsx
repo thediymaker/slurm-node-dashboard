@@ -34,7 +34,7 @@ const nodeFetcher = async () => {
   return res.json();
 };
 
-const Nodes = () => {
+const Nodes = ({ username }: { username?: string }) => {
   const {
     data: nodeData,
     error: nodeError,
@@ -286,6 +286,7 @@ const Nodes = () => {
           partitions={[]}
           features={[]}
           colorSchema={colorSchema}
+          username={username}
         />
         <div className="flex justify-between">
           <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -327,6 +328,7 @@ const Nodes = () => {
         colorSchema={colorSchema}
         selectedFeatures={selectedNodeFeatures}
         featureLogicType={featureLogicType}
+        username={username}
       />
       <div className="flex justify-between">
         <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">

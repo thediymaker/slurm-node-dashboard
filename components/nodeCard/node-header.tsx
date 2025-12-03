@@ -37,6 +37,7 @@ interface NodeHeaderProps {
   colorSchema: string;
   selectedFeatures?: string[];
   featureLogicType?: LogicType;
+  username?: string;
 }
 
 const NodeHeader: React.FC<NodeHeaderProps> = ({
@@ -52,6 +53,7 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
   colorSchema,
   selectedFeatures = [],
   featureLogicType = "OR",
+  username,
 }) => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -222,8 +224,7 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
           value={colorSchema}
           onChange={handleColorSchemaChange}
         />
-        <ThemeToggle />
-        <HeaderMenu />
+        <HeaderMenu username={username} />
       </div>
     </div>
   );
