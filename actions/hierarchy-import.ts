@@ -160,7 +160,7 @@ export async function exportHierarchyCSV() {
   
   // Convert to CSV
   const header = '"code","name","parent_code"';
-  const rows = result.rows.map(row => {
+  const rows = result.rows.map((row: any) => {
     const code = row.code ? `"${row.code.replace(/"/g, '""')}"` : '""';
     const name = row.name ? `"${row.name.replace(/"/g, '""')}"` : '""';
     const parent = row.parent_code ? `"${row.parent_code.replace(/"/g, '""')}"` : '""';
@@ -181,7 +181,7 @@ export async function exportMappingCSV() {
   `);
   
   const header = '"slurm_account","org_code"';
-  const rows = result.rows.map(row => {
+  const rows = result.rows.map((row: any) => {
     const acc = row.account_name ? `"${row.account_name.replace(/"/g, '""')}"` : '""';
     const org = row.org_code ? `"${row.org_code.replace(/"/g, '""')}"` : '""';
     return `${acc},${org}`;
