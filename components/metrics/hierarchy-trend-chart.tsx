@@ -69,7 +69,7 @@ export function HierarchyTrendChart({ data, entities, metric, level }: Hierarchy
                 <Area
                     key={entity}
                     dataKey={entity}
-                    type="natural"
+                    type="monotone"
                     fill={COLORS[index % COLORS.length]}
                     fillOpacity={0.4}
                     stroke={COLORS[index % COLORS.length]}

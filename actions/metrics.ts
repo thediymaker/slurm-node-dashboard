@@ -435,29 +435,63 @@ export async function getHierarchyTimeSeriesData(filters: MetricsFilters, metric
     
     const result = await pool.query(query, params);
     
-    // Transform for Recharts
-    const dataMap = new Map<string, any>();
+    // Transform for Recharts with Zero-Filling
     const entities = new Set<string>();
+    result.rows.forEach((row: any) => {
+        if (row.name) entities.add(row.name);
+    });
+    const entityList = Array.from(entities);
 
+    const dataMap = new Map<string, any>();
+    
+    // Determine range
+    const startDate = filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const endDate = filters.endDate || new Date();
+    
+    let current = new Date(startDate);
+    
+    // Align start
+    if (isShortRange) {
+        current.setMinutes(0, 0, 0);
+    } else {
+        current.setHours(0, 0, 0, 0);
+    }
+
+    // Generate all time slots
+    while (current <= endDate) {
+        const dateStr = isShortRange 
+            ? current.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' })
+            : current.toISOString().split('T')[0];
+            
+        const entry: any = { date: dateStr };
+        entityList.forEach(e => entry[e] = 0);
+        dataMap.set(dateStr, entry);
+        
+        // Increment
+        if (isShortRange) {
+            current = new Date(current.getTime() + 60 * 60 * 1000); // Add 1 hour
+        } else {
+            current = new Date(current.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
+        }
+    }
+
+    // Fill with data
     result.rows.forEach((row: any) => {
         if (!row.name) return;
-        // Format date string based on grouping
         const dateObj = new Date(row.date);
         const dateStr = isShortRange 
             ? dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' })
             : dateObj.toISOString().split('T')[0];
 
-        if (!dataMap.has(dateStr)) {
-            dataMap.set(dateStr, { date: dateStr });
+        if (dataMap.has(dateStr)) {
+            const entry = dataMap.get(dateStr);
+            entry[row.name] = parseFloat(row.value);
         }
-        const entry = dataMap.get(dateStr);
-        entry[row.name] = parseFloat(row.value);
-        entities.add(row.name);
     });
 
     return {
         data: Array.from(dataMap.values()),
-        entities: Array.from(entities)
+        entities: entityList
     };
 
   } catch (error) {
