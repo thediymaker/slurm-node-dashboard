@@ -2,6 +2,7 @@ import { PrometheusQueryResponse } from "@/types/types";
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 import { env } from "process";
+import { fetchSlurmData } from "@/lib/slurm-api";
 
 export const revalidate = 0;
 const PROMETHEUS_URL = env.PROMETHEUS_URL;
@@ -38,25 +39,25 @@ async function getClusterNodes(): Promise<string[]> {
   }
 
   try {
-    // Fetch node information from Slurm API
-    const baseURL = env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const response = await fetch(`${baseURL}/api/slurm/nodes`);
+    // Fetch node information directly from Slurm API
+    const { data, error } = await fetchSlurmData('/nodes');
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch nodes: ${response.statusText}`);
+    if (error) {
+      console.error(`Failed to fetch nodes from Slurm: ${error}`);
+      return clusterNodesCache.nodes; // Return stale cache if available
     }
 
-    const data = await response.json();
-
-    if (!data.nodes || !Array.isArray(data.nodes)) {
+    if (!data?.nodes || !Array.isArray(data.nodes)) {
       console.warn("Invalid nodes data format from Slurm API");
-      return [];
+      return clusterNodesCache.nodes; // Return stale cache if available
     }
 
     // Extract node names
     const nodeNames = data.nodes
       .map((node: any) => node.name || null)
       .filter(Boolean);
+
+    console.log(`Fetched ${nodeNames.length} nodes from Slurm API`);
 
     // Update cache
     clusterNodesCache = {
@@ -67,7 +68,7 @@ async function getClusterNodes(): Promise<string[]> {
     return nodeNames;
   } catch (error) {
     console.error("Error fetching cluster nodes:", error);
-    return [];
+    return clusterNodesCache.nodes; // Return stale cache if available
   }
 }
 

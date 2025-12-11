@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
 import { env } from "process";
+import { fetchSlurmData } from "@/lib/slurm-api";
 
 const PROMETHEUS_URL = env.PROMETHEUS_URL;
 const STALE_JOB_THRESHOLD_SECONDS = 30; // Consider a job stale if no metrics in the last 30 seconds
@@ -119,14 +120,14 @@ const checkJobFreshness = async (jobId: string): Promise<boolean> => {
 // Get the actual running jobs from Slurm
 const getRunningJobsFromSlurm = async (): Promise<Set<string>> => {
   try {
-    const baseURL = env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const response = await fetch(`${baseURL}/api/slurm/jobs`);
+    // Fetch job information directly from Slurm API
+    const { data, error } = await fetchSlurmData('/jobs');
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch jobs: ${response.statusText}`);
+    if (error) {
+      console.error(`Failed to fetch jobs from Slurm: ${error}`);
+      return new Set<string>();
     }
 
-    const data = await response.json();
     const runningJobs = new Set<string>();
 
     if (data && data.jobs && Array.isArray(data.jobs)) {
@@ -138,6 +139,7 @@ const getRunningJobsFromSlurm = async (): Promise<Set<string>> => {
       });
     }
 
+    console.log(`Fetched ${runningJobs.size} running jobs from Slurm API`);
     return runningJobs;
   } catch (error) {
     console.error("Error fetching running jobs from Slurm:", error);
