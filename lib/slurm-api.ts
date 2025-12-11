@@ -17,7 +17,8 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
   const { type = 'slurm', revalidate = 30, method = 'GET', body } = finalOptions;
   
   const protocol = env.SLURM_PROTOCOL || 'http';
-  const baseUrl = `${protocol}://${env.SLURM_SERVER}:6820/${type}/${env.SLURM_API_VERSION}`;
+  const port = env.SLURM_SERVER_PORT || '6820';
+  const baseUrl = `${protocol}://${env.SLURM_SERVER}:${port}/${type}/${env.SLURM_API_VERSION}`;
   
   const fetchOptions: RequestInit = {
     method,
