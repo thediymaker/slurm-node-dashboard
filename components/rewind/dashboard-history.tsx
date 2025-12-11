@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NodeCard } from "@/components/nodeCard/node-card";
-import { ThreeCircles } from "react-loader-spinner";
+import { RingLoader } from "react-spinners";
 import { DateTimePicker } from "@/components/date-time";
 
 const fetcher = async (url: string) => {
@@ -68,15 +68,7 @@ const DashboardHistory = () => {
   if (!isMounted) {
     return (
       <div className="flex justify-center items-center w-full h-full">
-        <ThreeCircles
-          visible={true}
-          height="64"
-          width="64"
-          color="white"
-          ariaLabel="three-circles-loading"
-          wrapperStyle={{}}
-          wrapperClass=""
-        />
+        <RingLoader color="white" size={64} />
       </div>
     );
   }
