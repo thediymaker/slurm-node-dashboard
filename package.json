@@ -45,6 +45,7 @@
     "cmdk": "^1.0.0",
     "d3": "^7.9.0",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.3",
     "eslint-config-next": "^16.0.8",
     "framer-motion": "^12.4.7",
     "fs-extra": "^11.2.0",
