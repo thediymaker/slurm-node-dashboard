@@ -3,9 +3,10 @@ import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string[] }> }
 ) {
-  const { data, error, status } = await fetchSlurmData(`/job/${params.id[0]}`, {
+  const { id } = await params;
+  const { data, error, status } = await fetchSlurmData(`/job/${id[0]}`, {
     revalidate: 0
   });
 

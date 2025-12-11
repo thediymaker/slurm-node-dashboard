@@ -8,8 +8,8 @@ interface UnifiedHeaderProps {
   description?: string;
 }
 
-export default function UnifiedHeader({ title, description }: UnifiedHeaderProps) {
-  const cookieStore = cookies();
+export default async function UnifiedHeader({ title, description }: UnifiedHeaderProps) {
+  const cookieStore = await cookies();
   const username = cookieStore.get("SSONAME")?.value || getRandomGeekName();
 
   return (

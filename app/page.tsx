@@ -5,8 +5,8 @@ import { getRandomGeekName } from "@/lib/utils";
 
 import Nodes from "@/components/nodeCard/nodes";
 
-export default function Dashboard() {
-  const cookieStore = cookies();
+export default async function Dashboard() {
+  const cookieStore = await cookies();
   const username = cookieStore.get("SSONAME")?.value || getRandomGeekName();
 
   return (

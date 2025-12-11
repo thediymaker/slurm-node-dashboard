@@ -3,9 +3,10 @@ import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string[] }> }
 ) {
-  const { data, error, status } = await fetchSlurmData(`/node/${params.id[0]}`, {
+  const { id } = await params;
+  const { data, error, status } = await fetchSlurmData(`/node/${id[0]}`, {
     revalidate: 0
   });
 
@@ -18,16 +19,17 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string[] }> }
 ) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const requestBody = {
       state: `${body.state}`,
       reason: `${body.reason}`,
     };
 
-    const { data, error, status } = await fetchSlurmData(`/node/${params.id[0]}`, {
+    const { data, error, status } = await fetchSlurmData(`/node/${id[0]}`, {
       method: 'POST',
       body: requestBody,
       revalidate: 0

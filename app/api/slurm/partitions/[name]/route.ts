@@ -5,9 +5,9 @@ import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET(
   request: Request,
-  { params }: { params: { name: string } }
+  { params }: { params: Promise<{ name: string }> }
 ) {
-  const name = params.name;
+  const { name } = await params;
   const { data, error, status } = await fetchSlurmData(`/partition/${name}`);
 
   if (error) {
