@@ -2,6 +2,8 @@ import { getFlatHierarchy, getAccounts } from "@/actions/hierarchy";
 import { HierarchyManager } from "@/components/admin/hierarchy/hierarchy-manager";
 import BaseHeader from "@/components/base-header";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HierarchyPage() {
   const [orgs, accounts] = await Promise.all([
     getFlatHierarchy(),
