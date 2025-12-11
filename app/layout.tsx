@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { env } from "process";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: `${env.CLUSTER_NAME} Supercomputer`,
+  title: `${process.env.CLUSTER_NAME} Supercomputer`,
   description: "A Slurm supercomputer dashboard.",
   icons: {
     icon: "/favicon.ico",

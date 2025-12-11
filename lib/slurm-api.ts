@@ -1,5 +1,3 @@
-import { env } from "process";
-
 type SlurmApiType = 'slurm' | 'slurmdb';
 
 interface FetchSlurmOptions {
@@ -17,14 +15,14 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
 
   const { type = 'slurm', revalidate = 30, method = 'GET', body } = finalOptions;
   
-  const protocol = env.SLURM_PROTOCOL || 'http';
-  const baseUrl = `${protocol}://${env.SLURM_SERVER}:6820/${type}/${env.SLURM_API_VERSION}`;
+  const protocol = process.env.SLURM_PROTOCOL || 'http';
+  const baseUrl = `${protocol}://${process.env.SLURM_SERVER}:6820/${type}/${process.env.SLURM_API_VERSION}`;
   
   const fetchOptions: RequestInit = {
     method,
     headers: {
-      "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
-      "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
+      "X-SLURM-USER-NAME": `${process.env.SLURM_API_ACCOUNT}`,
+      "X-SLURM-USER-TOKEN": `${process.env.SLURM_API_TOKEN}`,
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     next: {
