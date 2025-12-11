@@ -1,8 +1,9 @@
 // app/api/reporting/gpu/route.ts
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
+import { env } from "process";
 
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
+const PROMETHEUS_URL = env.PROMETHEUS_URL;
 const STALE_JOB_THRESHOLD_SECONDS = 30; // Consider a job stale if no metrics in the last 30 seconds
 
 let prom: PrometheusDriver | null = null;
@@ -118,7 +119,7 @@ const checkJobFreshness = async (jobId: string): Promise<boolean> => {
 // Get the actual running jobs from Slurm
 const getRunningJobsFromSlurm = async (): Promise<Set<string>> => {
   try {
-    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseURL = env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const response = await fetch(`${baseURL}/api/slurm/jobs`);
 
     if (!response.ok) {

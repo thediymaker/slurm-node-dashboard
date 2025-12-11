@@ -1,11 +1,12 @@
 export const dynamic = 'force-dynamic';
+import { env } from "process";
 
 import { NextResponse } from "next/server";
 import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET() {
   const isEnabled =
-    String(process.env.MAINT_NOTIFICATIONS_ENABLED ?? "true").toLowerCase() === "true";
+    String(env.MAINT_NOTIFICATIONS_ENABLED ?? "true").toLowerCase() === "true";
 
   if (!isEnabled) {
     return NextResponse.json({ meta: { enabled: false }, reservations: [] });

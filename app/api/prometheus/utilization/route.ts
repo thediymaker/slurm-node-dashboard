@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
+import { env } from "process";
 
 type PrometheusMetric = {
   labels: Record<string, string>;
@@ -23,7 +24,7 @@ type UtilizationResponse = {
   error?: string;
 };
 
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL!;
+const PROMETHEUS_URL = env.PROMETHEUS_URL!;
 const HOURS_TO_ANALYZE = 24;
 const STEP_INTERVAL = 900; // 15 minutes in seconds
 

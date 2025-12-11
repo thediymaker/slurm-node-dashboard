@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import zlib from "zlib";
 import { promisify } from "util";
+import { env } from "process";
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
     }
 
     const dataDir =
-      process.env.HISTORICAL_DATA_DIR || path.join(process.cwd(), "data");
+      env.HISTORICAL_DATA_DIR || path.join(process.cwd(), "data");
     const files = await fs.readdir(dataDir);
     const [hour] = time.split(":");
     const targetStartTime = new Date(`${date}T${hour}:00:00.000Z`);

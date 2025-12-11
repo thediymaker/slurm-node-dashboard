@@ -1,9 +1,10 @@
 import { PrometheusQueryResponse } from "@/types/types";
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
+import { env } from "process";
 
 export const revalidate = 0;
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
+const PROMETHEUS_URL = env.PROMETHEUS_URL;
 const MAX_DATA_POINTS = 200;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache for node list
 
@@ -38,7 +39,7 @@ async function getClusterNodes(): Promise<string[]> {
 
   try {
     // Fetch node information from Slurm API
-    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseURL = env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const response = await fetch(`${baseURL}/api/slurm/nodes`);
 
     if (!response.ok) {

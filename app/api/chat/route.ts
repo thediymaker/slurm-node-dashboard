@@ -2,6 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, tool, convertToModelMessages } from "ai";
 import { z } from "zod";
 import { fetchSlurmData } from "@/lib/slurm-api";
+import { env } from "process";
 
 export const maxDuration = 30;
 
@@ -9,8 +10,8 @@ export async function POST(req: Request) {
   const { messages } = await req.json();
 
   const openai = createOpenAI({
-    baseURL: process.env.OPENAI_API_URL,
-    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: env.OPENAI_API_URL,
+    apiKey: env.OPENAI_API_KEY,
     fetch: async (url, options) => {
       console.log("OpenAI Fetch URL:", url);
       // console.log("OpenAI Fetch Options:", JSON.stringify(options, null, 2)); // Don't log full options to avoid leaking keys in logs if possible, or just log headers keys
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
   });
 
   const result = await streamText({
-    model: openai.chat(process.env.OPENAI_API_MODEL || "gpt-3.5-turbo"),
+    model: openai.chat(env.OPENAI_API_MODEL || "gpt-3.5-turbo"),
     messages: convertToModelMessages(messages),
     onError: (error) => {
       console.error("StreamText Error:", error);

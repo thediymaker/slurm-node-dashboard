@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { PrometheusDriver } from "prometheus-query";
+import { env } from "process";
 
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
+const PROMETHEUS_URL = env.PROMETHEUS_URL;
 
 let prom: PrometheusDriver | null = null;
 

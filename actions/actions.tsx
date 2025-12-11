@@ -3,10 +3,11 @@
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createOpenAI } from "@ai-sdk/openai";
+import { env } from "process";
 
 const openai = createOpenAI({
-  baseURL: process.env.OPENAI_API_URL,
-  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: env.OPENAI_API_URL,
+  apiKey: env.OPENAI_API_KEY,
 });
 
 export async function generateFollowUpQuestions(
@@ -16,8 +17,8 @@ export async function generateFollowUpQuestions(
   try {
     const { object } = await generateObject({
       model: openai.chat(
-        process.env.OPENAI_API_MODEL_SUGGESTION ||
-          process.env.OPENAI_API_MODEL ||
+        env.OPENAI_API_MODEL_SUGGESTION ||
+          env.OPENAI_API_MODEL ||
           "gpt-3.5-turbo"
       ),
       schema: z.object({

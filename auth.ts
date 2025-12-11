@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { env } from "process";
 
 export const {
   handlers: { GET, POST },
@@ -31,8 +32,8 @@ export const {
       },
       async authorize(credentials) {
         if (
-          credentials?.username === process.env.ADMIN_USERNAME &&
-          credentials?.password === process.env.ADMIN_PASSWORD
+          credentials?.username === env.ADMIN_USERNAME &&
+          credentials?.password === env.ADMIN_PASSWORD
         ) {
           return { id: "1", name: "Admin", role: "admin" };
         }
