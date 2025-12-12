@@ -1,7 +1,7 @@
-import { 
-  getTimeSeriesData, 
-  getGroupData, 
-  getFilterOptions, 
+import {
+  getTimeSeriesData,
+  getGroupData,
+  getFilterOptions,
   getDashboardStats,
   getJobStateDistribution,
   getTopUsers,
@@ -10,7 +10,7 @@ import {
   getJobDurationDistribution,
   getHierarchyUsage,
   getHierarchyTimeSeriesData,
-  MetricsFilters 
+  MetricsFilters
 } from "@/actions/metrics";
 import { MetricsFilter } from "@/components/metrics/metrics-filter";
 import { KPICards } from "@/components/metrics/kpi-cards";
@@ -22,7 +22,7 @@ import { addDays } from "date-fns";
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     from?: string;
     to?: string;
     clusters?: string;
@@ -32,10 +32,13 @@ interface PageProps {
     colleges?: string;
     departments?: string;
     search?: string;
-  }
+  }>;
 }
 
 export default async function MetricsPage({ searchParams }: PageProps) {
+  // Await searchParams (required in Next.js 15+)
+  const resolvedSearchParams = await searchParams;
+
   // Feature Flag Check
   if (process.env.NEXT_PUBLIC_ENABLE_JOB_METRICS_PLUGIN !== 'true') {
     redirect("/");
@@ -43,22 +46,22 @@ export default async function MetricsPage({ searchParams }: PageProps) {
 
   // Parse Filters
   const filters: MetricsFilters = {
-    startDate: searchParams.from ? new Date(searchParams.from) : addDays(new Date(), -30),
-    endDate: searchParams.to ? new Date(searchParams.to) : new Date(),
-    clusters: searchParams.clusters ? searchParams.clusters.split(',') : [],
-    accounts: searchParams.accounts ? searchParams.accounts.split(',') : [],
-    users: searchParams.users ? searchParams.users.split(',') : [],
-    colleges: searchParams.colleges ? searchParams.colleges.split(',') : [],
-    departments: searchParams.departments ? searchParams.departments.split(',') : [],
-    search: searchParams.search,
+    startDate: resolvedSearchParams.from ? new Date(resolvedSearchParams.from) : addDays(new Date(), -30),
+    endDate: resolvedSearchParams.to ? new Date(resolvedSearchParams.to) : new Date(),
+    clusters: resolvedSearchParams.clusters ? resolvedSearchParams.clusters.split(',') : [],
+    accounts: resolvedSearchParams.accounts ? resolvedSearchParams.accounts.split(',') : [],
+    users: resolvedSearchParams.users ? resolvedSearchParams.users.split(',') : [],
+    colleges: resolvedSearchParams.colleges ? resolvedSearchParams.colleges.split(',') : [],
+    departments: resolvedSearchParams.departments ? resolvedSearchParams.departments.split(',') : [],
+    search: resolvedSearchParams.search,
   };
 
-  const metric = (searchParams.metric as 'coreHours' | 'jobCount') || 'coreHours';
+  const metric = (resolvedSearchParams.metric as 'coreHours' | 'jobCount') || 'coreHours';
 
   // Fetch Data in Parallel
   const [
-    timeSeriesData, 
-    groupData, 
+    timeSeriesData,
+    groupData,
     filterOptions,
     stats,
     jobStateData,
@@ -86,12 +89,12 @@ export default async function MetricsPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 bg-background min-h-screen">
-      <UnifiedHeader 
-        title="Job Metrics Dashboard" 
-        description="Historical analysis of cluster usage, efficiency, and user activity." 
+      <UnifiedHeader
+        title="Job Metrics Dashboard"
+        description="Historical analysis of cluster usage, efficiency, and user activity."
       />
 
-      <MetricsFilter 
+      <MetricsFilter
         clusterOptions={filterOptions.clusters}
         accountOptions={filterOptions.accounts}
         userOptions={filterOptions.users}
@@ -100,8 +103,8 @@ export default async function MetricsPage({ searchParams }: PageProps) {
       />
 
       <KPICards stats={stats} />
-      
-      <MetricsDashboard 
+
+      <MetricsDashboard
         timeSeriesData={timeSeriesData}
         groupData={groupData}
         collegeData={collegeData}
