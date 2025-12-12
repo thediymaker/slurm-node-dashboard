@@ -6,7 +6,7 @@ import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET() {
   const isEnabled =
-    String(env.MAINT_NOTIFICATIONS_ENABLED ?? "true").toLowerCase() === "true";
+    String(env.NEXT_PUBLIC_MAINT_NOTIFICATIONS_ENABLED ?? "true").toLowerCase() === "true";
 
   if (!isEnabled) {
     return NextResponse.json({ meta: { enabled: false }, reservations: [] });

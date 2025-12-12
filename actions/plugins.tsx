@@ -55,5 +55,5 @@ export const influxDBPluginMetadata = {
 export const maintenanceNotificationsMetadata = {
   name: "Maintenance Notifications",
   description: "Display maintenance notification banners.",
-  isEnabled: process.env.MAINT_NOTIFICATIONS_ENABLED === "true",
+  isEnabled: process.env.NEXT_PUBLIC_MAINT_NOTIFICATIONS_ENABLED === "true",
 };
