@@ -77,18 +77,22 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
               <span>Home</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/modules" className="w-full cursor-pointer">
-              <Box className="mr-2 h-4 w-4" />
-              <span>Modules</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/rewind" className="w-full cursor-pointer">
-              <History className="mr-2 h-4 w-4" />
-              <span>Historical</span>
-            </Link>
-          </DropdownMenuItem>
+          {process.env.NEXT_PUBLIC_ENABLE_MODULES_PLUGIN === 'true' && (
+            <DropdownMenuItem asChild>
+              <Link href="/modules" className="w-full cursor-pointer">
+                <Box className="mr-2 h-4 w-4" />
+                <span>Modules</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
+          {process.env.NEXT_PUBLIC_ENABLE_HISTORY_PLUGIN === 'true' && (
+            <DropdownMenuItem asChild>
+              <Link href="/rewind" className="w-full cursor-pointer">
+                <History className="mr-2 h-4 w-4" />
+                <span>Historical</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
           {process.env.NEXT_PUBLIC_ENABLE_JOB_METRICS_PLUGIN === 'true' && (
             <DropdownMenuItem asChild>
               <Link href="/metrics" className="w-full cursor-pointer">
