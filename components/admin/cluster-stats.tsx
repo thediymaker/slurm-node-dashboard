@@ -1,16 +1,10 @@
+"use client";
+
 import React, { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, Server } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ClusterData {
   type: string;
@@ -40,7 +34,8 @@ const nodeFetcher = async (): Promise<ClusterResponse> => {
 const ClusterStats: React.FC = () => {
   const { data, error, isLoading } = useSWR<ClusterResponse>(
     nodeURL,
-    nodeFetcher
+    nodeFetcher,
+    { refreshInterval: 15000 }
   );
   const [clusterData, setClusterData] = useState<ClusterData[]>([]);
 
@@ -54,68 +49,70 @@ const ClusterStats: React.FC = () => {
     return clusterData.filter((item) => item.count > 0);
   }, [clusterData]);
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl font-medium">Cluster Resources</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl font-medium">Cluster Resources</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Failed to load cluster data
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Card className="text-gray-100">
-          <CardContent className="mt-6">
-            {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </div>
-            ) : error ? (
-              <Alert
-                variant="destructive"
-                className="bg-red-900 text-red-100 border-red-700"
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl font-medium">Cluster Resources (TRES)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {filteredClusterData.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No resource data available</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredClusterData.map((item) => (
+              <div
+                key={`${item.type}-${item.name}`}
+                className="p-4 rounded-lg border bg-card"
               >
-                <XCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  Failed to load cluster data.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <div className="space-y-4">
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertTitle>Cluster Status</AlertTitle>
-                  <AlertDescription>
-                    Cluster resource information is available.
-                  </AlertDescription>
-                </Alert>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {filteredClusterData.map((item, index) => (
-                    <motion.div
-                      key={`${item.type}-${item.name}`}
-                      className="p-4 rounded-lg shadow-md border bg-zinc-900"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Server className="h-4 w-4" />
-                        <h3 className="text-sm font-semibold text-gray-300 uppercase">
-                          {item.type} {item.name}
-                        </h3>
-                      </div>
-                      <p className="text-2xl font-bold">
-                        {item.count.toLocaleString()}
-                      </p>
-                    </motion.div>
-                  ))}
+                <div className="flex items-center justify-between mb-2">
+                  <Badge variant="outline" className="text-xs uppercase">
+                    {item.type}
+                  </Badge>
                 </div>
+                <div className="text-2xl font-bold">
+                  {item.count.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {item.name || item.type}
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </AnimatePresence>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
