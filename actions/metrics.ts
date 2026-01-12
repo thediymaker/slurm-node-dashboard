@@ -34,6 +34,8 @@ export interface DashboardStats {
   totalCoreHours: number;
   activeUsers: number;
   avgWaitTime: number;
+  totalGpuHours: number;
+  gpuJobs: number;
 }
 
 function buildWhereClause(filters: MetricsFilters, paramOffset: number = 0, tablePrefix: string = '') {
@@ -46,7 +48,7 @@ function buildWhereClause(filters: MetricsFilters, paramOffset: number = 0, tabl
     conditions.push(`${p}end_time >= $${idx++}`);
     params.push(filters.startDate);
   }
-  
+
   if (filters.endDate) {
     conditions.push(`${p}end_time <= $${idx++}`);
     params.push(filters.endDate);
@@ -149,7 +151,9 @@ export async function getDashboardStats(filters: MetricsFilters): Promise<Dashbo
       COUNT(*) as total_jobs,
       COALESCE(SUM(core_hours), 0) as total_core_hours,
       COUNT(DISTINCT user_id) as active_users,
-      COALESCE(AVG(wait_time_seconds), 0) as avg_wait_time
+      COALESCE(AVG(wait_time_seconds), 0) as avg_wait_time,
+      COALESCE(SUM(gpu_hours), 0) as total_gpu_hours,
+      COUNT(*) FILTER (WHERE gpu_count > 0) as gpu_jobs
     FROM job_history
     ${where}
   `;
@@ -161,18 +165,20 @@ export async function getDashboardStats(filters: MetricsFilters): Promise<Dashbo
       totalJobs: parseInt(row.total_jobs),
       totalCoreHours: parseFloat(row.total_core_hours),
       activeUsers: parseInt(row.active_users),
-      avgWaitTime: parseFloat(row.avg_wait_time)
+      avgWaitTime: parseFloat(row.avg_wait_time),
+      totalGpuHours: parseFloat(row.total_gpu_hours || 0),
+      gpuJobs: parseInt(row.gpu_jobs || 0)
     };
   } catch (error) {
     console.error('Error fetching stats:', error);
-    return { totalJobs: 0, totalCoreHours: 0, activeUsers: 0, avgWaitTime: 0 };
+    return { totalJobs: 0, totalCoreHours: 0, activeUsers: 0, avgWaitTime: 0, totalGpuHours: 0, gpuJobs: 0 };
   }
 }
 
 export async function getTimeSeriesData(filters: MetricsFilters, metric: 'coreHours' | 'jobCount') {
   const pool = getMetricsDb();
   const { where, params } = buildWhereClause(filters);
-  
+
   const agg = metric === 'coreHours' ? 'SUM(core_hours)' : 'COUNT(*)';
 
   try {
@@ -186,9 +192,9 @@ export async function getTimeSeriesData(filters: MetricsFilters, metric: 'coreHo
       GROUP BY DATE(end_time), cluster
       ORDER BY date ASC
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows.map((row: any) => ({
       date: row.date.toISOString().split('T')[0],
       value: parseFloat(row.value),
@@ -200,10 +206,218 @@ export async function getTimeSeriesData(filters: MetricsFilters, metric: 'coreHo
   }
 }
 
+export async function getGpuTimeSeriesData(filters: MetricsFilters) {
+  const pool = getMetricsDb();
+  const { where, params } = buildWhereClause(filters);
+
+  try {
+    const query = `
+      SELECT 
+        DATE(end_time) as date,
+        SUM(gpu_hours) as gpu_hours,
+        COUNT(*) FILTER (WHERE gpu_count > 0) as gpu_jobs
+      FROM job_history
+      ${where}
+      GROUP BY DATE(end_time)
+      ORDER BY date ASC
+    `;
+
+    const result = await pool.query(query, params);
+
+    return result.rows.map((row: any) => ({
+      date: row.date.toISOString().split('T')[0],
+      gpuHours: parseFloat(row.gpu_hours || 0),
+      gpuJobs: parseInt(row.gpu_jobs || 0)
+    }));
+  } catch (error) {
+    console.error('Database Error (getGpuTimeSeriesData):', error);
+    return [];
+  }
+}
+
+export async function getGpuByPartition(filters: MetricsFilters) {
+  const pool = getMetricsDb();
+  const { where, params } = buildWhereClause(filters);
+
+  try {
+    const query = `
+      SELECT 
+        partition as name,
+        SUM(gpu_hours) as value,
+        COUNT(*) FILTER (WHERE gpu_count > 0) as job_count
+      FROM job_history
+      ${where} AND gpu_count > 0
+      GROUP BY partition
+      ORDER BY value DESC
+      LIMIT 10
+    `;
+
+    const result = await pool.query(query, params);
+
+    return result.rows.map((row: any) => ({
+      name: row.name || 'Unknown',
+      value: parseFloat(row.value || 0),
+      jobCount: parseInt(row.job_count || 0)
+    }));
+  } catch (error) {
+    console.error('Database Error (getGpuByPartition):', error);
+    return [];
+  }
+}
+
+export async function getGpuTopUsers(filters: MetricsFilters) {
+  const pool = getMetricsDb();
+  const { where, params } = buildWhereClause(filters);
+
+  try {
+    const query = `
+      SELECT 
+        user_id as name,
+        SUM(gpu_hours) as value,
+        COUNT(*) FILTER (WHERE gpu_count > 0) as job_count
+      FROM job_history
+      ${where} AND gpu_count > 0
+      GROUP BY user_id
+      ORDER BY value DESC
+      LIMIT 10
+    `;
+
+    const result = await pool.query(query, params);
+
+    return result.rows.map((row: any) => ({
+      name: row.name || 'Unknown',
+      value: parseFloat(row.value || 0),
+      jobCount: parseInt(row.job_count || 0)
+    }));
+  } catch (error) {
+    console.error('Database Error (getGpuTopUsers):', error);
+    return [];
+  }
+}
+
+export async function getGpuByHierarchy(filters: MetricsFilters, level: 'college' | 'department') {
+  const pool = getMetricsDb();
+  const { where, params } = buildWhereClause(filters, 0, 'j');
+
+  // level 'department' = direct mapping (e.g. B1343)
+  // level 'college' = parent of direct mapping (e.g. FSE)
+
+  const groupByCol = level === 'department' ? 'o.name' : 'p.name';
+  const joinType = level === 'college' ? 'LEFT JOIN organizations p ON o.parent_id = p.id' : '';
+
+  try {
+    const query = `
+      SELECT 
+        ${groupByCol} as name,
+        SUM(j.gpu_hours) as value,
+        COUNT(*) FILTER (WHERE j.gpu_count > 0) as job_count
+      FROM job_history j
+      JOIN account_mappings am ON j.account_id = am.account_id
+      JOIN organizations o ON am.organization_id = o.id
+      ${joinType}
+      ${where} AND j.gpu_count > 0
+      GROUP BY ${groupByCol}
+      HAVING ${groupByCol} IS NOT NULL
+      ORDER BY value DESC
+      LIMIT 10
+    `;
+
+    const result = await pool.query(query, params);
+
+    return result.rows.map((row: any) => ({
+      name: row.name || 'Unknown',
+      value: parseFloat(row.value || 0),
+      jobCount: parseInt(row.job_count || 0)
+    }));
+  } catch (error) {
+    console.error('Database Error (getGpuByHierarchy):', error);
+    return [];
+  }
+}
+
+export async function getGpuHeatmapData(filters: MetricsFilters) {
+  const pool = getMetricsDb();
+  const { where, params } = buildWhereClause(filters);
+
+  try {
+    const query = `
+      SELECT 
+        EXTRACT(DOW FROM start_time) as day_of_week,
+        EXTRACT(HOUR FROM start_time) as hour_of_day,
+        COUNT(*) as job_count,
+        SUM(gpu_hours) as total_gpu_hours
+      FROM job_history
+      ${where} AND gpu_count > 0 AND start_time IS NOT NULL
+      GROUP BY 1, 2
+      ORDER BY 1, 2
+    `;
+
+    const result = await pool.query(query, params);
+
+    // Initialize 7x24 grid with zeros
+    const grid: { day: number; hour: number; value: number; jobs: number }[] = [];
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        grid.push({ day: d, hour: h, value: 0, jobs: 0 });
+      }
+    }
+
+    // Fill with data
+    result.rows.forEach((row: any) => {
+      const d = parseInt(row.day_of_week);
+      const h = parseInt(row.hour_of_day);
+      const idx = d * 24 + h;
+      if (grid[idx]) {
+        grid[idx].value = parseFloat(row.total_gpu_hours || 0);
+        grid[idx].jobs = parseInt(row.job_count || 0);
+      }
+    });
+
+    return grid;
+  } catch (error) {
+    console.error('Database Error (getGpuHeatmapData):', error);
+    return [];
+  }
+}
+
+export async function getGpuScatterData(filters: MetricsFilters) {
+  const pool = getMetricsDb();
+  const { where, params } = buildWhereClause(filters);
+
+  try {
+    const query = `
+      SELECT 
+        job_id,
+        user_id,
+        gpu_count,
+        (EXTRACT(EPOCH FROM (end_time - start_time)) / 3600.0) as duration_hours
+      FROM job_history
+      ${where} 
+      AND gpu_count > 0 
+      AND start_time IS NOT NULL 
+      AND end_time IS NOT NULL
+      ORDER BY end_time DESC
+      LIMIT 200
+    `;
+
+    const result = await pool.query(query, params);
+
+    return result.rows.map((row: any) => ({
+      jobId: row.job_id,
+      user: row.user_id,
+      gpuCount: parseInt(row.gpu_count),
+      duration: parseFloat(row.duration_hours || 0)
+    }));
+  } catch (error) {
+    console.error('Database Error (getGpuScatterData):', error);
+    return [];
+  }
+}
+
 export async function getGroupData(filters: MetricsFilters, metric: 'coreHours' | 'jobCount') {
   const pool = getMetricsDb();
   const { where, params } = buildWhereClause(filters, 0, 'j');
-  
+
   const agg = metric === 'coreHours' ? 'SUM(j.core_hours)' : 'COUNT(*)';
 
   try {
@@ -218,9 +432,9 @@ export async function getGroupData(filters: MetricsFilters, metric: 'coreHours' 
       ORDER BY value DESC
       LIMIT 10
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows.map((row: any) => ({
       name: row.account_name,
       value: parseFloat(row.value)
@@ -234,7 +448,7 @@ export async function getGroupData(filters: MetricsFilters, metric: 'coreHours' 
 export async function getTopUsers(filters: MetricsFilters, metric: 'coreHours' | 'jobCount') {
   const pool = getMetricsDb();
   const { where, params } = buildWhereClause(filters, 0, 'j');
-  
+
   const agg = metric === 'coreHours' ? 'SUM(j.core_hours)' : 'COUNT(*)';
 
   try {
@@ -249,9 +463,9 @@ export async function getTopUsers(filters: MetricsFilters, metric: 'coreHours' |
       ORDER BY value DESC
       LIMIT 10
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows.map((row: any) => ({
       name: row.user_name,
       value: parseFloat(row.value)
@@ -276,9 +490,9 @@ export async function getJobStateDistribution(filters: MetricsFilters) {
       GROUP BY job_state
       ORDER BY count DESC
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows.map((row: any) => ({
       state: row.state,
       count: parseInt(row.count)
@@ -303,9 +517,9 @@ export async function getWaitTimeData(filters: MetricsFilters) {
       GROUP BY DATE(end_time)
       ORDER BY date ASC
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows.map((row: any) => ({
       date: row.date.toISOString().split('T')[0],
       value: Math.max(0, parseFloat(row.value)), // Ensure no negative values
@@ -320,7 +534,7 @@ export async function getWaitTimeData(filters: MetricsFilters) {
 export async function getPartitionUsage(filters: MetricsFilters, metric: 'coreHours' | 'jobCount') {
   const pool = getMetricsDb();
   const { where, params } = buildWhereClause(filters);
-  
+
   const agg = metric === 'coreHours' ? 'SUM(core_hours)' : 'COUNT(*)';
 
   try {
@@ -334,9 +548,9 @@ export async function getPartitionUsage(filters: MetricsFilters, metric: 'coreHo
       ORDER BY value DESC
       LIMIT 10
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows.map((row: any) => ({
       name: row.partition || 'Unknown',
       value: parseFloat(row.value)
@@ -389,9 +603,9 @@ export async function getJobDurationDistribution(filters: MetricsFilters) {
           ELSE 5
         END
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows.map((row: any) => ({
       name: row.duration_bucket,
       value: parseInt(row.count)
@@ -405,17 +619,17 @@ export async function getJobDurationDistribution(filters: MetricsFilters) {
 export async function getHierarchyTimeSeriesData(filters: MetricsFilters, metric: 'coreHours' | 'jobCount', level: 'department' | 'college') {
   const pool = getMetricsDb();
   const { where, params } = buildWhereClause(filters, 0, 'j');
-  
+
   const agg = metric === 'coreHours' ? 'SUM(j.core_hours)' : 'COUNT(*)';
   const groupByCol = level === 'department' ? 'o.name' : 'p.name';
   const joinType = level === 'college' ? 'LEFT JOIN organizations p ON o.parent_id = p.id' : '';
 
   // Check if date range is small (< 2 days) to switch to hourly grouping
-  const isShortRange = filters.startDate && filters.endDate && 
+  const isShortRange = filters.startDate && filters.endDate &&
     (filters.endDate.getTime() - filters.startDate.getTime()) < 2 * 24 * 60 * 60 * 1000;
 
-  const timeGroup = isShortRange 
-    ? "DATE_TRUNC('hour', j.end_time)" 
+  const timeGroup = isShortRange
+    ? "DATE_TRUNC('hour', j.end_time)"
     : "DATE(j.end_time)";
 
   try {
@@ -432,66 +646,66 @@ export async function getHierarchyTimeSeriesData(filters: MetricsFilters, metric
       GROUP BY ${timeGroup}, ${groupByCol}
       ORDER BY date ASC
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     // Transform for Recharts with Zero-Filling
     const entities = new Set<string>();
     result.rows.forEach((row: any) => {
-        if (row.name) entities.add(row.name);
+      if (row.name) entities.add(row.name);
     });
     const entityList = Array.from(entities);
 
     const dataMap = new Map<string, any>();
-    
+
     // Determine range
     const startDate = filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const endDate = filters.endDate || new Date();
-    
+
     let current = new Date(startDate);
-    
+
     // Align start
     if (isShortRange) {
-        current.setMinutes(0, 0, 0);
+      current.setMinutes(0, 0, 0);
     } else {
-        current.setHours(0, 0, 0, 0);
+      current.setHours(0, 0, 0, 0);
     }
 
     // Generate all time slots
     while (current <= endDate) {
-        const dateStr = isShortRange 
-            ? current.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' })
-            : current.toISOString().split('T')[0];
-            
-        const entry: any = { date: dateStr };
-        entityList.forEach(e => entry[e] = 0);
-        dataMap.set(dateStr, entry);
-        
-        // Increment
-        if (isShortRange) {
-            current = new Date(current.getTime() + 60 * 60 * 1000); // Add 1 hour
-        } else {
-            current = new Date(current.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
-        }
+      const dateStr = isShortRange
+        ? current.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' })
+        : current.toISOString().split('T')[0];
+
+      const entry: any = { date: dateStr };
+      entityList.forEach(e => entry[e] = 0);
+      dataMap.set(dateStr, entry);
+
+      // Increment
+      if (isShortRange) {
+        current = new Date(current.getTime() + 60 * 60 * 1000); // Add 1 hour
+      } else {
+        current = new Date(current.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
+      }
     }
 
     // Fill with data
     result.rows.forEach((row: any) => {
-        if (!row.name) return;
-        const dateObj = new Date(row.date);
-        const dateStr = isShortRange 
-            ? dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' })
-            : dateObj.toISOString().split('T')[0];
+      if (!row.name) return;
+      const dateObj = new Date(row.date);
+      const dateStr = isShortRange
+        ? dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' })
+        : dateObj.toISOString().split('T')[0];
 
-        if (dataMap.has(dateStr)) {
-            const entry = dataMap.get(dateStr);
-            entry[row.name] = parseFloat(row.value);
-        }
+      if (dataMap.has(dateStr)) {
+        const entry = dataMap.get(dateStr);
+        entry[row.name] = parseFloat(row.value);
+      }
     });
 
     return {
-        data: Array.from(dataMap.values()),
-        entities: entityList
+      data: Array.from(dataMap.values()),
+      entities: entityList
     };
 
   } catch (error) {
@@ -503,17 +717,17 @@ export async function getHierarchyTimeSeriesData(filters: MetricsFilters, metric
 export async function getHierarchyUsage(filters: MetricsFilters, metric: 'coreHours' | 'jobCount', level: 'department' | 'college') {
   const pool = getMetricsDb();
   const { where, params } = buildWhereClause(filters, 0, 'j');
-  
+
   // If coreHours is huge (seconds), divide by 3600? 
   // Assuming the user's data is in seconds if it's > 1M for a small test.
   // But to be safe, let's just use the raw value for now, or maybe the user can fix the ingestor.
   // Actually, let's add a DISTINCT to the join to prevent multiplication if mappings are duplicated.
-  
+
   const agg = metric === 'coreHours' ? 'SUM(j.core_hours)' : 'COUNT(DISTINCT j.job_id)';
-  
+
   // level 'department' = direct mapping (e.g. B1343)
   // level 'college' = parent of direct mapping (e.g. FSE)
-  
+
   const groupByCol = level === 'department' ? 'o.name' : 'p.name';
   const joinType = level === 'college' ? 'LEFT JOIN organizations p ON o.parent_id = p.id' : '';
 
@@ -531,9 +745,9 @@ export async function getHierarchyUsage(filters: MetricsFilters, metric: 'coreHo
       ORDER BY value DESC
       LIMIT 15
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     return result.rows
       .filter((row: any) => row.name != null) // Filter out nulls if parent doesn't exist
       .map((row: any) => ({

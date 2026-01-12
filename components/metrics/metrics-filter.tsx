@@ -8,7 +8,7 @@ import { DatePickerWithRange } from "./date-range-picker"
 import { MultiSelect, Option } from "./multi-select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Filter, Calendar, RotateCcw, Check, Search } from "lucide-react"
+import { Filter, Calendar, RotateCcw, Check, Search, Bookmark } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -63,6 +63,25 @@ export function MetricsFilter({
 
   const { level1, level2 } = getHierarchyLabels();
 
+  // Auto-apply helper for immediate refresh (metric, date preset)
+  const autoApply = React.useCallback((overrides: { metric?: string; date?: DateRange }) => {
+    const params = new URLSearchParams()
+    const effectiveDate = overrides.date || date
+    const effectiveMetric = overrides.metric || metric
+
+    if (effectiveDate?.from) params.set("from", effectiveDate.from.toISOString())
+    if (effectiveDate?.to) params.set("to", effectiveDate.to.toISOString())
+    if (selectedClusters.length) params.set("clusters", selectedClusters.join(","))
+    if (selectedAccounts.length) params.set("accounts", selectedAccounts.join(","))
+    if (selectedUsers.length) params.set("users", selectedUsers.join(","))
+    if (selectedColleges.length) params.set("colleges", selectedColleges.join(","))
+    if (selectedDepartments.length) params.set("departments", selectedDepartments.join(","))
+    if (searchQuery) params.set("search", searchQuery)
+    params.set("metric", effectiveMetric)
+
+    router.push(`/metrics?${params.toString()}`)
+  }, [date, metric, selectedClusters, selectedAccounts, selectedUsers, selectedColleges, selectedDepartments, searchQuery, router])
+
   const handleApply = () => {
     const params = new URLSearchParams()
     if (date?.from) params.set("from", date.from.toISOString())
@@ -92,21 +111,80 @@ export function MetricsFilter({
 
   const handlePresetChange = (value: string) => {
     const now = new Date();
+    let newDate: DateRange | undefined;
     switch (value) {
       case "24h":
-        setDate({ from: addDays(now, -1), to: now });
+        newDate = { from: addDays(now, -1), to: now };
         break;
       case "7d":
-        setDate({ from: addDays(now, -7), to: now });
+        newDate = { from: addDays(now, -7), to: now };
         break;
       case "30d":
-        setDate({ from: addDays(now, -30), to: now });
+        newDate = { from: addDays(now, -30), to: now };
         break;
       case "90d":
-        setDate({ from: addDays(now, -90), to: now });
+        newDate = { from: addDays(now, -90), to: now };
         break;
       case "1y":
-        setDate({ from: addDays(now, -365), to: now });
+        newDate = { from: addDays(now, -365), to: now };
+        break;
+    }
+    if (newDate) {
+      setDate(newDate);
+      autoApply({ date: newDate });
+    }
+  };
+
+  const handleMetricChange = (value: string) => {
+    if (value) {
+      setMetric(value);
+      autoApply({ metric: value });
+    }
+  };
+
+  // Dashboard preset views
+  const handlePresetViewChange = (preset: string) => {
+    const now = new Date();
+
+    switch (preset) {
+      case "executive":
+        // Executive Summary: 30 days, Core Hours
+        setDate({ from: addDays(now, -30), to: now });
+        setMetric("coreHours");
+        setSelectedClusters([]);
+        setSelectedAccounts([]);
+        setSelectedUsers([]);
+        autoApply({
+          date: { from: addDays(now, -30), to: now },
+          metric: "coreHours"
+        });
+        break;
+      case "gpu":
+        // GPU Focus: 7 days
+        setDate({ from: addDays(now, -7), to: now });
+        setMetric("coreHours");
+        autoApply({
+          date: { from: addDays(now, -7), to: now },
+          metric: "coreHours"
+        });
+        break;
+      case "queue":
+        // Queue Health: 24 hours
+        setDate({ from: addDays(now, -1), to: now });
+        setMetric("jobCount");
+        autoApply({
+          date: { from: addDays(now, -1), to: now },
+          metric: "jobCount"
+        });
+        break;
+      case "quarterly":
+        // Quarterly Report: 90 days
+        setDate({ from: addDays(now, -90), to: now });
+        setMetric("coreHours");
+        autoApply({
+          date: { from: addDays(now, -90), to: now },
+          metric: "coreHours"
+        });
         break;
     }
   };
@@ -124,38 +202,51 @@ export function MetricsFilter({
               <p className="text-sm text-muted-foreground">Refine your metrics view</p>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1 justify-end">
-             <div className="relative w-full max-w-sm">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search users, groups, departments..." 
-                  className="pl-8" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleApply()}
-                />
-             </div>
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users, groups, departments..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleApply()}
+              />
+            </div>
 
-             <Select onValueChange={handlePresetChange}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Quick Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">Last 24 Hours</SelectItem>
-                  <SelectItem value="7d">Last 7 Days</SelectItem>
-                  <SelectItem value="30d">Last 30 Days</SelectItem>
-                  <SelectItem value="90d">Last 3 Months</SelectItem>
-                  <SelectItem value="1y">Last Year</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <div className="h-8 w-[1px] bg-border hidden sm:block" />
+            <Select onValueChange={handlePresetViewChange}>
+              <SelectTrigger className="w-[150px]">
+                <Bookmark className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Presets" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="executive">Executive Summary</SelectItem>
+                <SelectItem value="gpu">GPU Focus</SelectItem>
+                <SelectItem value="queue">Queue Health</SelectItem>
+                <SelectItem value="quarterly">Quarterly Report</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <ToggleGroup type="single" value={metric} onValueChange={(v) => v && setMetric(v)} className="border rounded-md p-1 bg-background">
-                <ToggleGroupItem value="coreHours" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Core Hours</ToggleGroupItem>
-                <ToggleGroupItem value="jobCount" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Job Count</ToggleGroupItem>
-              </ToggleGroup>
+            <Select onValueChange={handlePresetChange}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Quick Date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="24h">Last 24 Hours</SelectItem>
+                <SelectItem value="7d">Last 7 Days</SelectItem>
+                <SelectItem value="30d">Last 30 Days</SelectItem>
+                <SelectItem value="90d">Last 3 Months</SelectItem>
+                <SelectItem value="1y">Last Year</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="h-8 w-[1px] bg-border hidden sm:block" />
+
+            <ToggleGroup type="single" value={metric} onValueChange={handleMetricChange} className="border rounded-md p-1 bg-background">
+              <ToggleGroupItem value="coreHours" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Core Hours</ToggleGroupItem>
+              <ToggleGroupItem value="jobCount" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Job Count</ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
       </CardHeader>

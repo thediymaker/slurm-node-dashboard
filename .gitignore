@@ -9,6 +9,8 @@ package-lock.json
 testdata.ts
 .cursor/
 
+/slurm-history-ingestor
+
 /data
 
 # testing

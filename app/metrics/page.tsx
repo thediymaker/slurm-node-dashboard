@@ -10,14 +10,22 @@ import {
   getJobDurationDistribution,
   getHierarchyUsage,
   getHierarchyTimeSeriesData,
+  getGpuTimeSeriesData,
+  getGpuByPartition,
+  getGpuTopUsers,
+  getGpuByHierarchy,
+  getGpuHeatmapData,
+  getGpuScatterData,
   MetricsFilters
 } from "@/actions/metrics";
 import { MetricsFilter } from "@/components/metrics/metrics-filter";
 import { KPICards } from "@/components/metrics/kpi-cards";
 import { MetricsDashboard } from "@/components/metrics/metrics-dashboard";
 import UnifiedHeader from "@/components/unified-header";
+import Footer from "@/components/footer/footer";
 import { redirect } from "next/navigation";
 import { addDays } from "date-fns";
+import { env } from "process";
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +79,14 @@ export default async function MetricsPage({ searchParams }: PageProps) {
     durationData,
     collegeData,
     deptData,
-    collegeTrendData
+    collegeTrendData,
+    gpuTimeSeriesData,
+    gpuPartitionData,
+    gpuTopUsersData,
+    gpuCollegeData,
+    gpuDeptData,
+    gpuHeatmapData,
+    gpuScatterData
   ] = await Promise.all([
     getTimeSeriesData(filters, metric),
     getGroupData(filters, metric),
@@ -84,39 +99,57 @@ export default async function MetricsPage({ searchParams }: PageProps) {
     getJobDurationDistribution(filters),
     getHierarchyUsage(filters, metric, 'college'),
     getHierarchyUsage(filters, metric, 'department'),
-    getHierarchyTimeSeriesData(filters, metric, 'college')
+    getHierarchyTimeSeriesData(filters, metric, 'college'),
+    getGpuTimeSeriesData(filters),
+    getGpuByPartition(filters),
+    getGpuTopUsers(filters),
+    getGpuByHierarchy(filters, 'college'),
+    getGpuByHierarchy(filters, 'department'),
+    getGpuHeatmapData(filters),
+    getGpuScatterData(filters)
   ]);
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 bg-background min-h-screen">
-      <UnifiedHeader
-        title="Job Metrics Dashboard"
-        description="Historical analysis of cluster usage, efficiency, and user activity."
-      />
+    <div className="mb-5">
+      <div className="flex-1 space-y-4 p-8 pt-6 bg-background min-h-screen">
+        <UnifiedHeader
+          title="Job Metrics Dashboard"
+          description="Historical analysis of cluster usage, efficiency, and user activity."
+        />
 
-      <MetricsFilter
-        clusterOptions={filterOptions.clusters}
-        accountOptions={filterOptions.accounts}
-        userOptions={filterOptions.users}
-        collegeOptions={filterOptions.colleges}
-        departmentOptions={filterOptions.departments}
-      />
+        <MetricsFilter
+          clusterOptions={filterOptions.clusters}
+          accountOptions={filterOptions.accounts}
+          userOptions={filterOptions.users}
+          collegeOptions={filterOptions.colleges}
+          departmentOptions={filterOptions.departments}
+        />
 
-      <KPICards stats={stats} />
+        <KPICards stats={stats} />
 
-      <MetricsDashboard
-        timeSeriesData={timeSeriesData}
-        groupData={groupData}
-        collegeData={collegeData}
-        deptData={deptData}
-        collegeTrendData={collegeTrendData}
-        jobStateData={jobStateData}
-        waitTimeData={waitTimeData}
-        topUsersData={topUsersData}
-        partitionData={partitionData}
-        durationData={durationData}
-        metric={metric}
-      />
+        <MetricsDashboard
+          timeSeriesData={timeSeriesData}
+          groupData={groupData}
+          collegeData={collegeData}
+          deptData={deptData}
+          collegeTrendData={collegeTrendData}
+          jobStateData={jobStateData}
+          waitTimeData={waitTimeData}
+          topUsersData={topUsersData}
+          partitionData={partitionData}
+          durationData={durationData}
+          gpuTimeSeriesData={gpuTimeSeriesData}
+          gpuPartitionData={gpuPartitionData}
+          gpuTopUsersData={gpuTopUsersData}
+          gpuCollegeData={gpuCollegeData}
+          gpuDeptData={gpuDeptData}
+          gpuHeatmapData={gpuHeatmapData}
+          gpuScatterData={gpuScatterData}
+          metric={metric}
+        />
+      </div>
+      <Footer cluster={env.CLUSTER_NAME} logo={env.CLUSTER_LOGO} />
     </div>
   );
 }
+

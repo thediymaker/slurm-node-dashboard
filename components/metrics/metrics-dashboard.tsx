@@ -28,6 +28,12 @@ import { JobDurationChart } from "@/components/metrics/job-duration-chart";
 import { HierarchyChart } from "@/components/metrics/hierarchy-chart";
 import { HierarchyDistributionChart } from "@/components/metrics/hierarchy-distribution-chart";
 import { HierarchyTrendChart } from "@/components/metrics/hierarchy-trend-chart";
+import { GpuTimeSeriesChart } from "@/components/metrics/gpu-time-series-chart";
+import { GpuPartitionChart } from "@/components/metrics/gpu-partition-chart";
+import { GpuTopUsersChart } from "@/components/metrics/gpu-top-users-chart";
+import { GpuHierarchyChart } from "@/components/metrics/gpu-hierarchy-chart";
+import { GpuHeatmapChart } from "@/components/metrics/gpu-heatmap-chart";
+import { GpuScatterChart } from "@/components/metrics/gpu-scatter-chart";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,6 +57,13 @@ interface MetricsDashboardProps {
   topUsersData: any;
   partitionData: any;
   durationData: any;
+  gpuTimeSeriesData: any;
+  gpuPartitionData: any;
+  gpuTopUsersData: any;
+  gpuCollegeData: any;
+  gpuDeptData: any;
+  gpuHeatmapData: any;
+  gpuScatterData: any;
   metric: "coreHours" | "jobCount";
 }
 
@@ -64,7 +77,14 @@ type WidgetId =
   | "waitTime"
   | "topUsers"
   | "partition"
-  | "duration";
+  | "duration"
+  | "gpuTimeSeries"
+  | "gpuPartition"
+  | "gpuTopUsers"
+  | "gpuCollege"
+  | "gpuDept"
+  | "gpuHeatmap"
+  | "gpuScatter";
 
 interface WidgetConfig {
   id: WidgetId;
@@ -120,6 +140,13 @@ export function MetricsDashboard({
   topUsersData,
   partitionData,
   durationData,
+  gpuTimeSeriesData,
+  gpuPartitionData,
+  gpuTopUsersData,
+  gpuCollegeData,
+  gpuDeptData,
+  gpuHeatmapData,
+  gpuScatterData,
   metric,
 }: MetricsDashboardProps) {
   const [mounted, setMounted] = useState(false);
@@ -129,6 +156,11 @@ export function MetricsDashboard({
     "usageCollege",
     "usageDept",
     "trendCollege",
+    "gpuTimeSeries",
+    "gpuPartition",
+    "gpuTopUsers",
+    "gpuCollege",
+    "gpuDept",
     "jobState",
     "waitTime",
     "topUsers",
@@ -143,6 +175,11 @@ export function MetricsDashboard({
     "usageCollege",
     "usageDept",
     "trendCollege",
+    "gpuTimeSeries",
+    "gpuPartition",
+    "gpuTopUsers",
+    "gpuCollege",
+    "gpuDept",
     "jobState",
     "waitTime",
     "topUsers",
@@ -167,9 +204,20 @@ export function MetricsDashboard({
       "metrics-dashboard-visibility"
     );
 
+    // All known widget IDs - used to ensure new widgets are added
+    const allWidgetIds: WidgetId[] = [
+      "timeSeries", "usageGroup", "usageCollege", "usageDept", "trendCollege",
+      "gpuTimeSeries", "gpuPartition", "gpuTopUsers", "gpuCollege", "gpuDept",
+      "gpuHeatmap", "gpuScatter",
+      "jobState", "waitTime", "topUsers", "partition", "duration"
+    ];
+
     if (savedOrder) {
       try {
-        setOrder(JSON.parse(savedOrder));
+        const parsed = JSON.parse(savedOrder) as WidgetId[];
+        // Merge: keep saved order, add any new widgets that aren't in saved order
+        const newWidgets = allWidgetIds.filter(id => !parsed.includes(id));
+        setOrder([...parsed, ...newWidgets]);
       } catch (e) {
         console.error("Failed to parse saved order", e);
       }
@@ -177,7 +225,10 @@ export function MetricsDashboard({
 
     if (savedVisibility) {
       try {
-        setVisibleWidgets(JSON.parse(savedVisibility));
+        const parsed = JSON.parse(savedVisibility) as WidgetId[];
+        // Merge: keep saved visibility, add any new widgets as visible by default
+        const newWidgets = allWidgetIds.filter(id => !parsed.includes(id));
+        setVisibleWidgets([...parsed, ...newWidgets]);
       } catch (e) {
         console.error("Failed to parse saved visibility", e);
       }
@@ -273,6 +324,48 @@ export function MetricsDashboard({
       id: "duration",
       title: "Job Duration",
       component: <JobDurationChart data={durationData} />,
+      defaultSpan: "col-span-2",
+    },
+    gpuTimeSeries: {
+      id: "gpuTimeSeries",
+      title: "GPU Usage Over Time",
+      component: <GpuTimeSeriesChart data={gpuTimeSeriesData} />,
+      defaultSpan: "col-span-2",
+    },
+    gpuPartition: {
+      id: "gpuPartition",
+      title: "GPU Hours by Partition",
+      component: <GpuPartitionChart data={gpuPartitionData} />,
+      defaultSpan: "col-span-1",
+    },
+    gpuTopUsers: {
+      id: "gpuTopUsers",
+      title: "Top GPU Users",
+      component: <GpuTopUsersChart data={gpuTopUsersData} />,
+      defaultSpan: "col-span-1",
+    },
+    gpuCollege: {
+      id: "gpuCollege",
+      title: `GPU Hours by ${level1}`,
+      component: <GpuHierarchyChart data={gpuCollegeData} level="college" />,
+      defaultSpan: "col-span-1",
+    },
+    gpuDept: {
+      id: "gpuDept",
+      title: `GPU Hours by ${level2}`,
+      component: <GpuHierarchyChart data={gpuDeptData} level="department" />,
+      defaultSpan: "col-span-1",
+    },
+    gpuHeatmap: {
+      id: "gpuHeatmap",
+      title: "GPU Usage Heatmap",
+      component: <GpuHeatmapChart data={gpuHeatmapData} />,
+      defaultSpan: "col-span-2",
+    },
+    gpuScatter: {
+      id: "gpuScatter",
+      title: "Job Duration vs GPU Count",
+      component: <GpuScatterChart data={gpuScatterData} />,
       defaultSpan: "col-span-2",
     },
   };
