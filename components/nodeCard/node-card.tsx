@@ -11,7 +11,6 @@ import GPUUsageDisplay from "./gpu-progress";
 import { parseGPUResources } from "@/utils/gpu-parse";
 import { GPUUsageData, NodeCardProps } from "@/types/types";
 import { getStatusColor } from "@/lib/color-schemas";
-import { Cpu, MemoryStick, Activity, MonitorDot } from "lucide-react";
 import { ShineBorder } from "@/components/ui/shine-border";
 
 const calculateTotalGPUUsage = (
@@ -33,13 +32,22 @@ const MiniProgressBar = ({
 }) => {
   const percentage = Math.min((value / max) * 100, 100);
   return (
-    <div className="h-1.5 w-full bg-black/20 rounded-[1px] overflow-hidden">
+    <div className="h-1 w-full bg-black/20 rounded-[1px] overflow-hidden">
       <div
         className={`h-full ${colorClass} transition-all duration-300`}
         style={{ width: `${percentage}%` }}
       />
     </div>
   );
+};
+
+// Dynamic name sizing based on length
+const getNameSizeClass = (name: string) => {
+  const len = name.length;
+  if (len <= 6) return "text-[12px]";
+  if (len <= 10) return "text-[11px]";
+  if (len <= 14) return "text-[10px]";
+  return "text-[9px]";
 };
 
 const SmallCardContent: React.FC<{ name: string }> = ({ name }) => (
@@ -66,39 +74,38 @@ const MediumCardContent = ({
   const memPercent = Math.round((memoryUsed / memoryTotal) * 100);
 
   return (
-    <div className="flex flex-col h-full p-1.5 gap-0.5">
-      {/* Header */}
-      <div className="font-bold text-[12px] leading-none uppercase">
+    <div className="flex flex-col h-full p-2 gap-1">
+      {/* Header - dynamic sizing for long names */}
+      <div 
+        className={`font-bold leading-tight uppercase ${getNameSizeClass(name)}`}
+        title={name}
+      >
         {name}
       </div>
 
-      {/* Stats */}
-      <div className="flex-1 flex flex-col justify-center gap-1">
+      {/* Stats - flexible spacing */}
+      <div className="flex-1 flex flex-col justify-evenly min-h-0">
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[8px] opacity-90">
-            <span className="flex items-center gap-0.5">
-              <Cpu size={8} /> CPU
-            </span>
+          <div className="flex items-center justify-between text-[9px] opacity-90">
+            <span>CPU</span>
             <span>{cpuPercent}%</span>
           </div>
           <MiniProgressBar value={coresUsed} max={coresTotal} />
         </div>
 
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[8px] opacity-90">
-            <span className="flex items-center gap-0.5">
-              <MemoryStick size={8} /> MEM
-            </span>
+          <div className="flex items-center justify-between text-[9px] opacity-90">
+            <span>MEM</span>
             <span>{memPercent}%</span>
           </div>
           <MiniProgressBar value={memoryUsed} max={memoryTotal} />
         </div>
-      </div>
 
-      {/* GPU Display */}
-      {gpuTotal > 0 && (
-        <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
-      )}
+        {/* GPU Display - integrated into stats flow */}
+        {gpuTotal > 0 && (
+          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+        )}
+      </div>
     </div>
   );
 };
@@ -122,57 +129,46 @@ const LargeCardContent = ({
   const loadPercent = Math.round((actualLoad / coresTotal) * 100);
 
   return (
-    <div className="flex flex-col h-full p-1.5 gap-0.5">
-      {/* Header */}
-      <div className="font-bold text-[12px] leading-none uppercase">
+    <div className="flex flex-col h-full p-2 gap-1">
+      {/* Header - dynamic sizing for long names */}
+      <div 
+        className={`font-bold leading-tight uppercase ${getNameSizeClass(name)}`}
+        title={name}
+      >
         {name}
       </div>
 
-      {/* Stats */}
-      <div className="flex-1 flex flex-col justify-center gap-0.5">
+      {/* Stats - flexible spacing */}
+      <div className="flex-1 flex flex-col justify-evenly min-h-0">
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[8px] opacity-90">
-            <span className="flex items-center gap-0.5">
-              <Cpu size={8} /> CPU
-            </span>
-            <span>
-              {coresUsed}/{coresTotal}
-            </span>
+          <div className="flex items-center justify-between text-[9px] opacity-90">
+            <span>CPU</span>
+            <span>{cpuPercent}%</span>
           </div>
           <MiniProgressBar value={coresUsed} max={coresTotal} />
         </div>
 
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[8px] opacity-90">
-            <span className="flex items-center gap-0.5">
-              <MemoryStick size={8} /> MEM
-            </span>
-            <span>
-              {(memoryUsed / 1024).toFixed(0)}/{(memoryTotal / 1024).toFixed(0)}G
-            </span>
+          <div className="flex items-center justify-between text-[9px] opacity-90">
+            <span>MEM</span>
+            <span>{memPercent}%</span>
           </div>
           <MiniProgressBar value={memoryUsed} max={memoryTotal} />
         </div>
 
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[8px] opacity-90">
-            <span className="flex items-center gap-0.5">
-              <Activity size={8} /> LOAD
-            </span>
+          <div className="flex items-center justify-between text-[9px] opacity-90">
+            <span>LOAD</span>
             <span>{loadPercent}%</span>
           </div>
-          <MiniProgressBar
-            value={actualLoad}
-            max={coresTotal}
-            colorClass="bg-white/80"
-          />
+          <MiniProgressBar value={actualLoad} max={coresTotal} />
         </div>
-      </div>
 
-      {/* GPU Display */}
-      {gpuTotal > 0 && (
-        <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
-      )}
+        {/* GPU Display - integrated into stats flow */}
+        {gpuTotal > 0 && (
+          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+        )}
+      </div>
     </div>
   );
 };
