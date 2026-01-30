@@ -11,6 +11,8 @@ import GPUUsageDisplay from "./gpu-progress";
 import { parseGPUResources } from "@/utils/gpu-parse";
 import { GPUUsageData, NodeCardProps } from "@/types/types";
 import { getStatusColor } from "@/lib/color-schemas";
+import { Cpu, MemoryStick, Activity, MonitorDot } from "lucide-react";
+import { ShineBorder } from "@/components/ui/shine-border";
 
 const calculateTotalGPUUsage = (
   gres: string,
@@ -19,12 +21,31 @@ const calculateTotalGPUUsage = (
   return parseGPUResources(gres, gresUsed);
 };
 
+// Compact progress bar component
+const MiniProgressBar = ({
+  value,
+  max,
+  colorClass = "bg-white/80",
+}: {
+  value: number;
+  max: number;
+  colorClass?: string;
+}) => {
+  const percentage = Math.min((value / max) * 100, 100);
+  return (
+    <div className="h-1.5 w-full bg-black/20 rounded-[1px] overflow-hidden">
+      <div
+        className={`h-full ${colorClass} transition-all duration-300`}
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
+  );
+};
+
 const SmallCardContent: React.FC<{ name: string }> = ({ name }) => (
   <div className="flex items-center justify-center w-full h-full">
-    <div className="w-full px-1">
-      <div className="font-extrabold text-[10px] mb-.5 truncate text-center">
-        {name}
-      </div>
+    <div className="font-bold text-[10px] tracking-wide truncate text-center">
+      {name}
     </div>
   </div>
 );
@@ -41,27 +62,42 @@ const MediumCardContent = ({
     nodeData.gres,
     nodeData.gres_used
   );
+  const cpuPercent = Math.round((coresUsed / coresTotal) * 100);
+  const memPercent = Math.round((memoryUsed / memoryTotal) * 100);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-1 space-y-1">
-        <div className="w-full">
-          <div className="font-extrabold text-[10px] leading-tight uppercase truncate">
-            {name}
-          </div>
-        </div>
-        <p className="text-[9px] leading-none">
-          CPU: {coresUsed} / {coresTotal}
-        </p>
-        <p className="text-[9px] leading-none">
-          MEM: {(memoryUsed / 1024).toFixed(0)} /{" "}
-          {(memoryTotal / 1024).toFixed(0)}
-        </p>
+    <div className="flex flex-col h-full p-1.5 gap-0.5">
+      {/* Header */}
+      <div className="font-bold text-[12px] leading-none uppercase">
+        {name}
       </div>
-      {gpuTotal > 0 && (
-        <div className="mt-auto mb-1">
-          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+
+      {/* Stats */}
+      <div className="flex-1 flex flex-col justify-center gap-1">
+        <div className="space-y-0.5">
+          <div className="flex items-center justify-between text-[8px] opacity-90">
+            <span className="flex items-center gap-0.5">
+              <Cpu size={8} /> CPU
+            </span>
+            <span>{cpuPercent}%</span>
+          </div>
+          <MiniProgressBar value={coresUsed} max={coresTotal} />
         </div>
+
+        <div className="space-y-0.5">
+          <div className="flex items-center justify-between text-[8px] opacity-90">
+            <span className="flex items-center gap-0.5">
+              <MemoryStick size={8} /> MEM
+            </span>
+            <span>{memPercent}%</span>
+          </div>
+          <MiniProgressBar value={memoryUsed} max={memoryTotal} />
+        </div>
+      </div>
+
+      {/* GPU Display */}
+      {gpuTotal > 0 && (
+        <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
       )}
     </div>
   );
@@ -79,30 +115,63 @@ const LargeCardContent = ({
     nodeData.gres,
     nodeData.gres_used
   );
+  const cpuPercent = Math.round((coresUsed / coresTotal) * 100);
+  const memPercent = Math.round((memoryUsed / memoryTotal) * 100);
+  // cpu_load from Slurm API is scaled by 100 (3025 = 30.25)
+  const actualLoad = nodeData.cpu_load / 100;
+  const loadPercent = Math.round((actualLoad / coresTotal) * 100);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-1 space-y-1">
-        <div className="w-full">
-          <div className="font-extrabold text-[10px] leading-tight uppercase truncate">
-            {name}
-          </div>
-        </div>
-        <p className="text-[9px] leading-none">
-          CPU: {coresUsed} / {coresTotal}
-        </p>
-        <p className="text-[9px] leading-none">
-          MEM: {(memoryUsed / 1024).toFixed(0)} /{" "}
-          {(memoryTotal / 1024).toFixed(0)}
-        </p>
-        <p className="text-[9px] leading-none">
-          LOAD: {(nodeData.cpu_load / coresTotal).toFixed(2)}
-        </p>
+    <div className="flex flex-col h-full p-1.5 gap-0.5">
+      {/* Header */}
+      <div className="font-bold text-[12px] leading-none uppercase">
+        {name}
       </div>
-      {gpuTotal > 0 && (
-        <div className="mt-auto">
-          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+
+      {/* Stats */}
+      <div className="flex-1 flex flex-col justify-center gap-0.5">
+        <div className="space-y-0.5">
+          <div className="flex items-center justify-between text-[8px] opacity-90">
+            <span className="flex items-center gap-0.5">
+              <Cpu size={8} /> CPU
+            </span>
+            <span>
+              {coresUsed}/{coresTotal}
+            </span>
+          </div>
+          <MiniProgressBar value={coresUsed} max={coresTotal} />
         </div>
+
+        <div className="space-y-0.5">
+          <div className="flex items-center justify-between text-[8px] opacity-90">
+            <span className="flex items-center gap-0.5">
+              <MemoryStick size={8} /> MEM
+            </span>
+            <span>
+              {(memoryUsed / 1024).toFixed(0)}/{(memoryTotal / 1024).toFixed(0)}G
+            </span>
+          </div>
+          <MiniProgressBar value={memoryUsed} max={memoryTotal} />
+        </div>
+
+        <div className="space-y-0.5">
+          <div className="flex items-center justify-between text-[8px] opacity-90">
+            <span className="flex items-center gap-0.5">
+              <Activity size={8} /> LOAD
+            </span>
+            <span>{loadPercent}%</span>
+          </div>
+          <MiniProgressBar
+            value={actualLoad}
+            max={coresTotal}
+            colorClass="bg-white/80"
+          />
+        </div>
+      </div>
+
+      {/* GPU Display */}
+      {gpuTotal > 0 && (
+        <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
       )}
     </div>
   );
@@ -115,8 +184,9 @@ export const NodeCard = ({
   const [open, setOpen] = useState(false);
   const { bgColor, textColor } = getStatusColor(props.status, colorSchema);
   const statusDef = getStatusDef(props.status);
+  // cpu_load from Slurm API is scaled by 100 (3025 = 30.25)
   const cpuLoad = parseFloat(
-    (props.nodeData.cpu_load / props.coresTotal).toFixed(2)
+    ((props.nodeData.cpu_load / 100) / props.coresTotal).toFixed(2)
   );
 
   const openModal = () => setOpen(!open);
@@ -134,24 +204,45 @@ export const NodeCard = ({
     }
   };
 
+  const sizeClasses =
+    props.size === 50
+      ? "w-[85px] h-[25px]"
+      : props.size === 100
+        ? "w-[100px] h-[100px]"
+        : props.size === 150
+          ? "w-[100px] h-[115px]"
+          : "w-[100px] h-[100px]";
+
+  const isOverloaded = cpuLoad > 1.25;
+
   return (
     <HoverCard>
       <HoverCardTrigger asChild>
         <div
-          className={`border-[1px] cursor-pointer m-0.5 p-1 rounded-[5px] shadow-xl ${bgColor} ${textColor} ${
-            props.size === 50
-              ? "w-[85px] h-[25px]"
-              : props.size === 100
-              ? "w-[85px] h-[85px]"
-              : props.size === 150
-              ? "w-[85px] h-[100px]"
-              : "w-[85px] h-[85px]"
-          } ${cpuLoad > 125 ? "animate-pulse border-black" : ""}`}
+          className={`
+            relative overflow-hidden cursor-pointer m-0.5 rounded-lg
+            ${bgColor} ${textColor} ${sizeClasses}
+            shadow-lg hover:shadow-xl
+            border border-white/10
+            backdrop-blur-sm
+            transition-all duration-200 ease-out
+            hover:scale-[1.02] hover:brightness-110
+          `}
           onClick={props.historical ? undefined : openModal}
         >
-          <div className="items-center justify-center h-full w-full">
-            <div className="h-full w-full">{cardContent()}</div>
-          </div>
+          {/* Subtle gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none" />
+
+          {/* Content */}
+          <div className="relative h-full w-full">{cardContent()}</div>
+
+          {/* Shine border for overloaded nodes */}
+          {isOverloaded && (
+            <ShineBorder 
+              duration={4}
+              shineColor={["#ffffff", "#ffffffcc", "#ffffff80"]}
+            />
+          )}
         </div>
       </HoverCardTrigger>
       <HoverCardContent className="w-96 m-5 font-extralight text-sm">

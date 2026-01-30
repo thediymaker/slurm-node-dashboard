@@ -2,9 +2,12 @@ import React from "react";
 import {
   ServerIcon,
   CpuIcon,
+  MemoryStick,
+  Activity,
   LayersIcon,
   OctagonIcon,
   BoltIcon,
+  AlertCircle,
 } from "lucide-react";
 import { CardHoverProps, GPUResources } from "@/types/types";
 import GPUResourcesDisplay from "./gpu-resource";
@@ -63,96 +66,68 @@ const parseGPUResources = (gres: string, gresUsed: string): GPUResources => {
 
 const CardHover = ({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
   const gpuResources = parseGPUResources(nodeData.gres, nodeData.gres_used);
+  const memUsedGB = (nodeData.alloc_memory / 1024).toFixed(1);
+  const memTotalGB = (nodeData.real_memory / 1024).toFixed(1);
+  const memPercent = Math.round((nodeData.alloc_memory / nodeData.real_memory) * 100);
 
   return (
-    <div className="space-y-4 p-2">
-      <div className="flex items-center space-x-2 text-lg font-semibold">
-        <ServerIcon className="h-5 w-5" />
-        <span>{nodeData.hostname}</span>
+    <div className="space-y-2">
+      {/* Header */}
+      <div className="flex items-center gap-1.5">
+        <ServerIcon className="h-4 w-4" />
+        <span className="text-base font-bold">{nodeData.hostname}</span>
       </div>
 
-      <div className="flex items-center space-x-2 text-sm">
-        <CpuIcon className="h-4 w-4" />
-        <span>CPU Load: {cpuLoad.toFixed(2)}%</span>
+      {/* Resource Stats - Inline */}
+      <div className="flex gap-3 text-xs">
+        <div>
+          <span className="text-white/50">CPU </span>
+          <span className="font-medium">{nodeData.alloc_cpus}/{nodeData.cpus}</span>
+        </div>
+        <div>
+          <span className="text-white/50">Mem </span>
+          <span className="font-medium">{memUsedGB}/{memTotalGB}G</span>
+        </div>
+        <div>
+          <span className="text-white/50">Load </span>
+          <span className="font-medium">{Math.round(cpuLoad * 100)}%</span>
+        </div>
       </div>
 
+      {/* Power Usage */}
       {nodeData.energy && nodeData.energy.current_watts.number > 0 && (
-        <div className="space-y-2 border p-2 rounded-lg bg-gray-800/50">
-          <div className="flex items-center space-x-2 text-sm font-medium border-b border-gray-700 pb-2">
-            <BoltIcon className="h-4 w-4 text-yellow-500" />
-            <span>Power Usage</span>
+        <div className="text-xs flex gap-3">
+          <div>
+            <span className="text-white/50">Power </span>
+            <span className="font-medium">{nodeData.energy.current_watts.number}W</span>
           </div>
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            {nodeData.energy.current_watts?.set && (
-              <div className="text-sm">
-                <span className="text-gray-400">Current:</span>
-                <span className="ml-2 font-medium text-white">
-                  {nodeData.energy.current_watts.number}W
-                </span>
-              </div>
-            )}
-            {nodeData.energy.average_watts > 0 && (
-              <div className="text-sm">
-                <span className="text-gray-400">Average:</span>
-                <span className="ml-2 font-medium text-white">
-                  {nodeData.energy.average_watts}W
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="text-sm pt-1">
-            <span className="text-gray-400">Total Energy:</span>
-            <span className="ml-2 font-medium text-white">
-              {(nodeData.energy.consumed_energy / 3600000).toFixed(2)} kWh
-            </span>
-          </div>
-          {nodeData.energy.last_collected && (
-            <div className="text-xs text-gray-400 pt-1">
-              Last updated:{" "}
-              {new Date(nodeData.energy.last_collected * 1000).toLocaleString()}
+          {nodeData.energy.average_watts > 0 && (
+            <div>
+              <span className="text-white/50">Avg </span>
+              <span className="font-medium">{nodeData.energy.average_watts}W</span>
             </div>
           )}
         </div>
       )}
 
-      <div className="space-y-2">
-        <div className="flex items-center space-x-2 text-sm font-medium">
-          <LayersIcon className="h-4 w-4" />
-          <span>Features:</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {nodeData.features.map((feature, index) => (
-            <div
-              key={index}
-              className="px-2 py-1 bg-gray-800 rounded-full text-xs"
-            >
-              {feature}
-            </div>
-          ))}
-        </div>
+      {/* Features & Partitions - Combined row */}
+      <div className="flex flex-wrap gap-1">
+        {nodeData.features?.map((feature, index) => (
+          <span key={`f-${index}`} className="px-1.5 py-0.5 bg-zinc-800 rounded text-[10px]">
+            {feature}
+          </span>
+        ))}
+        {nodeData.partitions?.map((partition, index) => (
+          <span key={`p-${index}`} className="px-1.5 py-0.5 bg-blue-900/50 rounded text-[10px]">
+            {partition}
+          </span>
+        ))}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center space-x-2 text-sm font-medium">
-          <OctagonIcon className="h-4 w-4" />
-          <span>Partitions:</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {nodeData.partitions.map((partition, index) => (
-            <div
-              key={index}
-              className="px-2 py-1 bg-blue-900 rounded-full text-xs"
-            >
-              {partition}
-            </div>
-          ))}
-        </div>
-      </div>
-
+      {/* GPU Resources */}
       {nodeData.gres && (
-        <div className="space-y-2 border-t pt-2 border-gray-700">
-          <div className="text-sm font-medium">GPU Resources:</div>
-          <div className="text-xs text-gray-400">
+        <div className="border-t border-white/10 pt-2">
+          <div className="text-[10px] text-white/50 font-mono mb-1">
             <div>GRES: {nodeData.gres}</div>
             <div>GRES Used: {nodeData.gres_used}</div>
           </div>
@@ -164,17 +139,14 @@ const CardHover = ({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
         </div>
       )}
 
-      <div className="border-t pt-2 border-gray-700">
-        <div className="text-sm font-medium">Node Status:</div>
-        <div className="mt-1 px-2 py-1 bg-gray-800 rounded text-xs">
+      {/* Status */}
+      <div className="border-t border-white/10 pt-2">
+        <div className="px-2 py-1.5 bg-zinc-800 rounded text-xs">
           {statusDef}
         </div>
         {nodeData.reason && (
-          <div className="mt-2">
-            <div className="text-sm font-medium">Reason:</div>
-            <div className="mt-1 px-2 py-1 bg-yellow-900 rounded text-xs">
-              {nodeData.reason}
-            </div>
+          <div className="mt-1 px-2 py-1 bg-yellow-900/50 rounded text-[10px] text-yellow-200">
+            {nodeData.reason}
           </div>
         )}
       </div>

@@ -272,12 +272,13 @@ export async function getGpuTopUsers(filters: MetricsFilters) {
   try {
     const query = `
       SELECT 
-        user_id as name,
-        SUM(gpu_hours) as value,
-        COUNT(*) FILTER (WHERE gpu_count > 0) as job_count
-      FROM job_history
-      ${where} AND gpu_count > 0
-      GROUP BY user_id
+        u.name as name,
+        SUM(j.gpu_hours) as value,
+        COUNT(*) FILTER (WHERE j.gpu_count > 0) as job_count
+      FROM job_history j
+      JOIN users u ON j.user_id = u.id
+      ${where} AND j.gpu_count > 0
+      GROUP BY u.name
       ORDER BY value DESC
       LIMIT 10
     `;
@@ -387,16 +388,17 @@ export async function getGpuScatterData(filters: MetricsFilters) {
   try {
     const query = `
       SELECT 
-        job_id,
-        user_id,
-        gpu_count,
-        (EXTRACT(EPOCH FROM (end_time - start_time)) / 3600.0) as duration_hours
-      FROM job_history
+        j.job_id,
+        u.name as user_name,
+        j.gpu_count,
+        (EXTRACT(EPOCH FROM (j.end_time - j.start_time)) / 3600.0) as duration_hours
+      FROM job_history j
+      JOIN users u ON j.user_id = u.id
       ${where} 
-      AND gpu_count > 0 
-      AND start_time IS NOT NULL 
-      AND end_time IS NOT NULL
-      ORDER BY end_time DESC
+      AND j.gpu_count > 0 
+      AND j.start_time IS NOT NULL 
+      AND j.end_time IS NOT NULL
+      ORDER BY j.end_time DESC
       LIMIT 200
     `;
 
@@ -404,7 +406,7 @@ export async function getGpuScatterData(filters: MetricsFilters) {
 
     return result.rows.map((row: any) => ({
       jobId: row.job_id,
-      user: row.user_id,
+      user: row.user_name,
       gpuCount: parseInt(row.gpu_count),
       duration: parseFloat(row.duration_hours || 0)
     }));
