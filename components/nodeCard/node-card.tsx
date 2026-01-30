@@ -72,6 +72,9 @@ const MediumCardContent = ({
   );
   const cpuPercent = Math.round((coresUsed / coresTotal) * 100);
   const memPercent = Math.round((memoryUsed / memoryTotal) * 100);
+  // cpu_load from Slurm API is scaled by 100 (3025 = 30.25)
+  const actualLoad = nodeData.cpu_load / 100;
+  const loadPercent = Math.round((actualLoad / coresTotal) * 100);
 
   return (
     <div className="flex flex-col h-full p-2 gap-1">
@@ -83,8 +86,8 @@ const MediumCardContent = ({
         {name}
       </div>
 
-      {/* Stats - flexible spacing */}
-      <div className="flex-1 flex flex-col justify-evenly min-h-0">
+      {/* Stats - align top with consistent spacing */}
+      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0">
         <div className="space-y-0.5">
           <div className="flex items-center justify-between text-[9px] opacity-90">
             <span>CPU</span>
@@ -101,9 +104,17 @@ const MediumCardContent = ({
           <MiniProgressBar value={memoryUsed} max={memoryTotal} />
         </div>
 
-        {/* GPU Display - integrated into stats flow */}
-        {gpuTotal > 0 && (
+        {/* Show LOAD on CPU-only nodes, GPU on GPU nodes */}
+        {gpuTotal > 0 ? (
           <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+        ) : (
+          <div className="space-y-0.5">
+            <div className="flex items-center justify-between text-[9px] opacity-90">
+              <span>LOAD</span>
+              <span>{loadPercent}%</span>
+            </div>
+            <MiniProgressBar value={actualLoad} max={coresTotal} />
+          </div>
         )}
       </div>
     </div>
@@ -138,8 +149,8 @@ const LargeCardContent = ({
         {name}
       </div>
 
-      {/* Stats - flexible spacing */}
-      <div className="flex-1 flex flex-col justify-evenly min-h-0">
+      {/* Stats - align top with consistent spacing */}
+      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0">
         <div className="space-y-0.5">
           <div className="flex items-center justify-between text-[9px] opacity-90">
             <span>CPU</span>
@@ -206,7 +217,7 @@ export const NodeCard = ({
       : props.size === 100
         ? "w-[100px] h-[100px]"
         : props.size === 150
-          ? "w-[100px] h-[115px]"
+          ? "w-[100px] h-[125px]"
           : "w-[100px] h-[100px]";
 
   const isOverloaded = cpuLoad > 1.25;
