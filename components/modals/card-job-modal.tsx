@@ -337,57 +337,56 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
         <Separator />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+        <div className="flex-1 overflow-hidden flex flex-col space-y-4 pr-2">
           {/* Metrics Panel - stat card + chart */}
-          <NodeMetricsPanel 
-            data={promData} 
-            metricName={metricValue}
-            isLoading={promIsLoading}
-          />
+          <div className="flex-shrink-0">
+            <NodeMetricsPanel 
+              data={promData} 
+              metricName={metricValue}
+              isLoading={promIsLoading}
+            />
+          </div>
 
           {/* Jobs Section */}
           {jobIsLoading ? (
-            <div className="space-y-2">
+            <div className="space-y-2 flex-shrink-0">
               {Array.from({ length: 3 }, (_, i) => (
                 <SkeletonJobCard key={i} />
               ))}
             </div>
           ) : (
-            <>
-              {/* Jobs Section */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Current Jobs on System
-                  </h3>
-                  <Badge variant="secondary" className="text-xs rounded-md">
-                    {runningJobsCount} running
-                  </Badge>
-                </div>
-
-                <Card className="border-muted">
-                  <div className="max-h-[400px] overflow-y-auto">
-                    {jobData?.jobs?.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        No jobs currently running on this node
-                      </div>
-                    ) : (
-                      jobData?.jobs.map((job: Job) => (
-                        <JobRow
-                          key={job.job_id}
-                          job={job}
-                          isExpanded={expandedJobId === job.job_id}
-                          onToggle={() => handleJobRowClick(job.job_id)}
-                          jobDetails={expandedJobId === job.job_id ? jobDetails : undefined}
-                          jobDetailsIsLoading={expandedJobId === job.job_id && jobDetailsIsLoading}
-                          jobDetailsError={expandedJobId === job.job_id ? jobDetailsError : null}
-                        />
-                      ))
-                    )}
-                  </div>
-                </Card>
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Current Jobs on System
+                </h3>
+                <Badge variant="secondary" className="text-xs rounded-md">
+                  {runningJobsCount} running
+                </Badge>
               </div>
-            </>
+
+              <Card className="border-muted flex-1 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto">
+                  {!jobData?.jobs || jobData.jobs.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      No jobs currently running on this node
+                    </div>
+                  ) : (
+                    jobData.jobs.map((job: Job) => (
+                      <JobRow
+                        key={job.job_id}
+                        job={job}
+                        isExpanded={expandedJobId === job.job_id}
+                        onToggle={() => handleJobRowClick(job.job_id)}
+                        jobDetails={expandedJobId === job.job_id ? jobDetails : undefined}
+                        jobDetailsIsLoading={expandedJobId === job.job_id && jobDetailsIsLoading}
+                        jobDetailsError={expandedJobId === job.job_id ? jobDetailsError : null}
+                      />
+                    ))
+                  )}
+                </div>
+              </Card>
+            </div>
           )}
         </div>
       </DialogContent>
