@@ -72,8 +72,8 @@ const JobSearch = () => {
           if (activeJobResult.status === "fulfilled") {
             const activeJobData = activeJobResult.value;
             if (activeJobData?.jobs?.length > 0) {
-              const jobState = activeJobData.jobs[0].job_state[0];
-              if (jobState === "RUNNING") {
+              const jobState = activeJobData.jobs[0].job_state?.[0];
+              if (jobState === "RUNNING" || jobState === "COMPLETING") {
                 setJobOpen(true);
                 return;
               }

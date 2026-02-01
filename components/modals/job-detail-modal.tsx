@@ -241,8 +241,8 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
             <p className="font-semibold">Allocated Nodes</p>
             <p>
               {job.job_resources?.allocated_nodes
-                .map((node) => node.nodename)
-                .join(", ")}
+                ?.map((node) => node.nodename)
+                .join(", ") || "N/A"}
             </p>
           </div>
         </div>
