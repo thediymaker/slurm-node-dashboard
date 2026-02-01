@@ -71,7 +71,7 @@ const JobSearch = () => {
           // Check active job result first (prioritize running/pending jobs)
           if (activeJobResult.status === "fulfilled") {
             const activeJobData = activeJobResult.value;
-            if (activeJobData?.jobs?.length > 0) {
+            if (activeJobData?.jobs && Array.isArray(activeJobData.jobs) && activeJobData.jobs.length > 0) {
               const jobState = activeJobData.jobs[0].job_state?.[0];
               if (jobState === "RUNNING" || jobState === "COMPLETING") {
                 setJobOpen(true);
@@ -80,7 +80,7 @@ const JobSearch = () => {
               if (jobState === "PENDING") {
                 toast({
                   title: "Job Pending",
-                  description: `Reason: ${activeJobData.jobs[0].state_reason}`,
+                  description: `Reason: ${activeJobData.jobs[0].state_reason || "None"}`,
                 });
                 return;
               }
@@ -90,7 +90,19 @@ const JobSearch = () => {
           // Check completed job result
           if (completedJobResult.status === "fulfilled") {
             const completedJobData = completedJobResult.value;
-            if (completedJobData?.jobs?.length > 0) {
+            if (completedJobData?.jobs && Array.isArray(completedJobData.jobs) && completedJobData.jobs.length > 0) {
+              const jobState = completedJobData.jobs[0].state?.current?.[0];
+              
+              // If job is pending in completed DB, show pending toast
+              if (jobState === "PENDING") {
+                toast({
+                  title: "Job Pending",
+                  description: `Reason: ${completedJobData.jobs[0].state?.reason || "None"}`,
+                });
+                return;
+              }
+              
+              // Open historical modal for completed/cancelled/failed jobs
               setHistoricalJobOpen(true);
               return;
             }
