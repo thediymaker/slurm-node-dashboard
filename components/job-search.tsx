@@ -127,8 +127,8 @@ const JobSearch = () => {
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(errorData.error || "Failed to fetch maintenance data");
+        // Silently fail for connection errors - this is expected when Slurm is unreachable
+        return;
       }
 
       const data = await response.json();
@@ -155,8 +155,8 @@ const JobSearch = () => {
       } else {
         setMaintOpen(maintReservations.length > 0);
       }
-    } catch (error) {
-      console.error("Error fetching maintenance data:", error);
+    } catch {
+      // Silently fail - maintenance data is non-critical
     }
   }, []);
 
