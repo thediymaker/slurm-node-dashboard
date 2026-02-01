@@ -41,6 +41,7 @@ export function AdminKPICards() {
 
     const isLoading = diagLoading || nodesLoading || partitionsLoading;
     const hasError = diagError || nodesError || partitionsError;
+    const hasData = diagData || nodesData || partitionsData;
 
     // Calculate node statistics with proper state parsing
     const nodeStats = useMemo((): NodeStats => {
@@ -143,12 +144,26 @@ export function AdminKPICards() {
         );
     }
 
-    if (hasError) {
+    // Only show full error when we have no data at all
+    if (hasError && !hasData) {
+        const errorMessage = diagError?.message || nodesError?.message || partitionsError?.message || "Failed to load cluster statistics";
+        const isConnectionError = errorMessage.includes("Unable to contact Slurm controller") || 
+                                   errorMessage.includes("service may be down");
+        
         return (
             <div className="rounded-md bg-destructive/15 p-4 mb-6">
                 <div className="flex items-center gap-2 text-destructive">
                     <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Failed to load cluster statistics</span>
+                    <div className="flex flex-col">
+                        <span className="text-sm font-medium">
+                            {isConnectionError ? "Unable to contact Slurm controller" : "Failed to load cluster statistics"}
+                        </span>
+                        {isConnectionError && (
+                            <span className="text-xs text-muted-foreground mt-1">
+                                The Slurm controller may be down or unreachable.
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
         );

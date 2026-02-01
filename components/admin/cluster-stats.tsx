@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { AlertTriangle } from "lucide-react";
 import { useAdminCluster, useAdminDiag } from "./admin-utils";
 
 interface ClusterData {
@@ -86,13 +87,29 @@ const ClusterStats: React.FC = () => {
   }
 
   if (clusterError) {
+    const errorMessage = clusterError?.message || "Failed to load cluster data";
+    const isConnectionError = errorMessage.includes("Unable to contact Slurm controller") || 
+                               errorMessage.includes("service may be down");
+    
     return (
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-medium">Cluster Resources</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Failed to load cluster data</p>
+          <div className="flex items-start gap-2 text-destructive">
+            <AlertTriangle className="h-4 w-4 mt-0.5" />
+            <div className="flex flex-col">
+              <p className="text-sm font-medium">
+                {isConnectionError ? "Unable to contact Slurm controller" : "Failed to load cluster data"}
+              </p>
+              {isConnectionError && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  The Slurm controller may be down or unreachable.
+                </p>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
     );

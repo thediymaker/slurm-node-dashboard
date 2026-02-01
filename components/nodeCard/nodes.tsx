@@ -27,22 +27,46 @@ const nodeFetcher = async () => {
     headers: {
       "Content-Type": "application/json",
     },
-    next: { revalidate: 15 },
+    cache: 'no-store', // Prevent caching to always get fresh data
   });
   if (!res.ok) {
-    throw new Error("Network response was not ok");
+    // Try to extract error message from response
+    let errorMessage = "Network response was not ok";
+    try {
+      const errorData = await res.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // Use default message
+    }
+    throw new Error(errorMessage);
   }
   return res.json();
 };
 
 const Nodes = ({ username }: { username?: string }) => {
+  // Track connection errors that occur during revalidation
+  const [lastFetchError, setLastFetchError] = useState<Error | null>(null);
+
   const {
     data: nodeData,
     error: nodeError,
     isLoading: nodeIsLoading,
   } = useSWR(nodeURL, nodeFetcher, {
     refreshInterval: 15000,
+    onSuccess: () => {
+      // Clear error on success
+      setLastFetchError(null);
+    },
+    onError: (err) => {
+      // Track errors even when we have cached data
+      setLastFetchError(err);
+    },
   });
+
+  // Determine if we have a connection issue (either initial error or revalidation error)
+  const hasConnectionError = !!(nodeError || (lastFetchError && nodeData));
 
   // Use lazy initializers - function is only called once on mount
   const [cardSize, setCardSize] = useState<number>(() => {
@@ -243,14 +267,24 @@ const Nodes = ({ username }: { username?: string }) => {
     setColorSchema(value);
   };
 
-  if (nodeError) {
+  // Check if we have an error (using either nodeError or lastFetchError)
+  const activeError = nodeError || lastFetchError;
+  const isConnectionError = activeError?.message?.includes("Unable to contact Slurm controller") ||
+                            activeError?.message?.includes("service may be down") ||
+                            activeError?.message?.includes("Network response was not ok") ||
+                            activeError?.message?.includes("fetch");
+
+  // Only show full error state if we have NO data
+  if (nodeError && !nodeData) {
+    const errorMessage = isConnectionError 
+      ? "Unable to contact Slurm controller. The service may be down or unreachable." 
+      : "An error occurred loading node data. Please try refreshing the page.";
+    
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          {nodeError.message === "Network response was not ok"
-            ? "Failed to load, please check your network connection."
-            : "Session expired, please reload the page."}
+          {errorMessage}
         </AlertDescription>
       </Alert>
     );
@@ -381,6 +415,7 @@ const Nodes = ({ username }: { username?: string }) => {
       <LastUpdated 
         data={nodeData?.last_update?.number} 
         onEasterEgg={() => !isGroupedView && setShowGame(true)}
+        hasConnectionError={hasConnectionError}
       />
       {openaiPluginMetadata.isEnabled && <ChatIcon />}
     </div>

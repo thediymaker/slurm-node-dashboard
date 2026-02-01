@@ -24,13 +24,18 @@ interface HealthIndicatorProps {
   data?: SlurmDiag;
   isLoading: boolean;
   error?: any;
+  hasStaleData?: boolean;
 }
 
 export function HealthIndicator({
   data,
   isLoading,
   error,
+  hasStaleData: hasStaleDataProp,
 }: HealthIndicatorProps) {
+  // Check if we have stale data - use prop if provided, otherwise infer from error + data
+  const hasStaleData = hasStaleDataProp ?? (error && data);
+  
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground text-xs">
@@ -40,11 +45,25 @@ export function HealthIndicator({
     );
   }
 
-  if (error || !data) {
+  // Show stale data warning when we have cached data but refresh failed
+  if (hasStaleData) {
+    return (
+      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 text-xs">
+        <AlertTriangle className="h-3 w-3" />
+        <span>Cached</span>
+      </div>
+    );
+  }
+
+  // Show connection error when we have no data at all
+  if (error && !data) {
+    const isConnectionError = error.message?.includes("Unable to contact Slurm controller") ||
+                               error.message?.includes("service may be down") ||
+                               error.message?.includes("ECONNREFUSED");
     return (
       <div className="flex items-center gap-2 text-destructive text-xs">
         <XCircle className="h-3 w-3" />
-        <span>System Status: Error</span>
+        <span>{isConnectionError ? "Slurm Controller Unreachable" : "System Status: Error"}</span>
       </div>
     );
   }

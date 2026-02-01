@@ -105,15 +105,28 @@ export function QoSPanel() {
     }
 
     if (error) {
+        const errorMessage = error?.message || "Failed to load QoS data";
+        const isConnectionError = errorMessage.includes("Unable to contact Slurm controller") || 
+                                   errorMessage.includes("service may be down");
+        
         return (
             <Card>
                 <CardHeader>
                     <CardTitle className="text-xl font-medium">Quality of Service</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center gap-2 text-destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span className="text-sm">Failed to load QoS data</span>
+                    <div className="flex items-start gap-2 text-destructive">
+                        <AlertTriangle className="h-4 w-4 mt-0.5" />
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium">
+                                {isConnectionError ? "Unable to contact Slurm controller" : "Failed to load QoS data"}
+                            </span>
+                            {isConnectionError && (
+                                <span className="text-xs text-muted-foreground mt-1">
+                                    The Slurm controller may be down or unreachable.
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </CardContent>
             </Card>

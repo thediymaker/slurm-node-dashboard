@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -10,13 +10,35 @@ import { Box } from "lucide-react";
 
 // Fetcher function with error handling
 const fetcher = async (url: string) => {
-  const response = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      cache: 'no-store', // Prevent caching to always get fresh data
+    });
+    if (!response.ok) {
+      // Try to extract error message from response
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Use default message
+      }
+      throw new Error(errorMessage);
+    }
+    return response.json();
+  } catch (err) {
+    // Handle network errors (ECONNREFUSED, etc.)
+    if (err instanceof Error) {
+      if (err.message.includes('fetch failed') || err.message.includes('ECONNREFUSED')) {
+        throw new Error('Unable to contact Slurm controller. The service may be down or unreachable.');
+      }
+      throw err;
+    }
+    throw new Error('Network error occurred');
   }
-  return response.json();
 };
 
 interface FooterProps {
@@ -25,13 +47,25 @@ interface FooterProps {
 }
 
 const Footer = ({ cluster = "Cluster", logo }: FooterProps) => {
+  // Track errors that occur during revalidation (SWR doesn't update error state with cached data)
+  const [lastFetchError, setLastFetchError] = useState<Error | null>(null);
+  
   const { data, error, isLoading } = useSWR<SlurmDiag>(
     "/api/slurm/diag",
     fetcher,
     {
       refreshInterval: 15000,
+      onSuccess: () => {
+        setLastFetchError(null);
+      },
+      onError: (err) => {
+        setLastFetchError(err);
+      },
     }
   );
+
+  // Has connection error if there's an error OR if revalidation failed with cached data
+  const hasConnectionError = !!(error || (lastFetchError && data));
 
   const stats = useMemo(() => {
     if (isLoading || !data) {
@@ -63,7 +97,8 @@ const Footer = ({ cluster = "Cluster", logo }: FooterProps) => {
           <HealthIndicator 
             data={data} 
             isLoading={isLoading} 
-            error={error} 
+            error={error || lastFetchError}
+            hasStaleData={hasConnectionError && !!data}
           />
         </div>
 

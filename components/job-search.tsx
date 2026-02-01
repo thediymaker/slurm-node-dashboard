@@ -127,7 +127,8 @@ const JobSearch = () => {
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
-        throw new Error("Failed to fetch data");
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to fetch maintenance data");
       }
 
       const data = await response.json();

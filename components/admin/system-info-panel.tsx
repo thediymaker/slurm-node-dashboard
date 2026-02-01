@@ -21,7 +21,7 @@ export function SystemInfoPanel() {
     const [isCheckingUpdate, setIsCheckingUpdate] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const { data: diagData, isLoading: diagLoading, error: diagError, mutate: mutateDiag } = useAdminDiag();
+    const { data: diagData, isLoading: diagLoading, error: diagError, hasConnectionError, mutate: mutateDiag } = useAdminDiag();
 
     useEffect(() => {
         async function checkForUpdate() {
@@ -115,8 +115,25 @@ export function SystemInfoPanel() {
                                 <Skeleton key={i} className="h-5 w-full" />
                             ))}
                         </div>
-                    ) : diagError ? (
-                        <p className="text-sm text-destructive">Failed to connect</p>
+                    ) : hasConnectionError ? (
+                        <>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Status</span>
+                                <Badge variant="destructive">Disconnected</Badge>
+                            </div>
+                            <Separator />
+                            <p className="text-sm text-destructive">
+                                Unable to contact Slurm controller. The service may be down or unreachable.
+                            </p>
+                            {diagData && (
+                                <>
+                                    <Separator />
+                                    <p className="text-xs text-muted-foreground">
+                                        Showing cached data from last successful connection.
+                                    </p>
+                                </>
+                            )}
+                        </>
                     ) : (
                         <>
                             <div className="flex justify-between items-center">

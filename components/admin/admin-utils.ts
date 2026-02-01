@@ -4,21 +4,48 @@
 // Shared utilities, configurations, and types for admin components
 
 import useSWR, { SWRConfiguration } from "swr";
+import { useState, useCallback } from "react";
 
 // -----------------------------------------------------------------------------
 // API Fetcher
 // -----------------------------------------------------------------------------
 
 export const adminFetcher = async (url: string) => {
-    const res = await fetch(url, {
-        headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) {
-        const error = new Error("Failed to fetch data");
-        (error as any).status = res.status;
-        throw error;
+    try {
+        const res = await fetch(url, {
+            headers: { "Content-Type": "application/json" },
+            cache: 'no-store', // Prevent caching to always get fresh data
+        });
+        if (!res.ok) {
+            // Try to get error message from response
+            let errorMessage = "Failed to fetch data";
+            try {
+                const errorData = await res.json();
+                if (errorData.error) {
+                    errorMessage = errorData.error;
+                }
+            } catch {
+                // If we can't parse the error, use status text
+                errorMessage = res.statusText || errorMessage;
+            }
+            
+            const error = new Error(errorMessage);
+            (error as any).status = res.status;
+            throw error;
+        }
+        return res.json();
+    } catch (err) {
+        // Handle network errors (ECONNREFUSED, fetch failed, etc.)
+        if (err instanceof Error) {
+            if (err.message.includes('fetch failed') || err.message.includes('ECONNREFUSED')) {
+                const error = new Error('Unable to contact Slurm controller. The service may be down or unreachable.');
+                (error as any).status = 503;
+                throw error;
+            }
+            throw err;
+        }
+        throw new Error('Network error occurred');
     }
-    return res.json();
 };
 
 // -----------------------------------------------------------------------------
@@ -50,35 +77,61 @@ export const API_ENDPOINTS = {
 } as const;
 
 // -----------------------------------------------------------------------------
-// Custom Hooks for Admin Data
+// Custom Hooks for Admin Data with Error Tracking
 // -----------------------------------------------------------------------------
 
+// Helper hook that wraps SWR with proper error tracking during revalidation
+function useAdminSWR<T>(key: string) {
+    const [lastError, setLastError] = useState<Error | null>(null);
+    
+    const result = useSWR<T>(key, adminFetcher, {
+        ...defaultSWRConfig,
+        onSuccess: () => {
+            setLastError(null);
+        },
+        onError: (err) => {
+            setLastError(err);
+        },
+    });
+    
+    // Combine SWR error with tracked error for revalidation failures
+    const hasConnectionError = !!(result.error || (lastError && result.data));
+    
+    return {
+        ...result,
+        // Override error to include revalidation errors
+        error: result.error || (lastError && result.data ? lastError : null),
+        hasConnectionError,
+        lastError,
+    };
+}
+
 export function useAdminDiag() {
-    return useSWR(API_ENDPOINTS.DIAG, adminFetcher, defaultSWRConfig);
+    return useAdminSWR(API_ENDPOINTS.DIAG);
 }
 
 export function useAdminNodes() {
-    return useSWR(API_ENDPOINTS.NODES, adminFetcher, defaultSWRConfig);
+    return useAdminSWR(API_ENDPOINTS.NODES);
 }
 
 export function useAdminPartitions() {
-    return useSWR(API_ENDPOINTS.PARTITIONS, adminFetcher, defaultSWRConfig);
+    return useAdminSWR(API_ENDPOINTS.PARTITIONS);
 }
 
 export function useAdminJobs() {
-    return useSWR(API_ENDPOINTS.JOBS, adminFetcher, defaultSWRConfig);
+    return useAdminSWR(API_ENDPOINTS.JOBS);
 }
 
 export function useAdminReservations() {
-    return useSWR(API_ENDPOINTS.RESERVATIONS, adminFetcher, defaultSWRConfig);
+    return useAdminSWR(API_ENDPOINTS.RESERVATIONS);
 }
 
 export function useAdminQoS() {
-    return useSWR(API_ENDPOINTS.QOS, adminFetcher, defaultSWRConfig);
+    return useAdminSWR(API_ENDPOINTS.QOS);
 }
 
 export function useAdminCluster() {
-    return useSWR(API_ENDPOINTS.CLUSTER, adminFetcher, defaultSWRConfig);
+    return useAdminSWR(API_ENDPOINTS.CLUSTER);
 }
 
 // -----------------------------------------------------------------------------
