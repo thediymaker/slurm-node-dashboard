@@ -107,15 +107,15 @@ function useAdminSWR<T>(key: string) {
 }
 
 export function useAdminDiag() {
-    return useAdminSWR(API_ENDPOINTS.DIAG);
+    return useAdminSWR<AdminDiagResponse>(API_ENDPOINTS.DIAG);
 }
 
 export function useAdminNodes() {
-    return useAdminSWR(API_ENDPOINTS.NODES);
+    return useAdminSWR<AdminNodesResponse>(API_ENDPOINTS.NODES);
 }
 
 export function useAdminPartitions() {
-    return useAdminSWR(API_ENDPOINTS.PARTITIONS);
+    return useAdminSWR<AdminPartitionsResponse>(API_ENDPOINTS.PARTITIONS);
 }
 
 export function useAdminJobs() {
@@ -132,6 +132,35 @@ export function useAdminQoS() {
 
 export function useAdminCluster() {
     return useAdminSWR(API_ENDPOINTS.CLUSTER);
+}
+
+// -----------------------------------------------------------------------------
+// Minimal Admin API Response Types
+// -----------------------------------------------------------------------------
+
+interface AdminDiagResponse {
+    statistics?: {
+        jobs_running?: number;
+        jobs_pending?: number;
+    };
+}
+
+interface AdminNodeSummary {
+    state: string;
+    cpus?: number;
+    alloc_cpus?: number;
+}
+
+interface AdminNodesResponse {
+    nodes?: AdminNodeSummary[];
+}
+
+interface AdminPartitionSummary {
+    state?: string[] | { current?: string[] } | { current?: string } | string;
+}
+
+interface AdminPartitionsResponse {
+    partitions?: AdminPartitionSummary[];
 }
 
 // -----------------------------------------------------------------------------
