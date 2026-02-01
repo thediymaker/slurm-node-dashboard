@@ -12,6 +12,7 @@ import { parseGPUResources } from "@/utils/gpu-parse";
 import { GPUUsageData, NodeCardProps } from "@/types/types";
 import { getStatusColor } from "@/lib/color-schemas";
 import { ShineBorder } from "@/components/ui/shine-border";
+import { useGameContext } from "./game-context";
 
 const calculateTotalGPUUsage = (
   gres: string,
@@ -202,6 +203,7 @@ export const NodeCard = memo(({
   ...props
 }: NodeCardProps & { colorSchema?: string }) => {
   const [open, setOpen] = useState(false);
+  const { isGameActive } = useGameContext();
   
   // Memoize expensive calculations
   const { bgColor, textColor } = useMemo(
@@ -216,7 +218,9 @@ export const NodeCard = memo(({
     [props.nodeData.cpu_load, props.coresTotal]
   );
 
-  const openModal = () => setOpen(!open);
+  const openModal = () => {
+    if (!isGameActive) setOpen(!open);
+  };
 
   const cardContent = useMemo(() => {
     switch (props.size) {
@@ -245,9 +249,10 @@ export const NodeCard = memo(({
   const isOverloaded = cpuLoad > 1.25;
 
   return (
-    <HoverCard>
+    <HoverCard open={isGameActive ? false : undefined}>
       <HoverCardTrigger asChild>
         <div
+          data-node-id={props.nodeData.hostname || props.name}
           className={`
             relative overflow-hidden cursor-pointer m-0.5 rounded-lg
             ${bgColor} ${textColor} ${sizeClasses}

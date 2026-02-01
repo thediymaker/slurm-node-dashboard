@@ -19,6 +19,7 @@ import NodeCount from "./node-counts";
 import ChatIcon from "../llm/chat-icon";
 import { openaiPluginMetadata } from "@/actions/plugins";
 import { LogicType } from "@/components/feature-selector";
+import NodeGameWrapper from "./node-game-wrapper";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
@@ -99,6 +100,7 @@ const Nodes = ({ username }: { username?: string }) => {
     useState<string>("allState");
   const [selectedNodePartitions, setSelectedNodePartitions] =
     useState<string>("allPartitions");
+  const [showGame, setShowGame] = useState(false);
 
   const systems: Node[] = nodeData?.nodes || [];
 
@@ -350,27 +352,36 @@ const Nodes = ({ username }: { username?: string }) => {
           colorSchema={colorSchema}
         />
       ) : (
-        <div className="flex flex-wrap p-3 uppercase mb-20">
-          {filteredNodes.map((node: any) => (
-            <NodeCard
-              size={cardSize}
-              key={node.hostname}
-              name={node.name}
-              load={node.cpu_load?.number}
-              partitions={node.partitions}
-              features={node.features}
-              coresTotal={node.cpus}
-              coresUsed={node.alloc_cpus}
-              memoryTotal={node.real_memory}
-              memoryUsed={node.alloc_memory}
-              status={node.state}
-              nodeData={node}
-              colorSchema={colorSchema}
-            />
-          ))}
-        </div>
+        <NodeGameWrapper
+          nodes={filteredNodes}
+          isGameActive={showGame}
+          onGameEnd={() => setShowGame(false)}
+        >
+          <div className="flex flex-wrap p-3 uppercase mb-20">
+            {filteredNodes.map((node: any) => (
+              <NodeCard
+                size={cardSize}
+                key={node.hostname}
+                name={node.name}
+                load={node.cpu_load?.number}
+                partitions={node.partitions}
+                features={node.features}
+                coresTotal={node.cpus}
+                coresUsed={node.alloc_cpus}
+                memoryTotal={node.real_memory}
+                memoryUsed={node.alloc_memory}
+                status={node.state}
+                nodeData={node}
+                colorSchema={colorSchema}
+              />
+            ))}
+          </div>
+        </NodeGameWrapper>
       )}
-      <LastUpdated data={nodeData?.last_update?.number} />
+      <LastUpdated 
+        data={nodeData?.last_update?.number} 
+        onEasterEgg={() => !isGroupedView && setShowGame(true)}
+      />
       {openaiPluginMetadata.isEnabled && <ChatIcon />}
     </div>
   );
