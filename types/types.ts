@@ -90,8 +90,11 @@ export interface JobDetails extends Job {
   job_state: string[];
   start_time: { number: number };
   end_time: { number: number };
+  submit_time?: { number: number };
   cpus_per_task: { number: number };
+  cpus?: { number: number };
   memory_per_node: { number: number };
+  memory_per_cpu?: { number: number };
   gres_detail: string[];
   standard_output: string;
   user_name: string;
@@ -105,6 +108,11 @@ export interface JobDetails extends Job {
   standard_input: string;
   time_limit: { number: number };
   priority: { number: number };
+  current_working_directory?: string;
+  state_reason?: string;
+  tres_req_str?: string;
+  partition?: string;
+  qos?: string;
 }
 
 export interface RunningJob extends Partial<JobDetails> {

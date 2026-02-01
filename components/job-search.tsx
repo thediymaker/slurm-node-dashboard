@@ -73,15 +73,9 @@ const JobSearch = () => {
             const activeJobData = activeJobResult.value;
             if (activeJobData?.jobs && Array.isArray(activeJobData.jobs) && activeJobData.jobs.length > 0) {
               const jobState = activeJobData.jobs[0].job_state?.[0];
-              if (jobState === "RUNNING" || jobState === "COMPLETING") {
+              // Show modal for running, pending, and completing jobs
+              if (jobState === "RUNNING" || jobState === "COMPLETING" || jobState === "PENDING") {
                 setJobOpen(true);
-                return;
-              }
-              if (jobState === "PENDING") {
-                toast({
-                  title: "Job Pending",
-                  description: `Reason: ${activeJobData.jobs[0].state_reason || "None"}`,
-                });
                 return;
               }
             }
@@ -93,12 +87,9 @@ const JobSearch = () => {
             if (completedJobData?.jobs && Array.isArray(completedJobData.jobs) && completedJobData.jobs.length > 0) {
               const jobState = completedJobData.jobs[0].state?.current?.[0];
               
-              // If job is pending in completed DB, show pending toast
+              // If job is pending in completed DB, still show active modal
               if (jobState === "PENDING") {
-                toast({
-                  title: "Job Pending",
-                  description: `Reason: ${completedJobData.jobs[0].state?.reason || "None"}`,
-                });
+                setJobOpen(true);
                 return;
               }
               
