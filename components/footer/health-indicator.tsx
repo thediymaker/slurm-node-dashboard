@@ -68,6 +68,16 @@ export function HealthIndicator({
     );
   }
 
+  // If no data available, show unknown status
+  if (!data) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+        <Activity className="h-3 w-3" />
+        <span>System Status: Unknown</span>
+      </div>
+    );
+  }
+
   // Memoize status calculation to avoid recalculating on every render
   const { status, errors, warnings } = useMemo(() => {
     const errs = data.errors || [];

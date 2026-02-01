@@ -4,7 +4,160 @@
 // Shared utilities, configurations, and types for admin components
 
 import useSWR, { SWRConfiguration } from "swr";
-import { useState, useCallback } from "react";
+import { useState } from "react";
+
+// -----------------------------------------------------------------------------
+// API Response Types
+// -----------------------------------------------------------------------------
+
+export interface SlurmValue {
+    set?: boolean;
+    infinite?: boolean;
+    number?: number;
+}
+
+export interface AdminNode {
+    name: string;
+    state?: string[];
+    cpus?: number;
+    alloc_cpus?: number;
+    real_memory?: number;
+    alloc_memory?: number;
+    partitions?: string[];
+    features?: string[];
+    gres?: string;
+    gres_used?: string;
+    reason?: string;
+}
+
+export interface AdminNodesResponse {
+    nodes: AdminNode[];
+}
+
+export interface AdminPartitionSummary {
+    name: string;
+    state?: string[];
+    partition?: {
+        state?: string[];
+        default?: boolean;
+    };
+    nodes?: {
+        total?: number;
+        allowed?: string;
+    };
+    cpus?: {
+        total?: number;
+    };
+    maximums?: {
+        time?: SlurmValue;
+    };
+    priority?: {
+        job_factor?: number;
+    };
+}
+
+export interface AdminPartitionsResponse {
+    partitions: AdminPartitionSummary[];
+}
+
+export interface AdminDiagResponse {
+    statistics?: {
+        jobs_running?: number;
+        jobs_pending?: number;
+        jobs_submitted?: number;
+        jobs_started?: number;
+        jobs_completed?: number;
+        jobs_canceled?: number;
+        jobs_failed?: number;
+        server_thread_count?: number;
+        agent_count?: number;
+        agent_queue_size?: number;
+        dbd_agent_queue_size?: number;
+        schedule_cycle_max?: number;
+        schedule_cycle_mean?: number;
+        schedule_cycle_last?: number;
+        bf_active?: boolean;
+        bf_cycle_counter?: number;
+        server_start_time?: { number?: number; set?: boolean };
+    };
+    meta?: {
+        slurm?: {
+            version?: {
+                major?: string;
+                minor?: string;
+                micro?: string;
+            };
+            release?: string;
+            cluster?: string;
+        };
+    };
+}
+
+export interface AdminJobsResponse {
+    jobs: Array<{
+        job_id?: number;
+        name?: string;
+        user_name?: string;
+        state?: { current?: string[] };
+        partition?: string;
+        nodes?: string;
+    }>;
+}
+
+export interface AdminReservation {
+    name: string;
+    start_time?: { number?: number };
+    end_time?: { number?: number };
+    node_count?: number;
+    node_list?: string;
+    users?: string;
+    accounts?: string;
+    flags?: string[];
+    features?: string;
+    partition?: string;
+}
+
+export interface AdminReservationsResponse {
+    reservations: AdminReservation[];
+}
+
+export interface AdminQoS {
+    name: string;
+    description?: string;
+    priority?: SlurmValue;
+    limits?: {
+        max?: {
+            jobs?: { per?: { user?: SlurmValue; account?: SlurmValue } };
+            wall_clock?: { per?: { qos?: SlurmValue; job?: SlurmValue } };
+            tres?: { per?: { user?: any[]; job?: any[]; node?: any[] } };
+            accruing?: { per?: { account?: SlurmValue } };
+        };
+        min?: {
+            tres?: { per?: { job?: any[] } };
+        };
+        factor?: number;
+    };
+    preempt?: { mode?: string[]; list?: string[] };
+    usage_factor?: SlurmValue;
+    flags?: string[];
+}
+
+export interface AdminQoSResponse {
+    qos: AdminQoS[];
+}
+
+export interface AdminClusterTres {
+    type: string;
+    count: number;
+    name: string;
+}
+
+export interface AdminClusterResponse {
+    clusters: Array<{
+        name?: string;
+        tres?: AdminClusterTres[];
+    }>;
+}
 
 // -----------------------------------------------------------------------------
 // API Fetcher
@@ -119,59 +272,24 @@ export function useAdminPartitions() {
 }
 
 export function useAdminJobs() {
-    return useAdminSWR(API_ENDPOINTS.JOBS);
+    return useAdminSWR<AdminJobsResponse>(API_ENDPOINTS.JOBS);
 }
 
 export function useAdminReservations() {
-    return useAdminSWR(API_ENDPOINTS.RESERVATIONS);
+    return useAdminSWR<AdminReservationsResponse>(API_ENDPOINTS.RESERVATIONS);
 }
 
 export function useAdminQoS() {
-    return useAdminSWR(API_ENDPOINTS.QOS);
+    return useAdminSWR<AdminQoSResponse>(API_ENDPOINTS.QOS);
 }
 
 export function useAdminCluster() {
-    return useAdminSWR(API_ENDPOINTS.CLUSTER);
-}
-
-// -----------------------------------------------------------------------------
-// Minimal Admin API Response Types
-// -----------------------------------------------------------------------------
-
-interface AdminDiagResponse {
-    statistics?: {
-        jobs_running?: number;
-        jobs_pending?: number;
-    };
-}
-
-interface AdminNodeSummary {
-    state: string;
-    cpus?: number;
-    alloc_cpus?: number;
-}
-
-interface AdminNodesResponse {
-    nodes?: AdminNodeSummary[];
-}
-
-interface AdminPartitionSummary {
-    state?: string[] | { current?: string[] } | { current?: string } | string;
-}
-
-interface AdminPartitionsResponse {
-    partitions?: AdminPartitionSummary[];
+    return useAdminSWR<AdminClusterResponse>(API_ENDPOINTS.CLUSTER);
 }
 
 // -----------------------------------------------------------------------------
 // Slurm Value Helpers
 // -----------------------------------------------------------------------------
-
-export interface SlurmValue {
-    set?: boolean;
-    infinite?: boolean;
-    number?: number;
-}
 
 /**
  * Extract a displayable value from Slurm's {set, infinite, number} format

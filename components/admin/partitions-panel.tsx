@@ -20,19 +20,10 @@ import {
     DropdownMenuCheckboxItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAdminPartitions, formatDuration, getPartitionState, sortByKey, SortDirection } from "./admin-utils";
+import { useAdminPartitions, formatDuration, getPartitionState, sortByKey, SortDirection, type AdminPartitionSummary } from "./admin-utils";
 import { Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
 
-interface Partition {
-    name: string;
-    state?: { current: string[] } | string[];
-    partition?: { state?: string[]; default?: boolean };
-    nodes: { total: number; configured?: string };
-    cpus: { total: number };
-    maximums?: { time?: { number?: number; infinite?: boolean } };
-    defaults?: { time?: { number?: number } };
-    priority?: { job_factor?: number; tier?: number };
-}
+type Partition = AdminPartitionSummary;
 
 type SortKey = "name" | "state" | "nodes" | "cpus";
 
