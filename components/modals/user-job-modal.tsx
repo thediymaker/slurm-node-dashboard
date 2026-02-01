@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import useSWR from "swr";
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import {
@@ -18,12 +19,26 @@ import {
   PaginationItem,
   PaginationLink,
 } from "@/components/ui/pagination";
-import { useState } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Job, JobDetails } from "@/types/types";
+
+// Utility function moved outside component
+const convertUnixToHumanReadable = (unixTimestamp: number): string => {
+  const date = new Date(unixTimestamp * 1000);
+  return date.toLocaleString();
+};
+
+// Shared fetcher for SWR
+const jsonFetcher = (url: string) =>
+  fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  }).then((res) => res.json());
+
+const ITEMS_PER_PAGE = 20;
 
 interface UserJobModalProps {
   open: boolean;
@@ -38,46 +53,57 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-  const jobFetcher = () =>
-    fetch(`/api/slurm/jobs/user/${searchID}`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((res) => res.json());
 
-  const itemsPerPage = 20;
+  // Memoize URLs
+  const userJobsURL = useMemo(
+    () => `/api/slurm/jobs/user/${searchID}`,
+    [searchID]
+  );
+  const jobDetailsURL = useMemo(
+    () => (expandedJobId ? `/api/slurm/job/${expandedJobId}` : null),
+    [expandedJobId]
+  );
 
   const {
     data: jobData,
     error: jobError,
     isLoading: jobIsLoading,
-  } = useSWR(open ? `/api/slurm/jobs/user/${searchID}` : null, jobFetcher);
-
-  function convertUnixToHumanReadable(unixTimestamp: number) {
-    const date = new Date(unixTimestamp * 1000);
-    return date.toLocaleString();
-  }
-
-  const pageCount = Math.ceil((jobData?.jobs?.length || 0) / itemsPerPage);
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-
-  const currentItems = jobData?.jobs?.slice(indexOfFirstItem, indexOfLastItem);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  } = useSWR(open ? userJobsURL : null, jsonFetcher);
 
   const {
     data: jobDetails,
     error: jobDetailsError,
     isLoading: jobDetailsIsLoading,
-  } = useSWR<{ jobs: JobDetails[] }>(
-    expandedJobId ? `/api/slurm/job/${expandedJobId}` : null,
-    (url: string) =>
-      fetch(url, {
-        headers: { "Content-Type": "application/json" },
-      }).then((res) => res.json())
+  } = useSWR<{ jobs: JobDetails[] }>(jobDetailsURL, jsonFetcher);
+
+  // Memoize pagination calculations
+  const pageCount = useMemo(
+    () => Math.ceil((jobData?.jobs?.length || 0) / ITEMS_PER_PAGE),
+    [jobData?.jobs?.length]
   );
+
+  const currentItems = useMemo(() => {
+    const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+    const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+    return jobData?.jobs?.slice(indexOfFirstItem, indexOfLastItem) ?? [];
+  }, [jobData?.jobs, currentPage]);
+
+  const runningJobsCount = useMemo(
+    () =>
+      jobData?.jobs?.filter((job: Job) =>
+        job.state.current.includes("RUNNING")
+      ).length ?? 0,
+    [jobData?.jobs]
+  );
+
+  // Memoize callbacks
+  const paginate = useCallback((pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  }, []);
+
+  const handleJobRowClick = useCallback((jobId: string) => {
+    setExpandedJobId((prev) => (prev === jobId ? null : jobId));
+  }, []);
 
   // Render skeleton loader for the table
   const renderSkeletonTable = () => (
@@ -326,16 +352,11 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentItems.map((job: Job, index: number) => (
-                  <>
+                {currentItems.map((job: Job) => (
+                  <React.Fragment key={job.job_id}>
                     <TableRow
-                      key={`${job.job_id}-row`}
                       className="cursor-pointer"
-                      onClick={() =>
-                        setExpandedJobId(
-                          expandedJobId === job.job_id ? null : job.job_id
-                        )
-                      }
+                      onClick={() => handleJobRowClick(job.job_id)}
                     >
                       <TableCell>{job.job_id}</TableCell>
                       <TableCell>
@@ -502,18 +523,13 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={9} className="text-right">
-                    Total Number of currently running jobs:{" "}
-                    {
-                      jobData?.jobs.filter((job: any) =>
-                        job.state.current.includes("RUNNING")
-                      ).length
-                    }
+                    Total Number of currently running jobs: {runningJobsCount}
                   </TableCell>
                 </TableRow>
               </TableFooter>
@@ -535,4 +551,4 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
   );
 };
 
-export default UserJobModal;
+export default memo(UserJobModal);

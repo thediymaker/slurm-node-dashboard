@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useMemo } from "react";
 import useSWR from "swr";
 import {
   Dialog,
@@ -14,75 +14,79 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RunningJob, JobDetailModalProps } from "@/types/types";
 
+// Utility function moved outside component
+const convertUnixToHumanReadable = (unixTimestamp: number): string => {
+  const date = new Date(unixTimestamp * 1000);
+  return date.toLocaleString();
+};
+
+// Shared fetcher for SWR
+const jsonFetcher = (url: string) =>
+  fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  }).then((res) => res.json());
+
+// Skeleton components extracted outside
+const SkeletonOverview = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {Array.from({ length: 4 }, (_, idx) => (
+      <Card key={idx}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-4 rounded-full" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-6 w-24 mb-2" />
+          <Skeleton className="h-3 w-full" />
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+);
+
+const SkeletonDetails = () => (
+  <Card className="mt-6">
+    <CardHeader>
+      <Skeleton className="h-5 w-32" />
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 12 }, (_, idx) => (
+          <div key={idx}>
+            <Skeleton className="h-4 w-24 mb-2" />
+            <Skeleton className="h-3 w-full" />
+          </div>
+        ))}
+      </div>
+      <Separator className="my-4" />
+      <div>
+        <Skeleton className="h-4 w-20 mb-2" />
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 5 }, (_, idx) => (
+            <Skeleton key={idx} className="h-6 w-16 rounded-full" />
+          ))}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 const JobDetailModal: React.FC<JobDetailModalProps> = ({
   open,
   setOpen,
   searchID,
 }) => {
-  const jobFetcher = () =>
-    fetch(`/api/slurm/job/${searchID}`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((res) => res.json());
+  // Memoize URL
+  const jobURL = useMemo(
+    () => `/api/slurm/job/${searchID}`,
+    [searchID]
+  );
 
   const {
     data: jobData,
     error: jobError,
     isLoading: jobIsLoading,
-  } = useSWR<{
-    jobs: RunningJob[];
-  }>(open ? `/api/slurm/job/${searchID}` : null, jobFetcher);
-
-  function convertUnixToHumanReadable(unixTimestamp: number) {
-    const date = new Date(unixTimestamp * 1000);
-    return date.toLocaleString();
-  }
-
-  // Skeleton components to display while loading
-  const renderSkeletonOverview = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {[...Array(4)].map((_, idx) => (
-        <Card key={idx}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-4 rounded-full" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-6 w-24 mb-2" />
-            <Skeleton className="h-3 w-full" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-
-  const renderSkeletonDetails = () => (
-    <Card className="mt-6">
-      <CardHeader>
-        <Skeleton className="h-5 w-32" />
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(12)].map((_, idx) => (
-            <div key={idx}>
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-3 w-full" />
-            </div>
-          ))}
-        </div>
-        <Separator className="my-4" />
-        <div>
-          <Skeleton className="h-4 w-20 mb-2" />
-          <div className="flex flex-wrap gap-2">
-            {[...Array(5)].map((_, idx) => (
-              <Skeleton key={idx} className="h-6 w-16 rounded-full" />
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  } = useSWR<{ jobs: RunningJob[] }>(open ? jobURL : null, jsonFetcher);
 
   if (jobError)
     return (
@@ -286,8 +290,8 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
         <ScrollArea className="pr-4">
           {jobIsLoading ? (
             <>
-              {renderSkeletonOverview()}
-              {renderSkeletonDetails()}
+              <SkeletonOverview />
+              <SkeletonDetails />
             </>
           ) : (
             jobData?.jobs &&
@@ -304,4 +308,4 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
   );
 };
 
-export default JobDetailModal;
+export default memo(JobDetailModal);

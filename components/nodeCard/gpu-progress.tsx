@@ -1,7 +1,7 @@
-import React from "react";
+import React, { memo } from "react";
 import { GPUUsageProps } from "@/types/types";
 
-const GPUUsageDisplay = ({ gpuUsed, gpuTotal }: GPUUsageProps) => {
+const GPUUsageDisplay = memo(({ gpuUsed, gpuTotal }: GPUUsageProps) => {
   const usagePercentage = Math.min((gpuUsed / gpuTotal) * 100, 100);
 
   return (
@@ -21,6 +21,7 @@ const GPUUsageDisplay = ({ gpuUsed, gpuTotal }: GPUUsageProps) => {
       </div>
     </div>
   );
-};
+});
+GPUUsageDisplay.displayName = "GPUUsageDisplay";
 
 export default GPUUsageDisplay;

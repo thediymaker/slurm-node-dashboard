@@ -1,6 +1,7 @@
 'use server'
 
 import { getMetricsDb } from "@/lib/metrics-db";
+import { unstable_cache } from "next/cache";
 
 export interface MetricsFilters {
   startDate?: Date;
@@ -118,7 +119,7 @@ function buildWhereClause(filters: MetricsFilters, paramOffset: number = 0, tabl
   };
 }
 
-export async function getFilterOptions() {
+async function getFilterOptionsInternal() {
   const pool = getMetricsDb();
   try {
     const [clusters, accounts, users, colleges, departments] = await Promise.all([
@@ -141,6 +142,13 @@ export async function getFilterOptions() {
     return { clusters: [], accounts: [], users: [], colleges: [], departments: [] };
   }
 }
+
+// Cache filter options for 5 minutes since they change infrequently
+export const getFilterOptions = unstable_cache(
+  getFilterOptionsInternal,
+  ['filter-options'],
+  { revalidate: 300, tags: ['filter-options', 'hierarchy'] }
+);
 
 export async function getDashboardStats(filters: MetricsFilters): Promise<DashboardStats> {
   const pool = getMetricsDb();

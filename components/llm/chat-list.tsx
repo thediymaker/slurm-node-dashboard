@@ -28,6 +28,27 @@ function getTextFromParts(parts: Message["parts"]) {
   }, "");
 }
 
+function getContextFromMessage(message: Message): string {
+  const textContent = getTextFromParts(message.parts);
+  
+  // If there's text content, use it
+  if (textContent.trim()) {
+    return textContent;
+  }
+  
+  // Otherwise, try to summarize tool calls for context
+  const toolParts = message.parts.filter(
+    (part) => part.type.startsWith("tool-") && 'toolName' in part
+  );
+  
+  if (toolParts.length > 0) {
+    const toolNames = toolParts.map((part: any) => part.toolName).join(", ");
+    return `Used tools: ${toolNames}`;
+  }
+  
+  return "";
+}
+
 export function ChatList({
   messages,
   isLoading,
@@ -55,6 +76,9 @@ export function ChatList({
       {messages.map((message, index) => {
         const isLast = index === messages.length - 1;
         const previousMessage = index > 0 ? messages[index - 1] : null;
+        
+        // Find the last user message for follow-up context
+        const lastUserMessage = [...messages].slice(0, index + 1).reverse().find(m => m.role === "user");
 
         if (message.role === "user") {
           const content = getTextFromParts(message.parts);
@@ -123,11 +147,11 @@ export function ChatList({
               </div>
             )}
 
-            {isLast && !isLoading && previousMessage?.role === "user" && (
+            {isLast && !isLoading && lastUserMessage && (
               <div className="mt-2 ml-10">
                 <FollowUpGenerator
-                  userMessage={getTextFromParts(previousMessage.parts)}
-                  assistantMessage={getTextFromParts(message.parts)}
+                  userMessage={getTextFromParts(lastUserMessage.parts)}
+                  assistantMessage={getContextFromMessage(message)}
                   onSelect={onSelectFollowUp}
                 />
               </div>

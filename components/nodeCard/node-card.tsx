@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo, useMemo } from "react";
 import {
   HoverCard,
   HoverCardContent,
@@ -20,8 +20,8 @@ const calculateTotalGPUUsage = (
   return parseGPUResources(gres, gresUsed);
 };
 
-// Compact progress bar component
-const MiniProgressBar = ({
+// Compact progress bar component - memoized to prevent re-renders
+const MiniProgressBar = memo(({
   value,
   max,
   colorClass = "bg-white/80",
@@ -39,33 +39,43 @@ const MiniProgressBar = ({
       />
     </div>
   );
-};
+});
+MiniProgressBar.displayName = "MiniProgressBar";
 
-// Dynamic name sizing based on length
+// Dynamic name sizing based on length - memoized lookup
+const nameSizeClasses = {
+  short: "text-[12px]",
+  medium: "text-[11px]",
+  long: "text-[10px]",
+  veryLong: "text-[9px]",
+} as const;
+
 const getNameSizeClass = (name: string) => {
   const len = name.length;
-  if (len <= 6) return "text-[12px]";
-  if (len <= 10) return "text-[11px]";
-  if (len <= 14) return "text-[10px]";
-  return "text-[9px]";
+  if (len <= 6) return nameSizeClasses.short;
+  if (len <= 10) return nameSizeClasses.medium;
+  if (len <= 14) return nameSizeClasses.long;
+  return nameSizeClasses.veryLong;
 };
 
-const SmallCardContent: React.FC<{ name: string }> = ({ name }) => (
+const SmallCardContent = memo<{ name: string }>(({ name }) => (
   <div className="flex items-center justify-center w-full h-full">
     <div className="font-bold text-[10px] tracking-wide truncate text-center">
       {name}
     </div>
   </div>
-);
+));
+SmallCardContent.displayName = "SmallCardContent";
 
-const MediumCardContent = ({
+const MediumCardContent = memo(({
   name,
   coresUsed,
   coresTotal,
   memoryUsed,
   memoryTotal,
   nodeData,
-}: NodeCardProps) => {
+  compact = false,
+}: NodeCardProps & { compact?: boolean }) => {
   const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
     nodeData.gres,
     nodeData.gres_used
@@ -87,9 +97,9 @@ const MediumCardContent = ({
       </div>
 
       {/* Stats - align top with consistent spacing */}
-      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0">
+      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0 leading-tight">
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] opacity-90">
+          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
             <span>CPU</span>
             <span>{cpuPercent}%</span>
           </div>
@@ -97,7 +107,7 @@ const MediumCardContent = ({
         </div>
 
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] opacity-90">
+          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
             <span>MEM</span>
             <span>{memPercent}%</span>
           </div>
@@ -109,7 +119,7 @@ const MediumCardContent = ({
           <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
         ) : (
           <div className="space-y-0.5">
-            <div className="flex items-center justify-between text-[9px] opacity-90">
+            <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
               <span>LOAD</span>
               <span>{loadPercent}%</span>
             </div>
@@ -119,16 +129,18 @@ const MediumCardContent = ({
       </div>
     </div>
   );
-};
+});
+MediumCardContent.displayName = "MediumCardContent";
 
-const LargeCardContent = ({
+const LargeCardContent = memo(({
   name,
   coresUsed,
   coresTotal,
   memoryUsed,
   memoryTotal,
   nodeData,
-}: NodeCardProps) => {
+  compact = false,
+}: NodeCardProps & { compact?: boolean }) => {
   const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
     nodeData.gres,
     nodeData.gres_used
@@ -150,9 +162,9 @@ const LargeCardContent = ({
       </div>
 
       {/* Stats - align top with consistent spacing */}
-      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0">
+      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0 leading-tight">
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] opacity-90">
+          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
             <span>CPU</span>
             <span>{cpuPercent}%</span>
           </div>
@@ -160,7 +172,7 @@ const LargeCardContent = ({
         </div>
 
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] opacity-90">
+          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
             <span>MEM</span>
             <span>{memPercent}%</span>
           </div>
@@ -168,7 +180,7 @@ const LargeCardContent = ({
         </div>
 
         <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] opacity-90">
+          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
             <span>LOAD</span>
             <span>{loadPercent}%</span>
           </div>
@@ -182,23 +194,31 @@ const LargeCardContent = ({
       </div>
     </div>
   );
-};
+});
+LargeCardContent.displayName = "LargeCardContent";
 
-export const NodeCard = ({
+export const NodeCard = memo(({
   colorSchema = "default",
   ...props
 }: NodeCardProps & { colorSchema?: string }) => {
   const [open, setOpen] = useState(false);
-  const { bgColor, textColor } = getStatusColor(props.status, colorSchema);
-  const statusDef = getStatusDef(props.status);
+  
+  // Memoize expensive calculations
+  const { bgColor, textColor } = useMemo(
+    () => getStatusColor(props.status, colorSchema),
+    [props.status, colorSchema]
+  );
+  const statusDef = useMemo(() => getStatusDef(props.status), [props.status]);
+  
   // cpu_load from Slurm API is scaled by 100 (3025 = 30.25)
-  const cpuLoad = parseFloat(
-    ((props.nodeData.cpu_load / 100) / props.coresTotal).toFixed(2)
+  const cpuLoad = useMemo(
+    () => parseFloat(((props.nodeData.cpu_load / 100) / props.coresTotal).toFixed(2)),
+    [props.nodeData.cpu_load, props.coresTotal]
   );
 
   const openModal = () => setOpen(!open);
 
-  const cardContent = () => {
+  const cardContent = useMemo(() => {
     switch (props.size) {
       case 50:
         return <SmallCardContent name={props.name} />;
@@ -209,16 +229,18 @@ export const NodeCard = ({
       default:
         return <MediumCardContent {...props} />;
     }
-  };
+  }, [props]);
 
-  const sizeClasses =
+  const sizeClasses = useMemo(() => 
     props.size === 50
       ? "w-[85px] h-[25px]"
       : props.size === 100
         ? "w-[100px] h-[100px]"
         : props.size === 150
-          ? "w-[100px] h-[125px]"
-          : "w-[100px] h-[100px]";
+          ? "w-[100px] h-[120px]"
+          : "w-[100px] h-[100px]",
+    [props.size]
+  );
 
   const isOverloaded = cpuLoad > 1.25;
 
@@ -241,7 +263,7 @@ export const NodeCard = ({
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none" />
 
           {/* Content */}
-          <div className="relative h-full w-full">{cardContent()}</div>
+          <div className="relative h-full w-full">{cardContent}</div>
 
           {/* Shine border for overloaded nodes */}
           {isOverloaded && (
@@ -262,6 +284,7 @@ export const NodeCard = ({
       <NodeCardModal open={open} setOpen={setOpen} nodename={props.name} />
     </HoverCard>
   );
-};
+});
+NodeCard.displayName = "NodeCard";
 
 export default NodeCard;

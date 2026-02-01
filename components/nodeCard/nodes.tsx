@@ -39,40 +39,40 @@ const Nodes = ({ username }: { username?: string }) => {
     data: nodeData,
     error: nodeError,
     isLoading: nodeIsLoading,
-    mutate,
   } = useSWR(nodeURL, nodeFetcher, {
     refreshInterval: 15000,
   });
 
-  const getInitialCardSize = () => {
+  // Use lazy initializers - function is only called once on mount
+  const [cardSize, setCardSize] = useState<number>(() => {
     if (typeof window !== "undefined") {
       return parseInt(localStorage.getItem("cardSize") || "100", 10);
     }
     return 100;
-  };
+  });
 
-  const getInitialShowStats = () => {
+  const [showStats, setShowStats] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("showStats") === "true";
     }
     return false;
-  };
+  });
 
-  const getInitialColorSchema = () => {
+  const [colorSchema, setColorSchema] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("colorSchema") || "default";
     }
     return "default";
-  };
+  });
 
-  const getInitialViewMode = () => {
+  const [isGroupedView, setIsGroupedView] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("isGroupedView") === "true";
     }
     return false;
-  };
+  });
 
-  const getInitialSelectedFeatures = () => {
+  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
       const storedFeatures = localStorage.getItem("selectedNodeFeatures");
       if (storedFeatures) {
@@ -84,32 +84,21 @@ const Nodes = ({ username }: { username?: string }) => {
       }
     }
     return [];
-  };
+  });
 
-  const getInitialFeatureLogicType = () => {
+  const [featureLogicType, setFeatureLogicType] = useState<LogicType>(() => {
     if (typeof window !== "undefined") {
       const logicType = localStorage.getItem("featureLogicType") as LogicType;
       return logicType === "OR" ? "OR" : "AND";
     }
     return "AND";
-  };
+  });
 
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
   const [selectedNodePartitions, setSelectedNodePartitions] =
     useState<string>("allPartitions");
-  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(
-    getInitialSelectedFeatures
-  );
-  const [featureLogicType, setFeatureLogicType] = useState<LogicType>(
-    getInitialFeatureLogicType
-  );
-  const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
-  const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
-  const [colorSchema, setColorSchema] = useState<string>(getInitialColorSchema);
-  const [isGroupedView, setIsGroupedView] =
-    useState<boolean>(getInitialViewMode);
 
   const systems: Node[] = nodeData?.nodes || [];
 
@@ -140,14 +129,7 @@ const Nodes = ({ username }: { username?: string }) => {
     localStorage.setItem("featureLogicType", featureLogicType);
   }, [featureLogicType]);
 
-  // Set up polling for data updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      mutate();
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [mutate]);
+  // SWR handles polling via refreshInterval - no manual interval needed
 
   const uniquePartitions = useMemo(() => {
     const partitions = new Set<string>();

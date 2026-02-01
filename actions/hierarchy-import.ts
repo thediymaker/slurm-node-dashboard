@@ -1,7 +1,7 @@
 'use server'
 
 import { getMetricsDb } from "@/lib/metrics-db";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 // Helper to parse CSV line respecting quotes
 function parseCSVLine(line: string): string[] {
@@ -26,127 +26,237 @@ function parseCSVLine(line: string): string[] {
 
 export async function importHierarchyCSV(csvContent: string) {
   const pool = getMetricsDb();
-  const lines = csvContent.split('\n');
+  const client = await pool.connect();
   
-  // First pass: Create all organizations
-  // Format: id_code, name, parent_code
-  // We need to store the code mapping to ID
-  
-  // Since the CSV uses codes (e.g. "asu", "wpc") but our DB uses auto-increment IDs,
-  // we need to handle this. 
-  // Strategy: 
-  // 1. Check if org with this name exists. If so, use it.
-  // 2. If not, create it.
-  // 3. Store a mapping of code -> db_id for the second pass (parenting).
-  
-  const codeToId = new Map<string, number>();
-  const pendingParents: {childId: number, parentCode: string}[] = [];
-
-  for (const line of lines) {
-    if (!line.trim() || line.trim().startsWith('#')) continue;
-    const [code, name, parentCode] = parseCSVLine(line);
+  try {
+    await client.query('BEGIN');
     
-    if (!code || !name) continue;
-
-    // Determine type based on parentCode or context? 
-    // The user didn't provide type in CSV. We might need to guess or default to 'group' if it has a parent, 'root' if not?
-    // Actually, let's default to 'department' for now, or maybe infer from hierarchy depth later.
-    // For now, let's just insert.
+    const lines = csvContent.split('\n').filter(line => line.trim() && !line.trim().startsWith('#'));
     
-    // Check if exists by name
-    let res = await pool.query('SELECT id FROM organizations WHERE name = $1', [name]);
-    let id: number;
-    
-    if ((res.rowCount ?? 0) > 0) {
-      id = res.rows[0].id;
-    } else {
-      // Create
-      const insertRes = await pool.query(
-        'INSERT INTO organizations (name, type, info) VALUES ($1, $2, $3) RETURNING id',
-        [name, 'department', code] // Storing code in info for reference
-      );
-      id = insertRes.rows[0].id;
-    }
-    
-    codeToId.set(code, id);
-    
-    if (parentCode) {
-      pendingParents.push({ childId: id, parentCode });
-    } else {
-        // It's a root, update type
-        await pool.query('UPDATE organizations SET type = $1 WHERE id = $2', ['root', id]);
-    }
-  }
-  
-  // Second pass: Update parents
-  for (const { childId, parentCode } of pendingParents) {
-    const parentId = codeToId.get(parentCode);
-    if (parentId) {
-      await pool.query('UPDATE organizations SET parent_id = $1 WHERE id = $2', [parentId, childId]);
-      
-      // Try to infer type based on parent
-      // If parent is root, child is college?
-      // If parent is college, child is department?
-      // This is heuristic.
-      const parentRes = await pool.query('SELECT type FROM organizations WHERE id = $1', [parentId]);
-      if ((parentRes.rowCount ?? 0) > 0) {
-          const pType = parentRes.rows[0].type;
-          let newType = 'group';
-          if (pType === 'root') newType = 'college';
-          else if (pType === 'college') newType = 'department';
-          else if (pType === 'department') newType = 'group';
-          
-          await pool.query('UPDATE organizations SET type = $1 WHERE id = $2', [newType, childId]);
+    // Parse all lines first
+    const entries: { code: string; name: string; parentCode: string | null }[] = [];
+    for (const line of lines) {
+      const [code, name, parentCode] = parseCSVLine(line);
+      if (code && name) {
+        entries.push({ code, name, parentCode: parentCode || null });
       }
     }
+    
+    if (entries.length === 0) {
+      await client.query('ROLLBACK');
+      return;
+    }
+    
+    // Batch check for existing orgs by name
+    const names = entries.map(e => e.name);
+    const existingOrgs = await client.query(
+      'SELECT id, name FROM organizations WHERE name = ANY($1)',
+      [names]
+    );
+    const existingOrgMap = new Map<string, number>();
+    existingOrgs.rows.forEach((row: any) => existingOrgMap.set(row.name, row.id));
+    
+    // Separate new orgs from existing
+    const newEntries = entries.filter(e => !existingOrgMap.has(e.name));
+    
+    // Batch insert new organizations
+    if (newEntries.length > 0) {
+      const insertValues: any[] = [];
+      const placeholders: string[] = [];
+      let idx = 1;
+      
+      for (const entry of newEntries) {
+        placeholders.push(`($${idx++}, $${idx++}, $${idx++})`);
+        insertValues.push(entry.name, 'department', entry.code);
+      }
+      
+      const insertResult = await client.query(
+        `INSERT INTO organizations (name, type, info) VALUES ${placeholders.join(', ')} RETURNING id, name`,
+        insertValues
+      );
+      
+      // Add new IDs to the map
+      insertResult.rows.forEach((row: any) => existingOrgMap.set(row.name, row.id));
+    }
+    
+    // Build code to ID mapping
+    const codeToId = new Map<string, number>();
+    entries.forEach(e => {
+      const id = existingOrgMap.get(e.name);
+      if (id) codeToId.set(e.code, id);
+    });
+    
+    // Batch update parents and types
+    const updateParents: { childId: number; parentId: number }[] = [];
+    const rootIds: number[] = [];
+    
+    for (const entry of entries) {
+      const childId = codeToId.get(entry.code);
+      if (!childId) continue;
+      
+      if (entry.parentCode) {
+        const parentId = codeToId.get(entry.parentCode);
+        if (parentId) {
+          updateParents.push({ childId, parentId });
+        }
+      } else {
+        rootIds.push(childId);
+      }
+    }
+    
+    // Batch update roots
+    if (rootIds.length > 0) {
+      await client.query(
+        'UPDATE organizations SET type = $1, parent_id = NULL WHERE id = ANY($2)',
+        ['root', rootIds]
+      );
+    }
+    
+    // Batch update parent relationships using UNNEST for efficiency
+    if (updateParents.length > 0) {
+      const childIds = updateParents.map(u => u.childId);
+      const parentIds = updateParents.map(u => u.parentId);
+      
+      await client.query(
+        `UPDATE organizations SET parent_id = data.parent_id 
+         FROM (SELECT UNNEST($1::int[]) as id, UNNEST($2::int[]) as parent_id) as data
+         WHERE organizations.id = data.id`,
+        [childIds, parentIds]
+      );
+    }
+    
+    // Infer types based on hierarchy depth (single pass with CTE)
+    await client.query(`
+      WITH RECURSIVE hierarchy AS (
+        SELECT id, parent_id, 1 as depth
+        FROM organizations
+        WHERE parent_id IS NULL
+        UNION ALL
+        SELECT o.id, o.parent_id, h.depth + 1
+        FROM organizations o
+        JOIN hierarchy h ON o.parent_id = h.id
+      )
+      UPDATE organizations SET type = 
+        CASE 
+          WHEN (SELECT depth FROM hierarchy WHERE hierarchy.id = organizations.id) = 1 THEN 'root'
+          WHEN (SELECT depth FROM hierarchy WHERE hierarchy.id = organizations.id) = 2 THEN 'college'
+          WHEN (SELECT depth FROM hierarchy WHERE hierarchy.id = organizations.id) = 3 THEN 'department'
+          ELSE 'group'
+        END
+      WHERE id IN (SELECT id FROM hierarchy)
+    `);
+    
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
   
   revalidatePath('/admin/hierarchy');
+  revalidateTag('hierarchy', 'default');
 }
 
 export async function importMappingCSV(csvContent: string) {
   const pool = getMetricsDb();
-  const lines = csvContent.split('\n');
+  const client = await pool.connect();
   
-  // Format: slurm_account, org_code_or_name
-  // "grp_aajoshi7","B1343"
-  
-  for (const line of lines) {
-    if (!line.trim() || line.trim().startsWith('#')) continue;
-    const [slurmAccount, orgIdentifier] = parseCSVLine(line);
+  try {
+    await client.query('BEGIN');
     
-    if (!slurmAccount || !orgIdentifier) continue;
+    const lines = csvContent.split('\n').filter(line => line.trim() && !line.trim().startsWith('#'));
     
-    // Find the org by info (code) or name
-    let orgRes = await pool.query('SELECT id FROM organizations WHERE info = $1 OR name = $1', [orgIdentifier]);
-    if ((orgRes.rowCount ?? 0) === 0) {
-        // Try finding by partial name? No, strict for now.
-        console.warn(`Org not found for identifier: ${orgIdentifier}`);
-        continue;
-    }
-    const orgId = orgRes.rows[0].id;
-    
-    // Find the account ID
-    let accRes = await pool.query('SELECT id FROM accounts WHERE name = $1', [slurmAccount]);
-    let accountId: number;
-    
-    if ((accRes.rowCount ?? 0) === 0) {
-        // Create account if not exists? Or skip?
-        // Usually accounts are synced from Slurm. But we can create a placeholder.
-        const ins = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', [slurmAccount]);
-        accountId = ins.rows[0].id;
-    } else {
-        accountId = accRes.rows[0].id;
+    // Parse all mappings
+    const mappings: { slurmAccount: string; orgIdentifier: string }[] = [];
+    for (const line of lines) {
+      const [slurmAccount, orgIdentifier] = parseCSVLine(line);
+      if (slurmAccount && orgIdentifier) {
+        mappings.push({ slurmAccount, orgIdentifier });
+      }
     }
     
-    // Map
-    await pool.query(
-        `INSERT INTO account_mappings (organization_id, account_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [orgId, accountId]
+    if (mappings.length === 0) {
+      await client.query('ROLLBACK');
+      return;
+    }
+    
+    // Get unique values for batch lookups
+    const accountNames = [...new Set(mappings.map(m => m.slurmAccount))];
+    const orgIdentifiers = [...new Set(mappings.map(m => m.orgIdentifier))];
+    
+    // Batch lookup organizations (by info/code or name)
+    const orgsResult = await client.query(
+      'SELECT id, info, name FROM organizations WHERE info = ANY($1) OR name = ANY($1)',
+      [orgIdentifiers]
     );
+    const orgMap = new Map<string, number>();
+    orgsResult.rows.forEach((row: any) => {
+      if (row.info) orgMap.set(row.info, row.id);
+      if (row.name) orgMap.set(row.name, row.id);
+    });
+    
+    // Batch lookup existing accounts
+    const existingAccounts = await client.query(
+      'SELECT id, name FROM accounts WHERE name = ANY($1)',
+      [accountNames]
+    );
+    const accountMap = new Map<string, number>();
+    existingAccounts.rows.forEach((row: any) => accountMap.set(row.name, row.id));
+    
+    // Find accounts that need to be created
+    const newAccountNames = accountNames.filter(name => !accountMap.has(name));
+    
+    // Batch insert new accounts
+    if (newAccountNames.length > 0) {
+      const placeholders = newAccountNames.map((_, i) => `($${i + 1})`).join(', ');
+      const insertResult = await client.query(
+        `INSERT INTO accounts (name) VALUES ${placeholders} RETURNING id, name`,
+        newAccountNames
+      );
+      insertResult.rows.forEach((row: any) => accountMap.set(row.name, row.id));
+    }
+    
+    // Build valid mappings
+    const validMappings: { orgId: number; accountId: number }[] = [];
+    for (const mapping of mappings) {
+      const orgId = orgMap.get(mapping.orgIdentifier);
+      const accountId = accountMap.get(mapping.slurmAccount);
+      
+      if (orgId && accountId) {
+        validMappings.push({ orgId, accountId });
+      } else if (!orgId) {
+        console.warn(`Org not found for identifier: ${mapping.orgIdentifier}`);
+      }
+    }
+    
+    // Batch insert mappings (using ON CONFLICT DO NOTHING)
+    if (validMappings.length > 0) {
+      const values: any[] = [];
+      const placeholders: string[] = [];
+      let idx = 1;
+      
+      for (const { orgId, accountId } of validMappings) {
+        placeholders.push(`($${idx++}, $${idx++})`);
+        values.push(orgId, accountId);
+      }
+      
+      await client.query(
+        `INSERT INTO account_mappings (organization_id, account_id) VALUES ${placeholders.join(', ')} ON CONFLICT DO NOTHING`,
+        values
+      );
+    }
+    
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
   
   revalidatePath('/admin/hierarchy');
+  revalidateTag('hierarchy', 'default');
 }
 
 export async function exportHierarchyCSV() {

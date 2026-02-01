@@ -1,7 +1,7 @@
 'use server'
 
 import { getMetricsDb } from "@/lib/metrics-db";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 
 export interface Organization {
   id: number;
@@ -17,7 +17,7 @@ export interface Account {
   name: string;
 }
 
-export async function getHierarchy() {
+async function getHierarchyInternal() {
   const pool = getMetricsDb();
   // Fetch all organizations
   const result = await pool.query(`
@@ -54,7 +54,13 @@ export async function getHierarchy() {
   return root;
 }
 
-export async function getFlatHierarchy() {
+export const getHierarchy = unstable_cache(
+  getHierarchyInternal,
+  ['hierarchy'],
+  { revalidate: 300, tags: ['hierarchy'] } // Cache for 5 minutes
+);
+
+async function getFlatHierarchyInternal() {
     const pool = getMetricsDb();
     const result = await pool.query(`
       SELECT id, name, type, parent_id, info 
@@ -64,6 +70,12 @@ export async function getFlatHierarchy() {
     return result.rows as Organization[];
 }
 
+export const getFlatHierarchy = unstable_cache(
+  getFlatHierarchyInternal,
+  ['flat-hierarchy'],
+  { revalidate: 300, tags: ['hierarchy'] } // Cache for 5 minutes
+);
+
 export async function createOrganization(data: { name: string; type: string; parent_id?: number | null; info?: string }) {
   const pool = getMetricsDb();
   await pool.query(
@@ -71,6 +83,9 @@ export async function createOrganization(data: { name: string; type: string; par
     [data.name, data.type, data.parent_id || null, data.info || null]
   );
   revalidatePath('/admin/hierarchy');
+  // Invalidate hierarchy caches
+  const { revalidateTag } = await import('next/cache');
+  revalidateTag('hierarchy', 'default');
 }
 
 export async function updateOrganization(id: number, data: { name: string; type: string; parent_id?: number | null; info?: string }) {
@@ -80,6 +95,8 @@ export async function updateOrganization(id: number, data: { name: string; type:
     [data.name, data.type, data.parent_id || null, data.info || null, id]
   );
   revalidatePath('/admin/hierarchy');
+  const { revalidateTag } = await import('next/cache');
+  revalidateTag('hierarchy', 'default');
 }
 
 export async function deleteOrganization(id: number) {
@@ -92,13 +109,21 @@ export async function deleteOrganization(id: number) {
   
   await pool.query('DELETE FROM organizations WHERE id = $1', [id]);
   revalidatePath('/admin/hierarchy');
+  const { revalidateTag } = await import('next/cache');
+  revalidateTag('hierarchy', 'default');
 }
 
-export async function getAccounts() {
+async function getAccountsInternal() {
     const pool = getMetricsDb();
     const result = await pool.query('SELECT id, name FROM accounts ORDER BY name');
     return result.rows as Account[];
 }
+
+export const getAccounts = unstable_cache(
+  getAccountsInternal,
+  ['accounts'],
+  { revalidate: 300, tags: ['accounts'] } // Cache for 5 minutes
+);
 
 export async function getAccountMappings(orgId: number) {
     const pool = getMetricsDb();
@@ -118,6 +143,8 @@ export async function addAccountMapping(orgId: number, accountId: number) {
         [orgId, accountId]
     );
     revalidatePath('/admin/hierarchy');
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('hierarchy', 'default');
 }
 
 export async function removeAccountMapping(orgId: number, accountId: number) {
@@ -127,6 +154,8 @@ export async function removeAccountMapping(orgId: number, accountId: number) {
         [orgId, accountId]
     );
     revalidatePath('/admin/hierarchy');
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('hierarchy', 'default');
 }
 
 export async function deleteAllHierarchy() {
@@ -136,4 +165,7 @@ export async function deleteAllHierarchy() {
   // Delete organizations
   await pool.query('DELETE FROM organizations');
   revalidatePath('/admin/hierarchy');
+  const { revalidateTag } = await import('next/cache');
+  revalidateTag('hierarchy', 'default');
+  revalidateTag('accounts', 'default');
 }

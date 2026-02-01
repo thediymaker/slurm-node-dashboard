@@ -1,25 +1,233 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import useSWR from "swr";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronDown, ChevronUp, Server } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
 import { Job, JobDetails, NodeCardModalProps } from "@/types/types";
-import { NodeCpuChart } from "../nodeCard/node-mon-chart";
+import { NodeMetricsPanel } from "../nodeCard/node-metrics-panel";
 import PromComboBox from "../prom-metric";
 import NodeUtilization from "../node-utilization";
+
+// Utility function moved outside component - created once
+const convertUnixToHumanReadable = (unixTimestamp: number): string => {
+  const date = new Date(unixTimestamp * 1000);
+  return date.toLocaleString();
+};
+
+const formatRelativeTime = (unixTimestamp: number): string => {
+  const now = Date.now();
+  const diff = now - unixTimestamp * 1000;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ${hours % 24}h ago`;
+  if (hours > 0) return `${hours}h ago`;
+  const mins = Math.floor(diff / (1000 * 60));
+  return `${mins}m ago`;
+};
+
+// Generic JSON fetcher for SWR - stable reference
+const jsonFetcher = (url: string) =>
+  fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  }).then((res) => res.json());
+
+const SkeletonJobCard = () => (
+  <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+    <div className="flex items-center justify-between">
+      <Skeleton className="h-5 w-32" />
+      <Skeleton className="h-5 w-20" />
+    </div>
+    <div className="flex gap-4">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-4 w-24" />
+    </div>
+  </div>
+);
+
+const SkeletonJobDetails = () => (
+  <div className="p-4 bg-muted/20 rounded-lg space-y-3 mt-2">
+    <div className="grid grid-cols-2 gap-3">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// Job state badge with colors
+const JobStateBadge = ({ state }: { state: string }) => {
+  const stateColors: Record<string, string> = {
+    RUNNING: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    COMPLETED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
+    CANCELLED: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+  };
+  const colorClass = stateColors[state] || "bg-muted text-muted-foreground";
+  return (
+    <Badge variant="outline" className={`text-xs py-0 h-5 rounded-md ${colorClass}`}>
+      {state}
+    </Badge>
+  );
+};
+
+// Compact job row component
+const JobRow = memo(({ 
+  job, 
+  isExpanded, 
+  onToggle, 
+  jobDetails, 
+  jobDetailsIsLoading, 
+  jobDetailsError 
+}: { 
+  job: Job; 
+  isExpanded: boolean; 
+  onToggle: () => void;
+  jobDetails?: { jobs: JobDetails[] };
+  jobDetailsIsLoading: boolean;
+  jobDetailsError: any;
+}) => {
+  const state = job.state?.current?.[0] || "UNKNOWN";
+  
+  return (
+    <div className="border-b last:border-b-0">
+      <div 
+        className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+        onClick={onToggle}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-sm font-medium text-primary">{job.job_id}</span>
+            {job.array?.task_id?.set && (
+              <Badge variant="secondary" className="text-xs py-0 h-5 rounded-md">
+                Array [{job.array.task_id.number}]
+              </Badge>
+            )}
+            <JobStateBadge state={state} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {formatRelativeTime(job.time.start)}
+            </span>
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          <span>{job.user}</span>
+          <span className="text-foreground truncate max-w-[200px]" title={job.name}>{job.name}</span>
+          <span>{job.partition}</span>
+          <span>QOS: {job.qos}</span>
+        </div>
+      </div>
+      
+      {isExpanded && (
+        <div className="px-3 pb-3 pt-3">
+          {jobDetailsIsLoading ? (
+            <SkeletonJobDetails />
+          ) : jobDetailsError ? (
+            <div className="p-3 bg-red-500/10 rounded-lg text-red-400 text-sm">
+              Error loading job details
+            </div>
+          ) : jobDetails?.jobs?.[0] ? (
+            <Card className="bg-muted/20 border-muted">
+              <CardContent className="p-4 space-y-3">
+                {/* Resource allocation row */}
+                <div className="flex items-center gap-6 text-sm">
+                  <span>
+                    <span className="text-muted-foreground">CPUs/Task:</span>{" "}
+                    <span className="font-medium">{jobDetails.jobs[0].cpus_per_task?.number || "N/A"}</span>
+                  </span>
+                  <span>
+                    <span className="text-muted-foreground">Memory:</span>{" "}
+                    <span className="font-medium">
+                      {jobDetails.jobs[0].memory_per_node?.number 
+                        ? `${(jobDetails.jobs[0].memory_per_node.number / 1024).toFixed(1)} GB`
+                        : "N/A"}
+                    </span>
+                  </span>
+                  <span>
+                    <span className="text-muted-foreground">Time Limit:</span>{" "}
+                    <span className="font-medium">{jobDetails.jobs[0].time_limit?.number || "N/A"} min</span>
+                  </span>
+                </div>
+
+                {/* Nodes */}
+                {jobDetails.jobs[0].nodes && (
+                  <div className="text-sm py-2 px-3 bg-muted/30 rounded-lg">
+                    <span className="text-muted-foreground">Nodes:</span>{" "}
+                    <span className="font-mono">{jobDetails.jobs[0].nodes}</span>
+                  </div>
+                )}
+
+                {/* GRES */}
+                {jobDetails.jobs[0].gres_detail?.length > 0 && jobDetails.jobs[0].gres_detail[0] && (
+                  <div className="text-sm py-2 px-3 bg-muted/30 rounded-lg">
+                    <span className="text-muted-foreground">GRES:</span>{" "}
+                    <span className="font-mono">{jobDetails.jobs[0].gres_detail.join(", ")}</span>
+                  </div>
+                )}
+
+                {/* Command */}
+                {jobDetails.jobs[0].command && (
+                  <div className="text-sm py-2 px-3 bg-muted/30 rounded-lg">
+                    <span className="text-muted-foreground">Command:</span>
+                    <code className="ml-2 text-xs font-mono truncate block mt-1">
+                      {jobDetails.jobs[0].command}
+                    </code>
+                  </div>
+                )}
+
+                {/* Paths - compact */}
+                <div className="grid grid-cols-1 gap-1 text-xs">
+                  {jobDetails.jobs[0].standard_output && (
+                    <div className="truncate text-muted-foreground">
+                      <span className="font-medium">Output:</span> {jobDetails.jobs[0].standard_output}
+                    </div>
+                  )}
+                  {jobDetails.jobs[0].standard_error && (
+                    <div className="truncate text-muted-foreground">
+                      <span className="font-medium">Error:</span> {jobDetails.jobs[0].standard_error}
+                    </div>
+                  )}
+                </div>
+
+                {/* Flags */}
+                {jobDetails.jobs[0].flags?.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    <span className="text-xs text-muted-foreground">Flags:</span>
+                    {jobDetails.jobs[0].flags.map((flag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs py-0 h-5 rounded-md">
+                        {flag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="p-3 bg-muted/20 rounded-lg text-muted-foreground text-sm text-center">
+              No job details available
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+JobRow.displayName = "JobRow";
 
 const NodeCardModal: React.FC<NodeCardModalProps> = ({
   open,
@@ -30,35 +238,32 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
   const [metricValue, setMetricValue] = useState("node_load15");
   const [daysValue, setDaysValue] = useState("3");
 
-  const slurmURL = `/api/slurm/jobs/node/${nodename}`;
-  const jobFetcher = () =>
-    fetch(slurmURL, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((res) => res.json());
+  // Memoize URLs to prevent unnecessary re-fetches
+  const slurmURL = useMemo(
+    () => `/api/slurm/jobs/node/${nodename}`,
+    [nodename]
+  );
+  const promURL = useMemo(
+    () => `/api/prometheus?node=${nodename}&days=${daysValue}&query=${metricValue}`,
+    [nodename, daysValue, metricValue]
+  );
+  const jobDetailsURL = useMemo(
+    () => (expandedJobId ? `/api/slurm/job/${expandedJobId}` : null),
+    [expandedJobId]
+  );
 
+  // SWR hooks with stable fetcher reference
   const {
     data: jobData,
     error: jobError,
     isLoading: jobIsLoading,
-  } = useSWR<{
-    jobs: Job[];
-  }>(open ? slurmURL : null, jobFetcher);
-
-  const promURL = `/api/prometheus?node=${nodename}&days=${daysValue}&query=${metricValue}`;
-  const promFetcher = () =>
-    fetch(promURL, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((res) => res.json());
+  } = useSWR<{ jobs: Job[] }>(open ? slurmURL : null, jsonFetcher);
 
   const {
     data: promData,
     error: promError,
     isLoading: promIsLoading,
-  } = useSWR(open ? promURL : null, promFetcher, {
+  } = useSWR(open ? promURL : null, jsonFetcher, {
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     refreshInterval: 300000,
@@ -68,79 +273,33 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
     data: jobDetails,
     error: jobDetailsError,
     isLoading: jobDetailsIsLoading,
-  } = useSWR<{ jobs: JobDetails[] }>(
-    expandedJobId ? `/api/slurm/job/${expandedJobId}` : null,
-    (url: any) =>
-      fetch(url, {
-        headers: { "Content-Type": "application/json" },
-      }).then((res) => res.json())
-  );
+  } = useSWR<{ jobs: JobDetails[] }>(jobDetailsURL, jsonFetcher);
 
-  const convertUnixToHumanReadable = (unixTimestamp: number): string => {
-    const date = new Date(unixTimestamp * 1000);
-    return date.toLocaleString();
-  };
+  // Memoize the toggle handler
+  const handleJobRowClick = useCallback((jobId: string) => {
+    setExpandedJobId((prev) => (prev === jobId ? null : jobId));
+  }, []);
 
-  // Skeleton loaders
-  const renderSkeletonHeader = () => (
-    <div className="flex justify-between items-center mb-4 mr-10">
-      <Skeleton className="h-8 w-64" />
-      <div className="flex items-center gap-8">
-        <div>
-          <Skeleton className="h-10 w-80" />
-        </div>
-        <Skeleton className="h-10 w-64" />
-      </div>
-    </div>
-  );
-
-  const renderSkeletonChart = () => <Skeleton className="h-72 w-full mb-6" />;
-
-  const renderSkeletonTable = () => (
-    <>
-      <Skeleton className="h-6 w-48 mb-5" />
-      <div className="border rounded-md">
-        <div className="border-b p-4">
-          <div className="grid grid-cols-9 gap-4">
-            {Array(9)
-              .fill(0)
-              .map((_, i) => (
-                <Skeleton key={i} className="h-4 w-full" />
-              ))}
-          </div>
-        </div>
-        <div className="p-4 space-y-6">
-          {Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <div key={i} className="grid grid-cols-9 gap-4">
-                {Array(9)
-                  .fill(0)
-                  .map((_, j) => (
-                    <Skeleton key={j} className="h-4 w-full" />
-                  ))}
-              </div>
-            ))}
-        </div>
-        <div className="border-t p-4">
-          <div className="flex justify-end">
-            <Skeleton className="h-4 w-64" />
-          </div>
-        </div>
-      </div>
-    </>
+  // Memoize running jobs count
+  const runningJobsCount = useMemo(
+    () => jobData?.jobs.filter((job) => job.state.current.includes("RUNNING")).length ?? 0,
+    [jobData?.jobs]
   );
 
   if (jobError) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTitle>Error</DialogTitle>
         <DialogContent
           aria-describedby={undefined}
-          className="border shadow-xl min-w-[800px] min-h-[300px] max-h-[90%] overflow-y-auto scrollbar-none"
+          className="border shadow-xl min-w-[400px] min-h-[200px]"
         >
-          <DialogTitle></DialogTitle>
-          <div>Failed to load, or session expired, please try again.</div>
+          <DialogTitle className="flex items-center gap-2">
+            <Server className="w-5 h-5 text-destructive" />
+            Error
+          </DialogTitle>
+          <div className="text-muted-foreground">
+            Failed to load, or session expired. Please try again.
+          </div>
         </DialogContent>
       </Dialog>
     );
@@ -150,280 +309,84 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         aria-describedby={undefined}
-        className="border shadow-xl w-[1200px] max-w-[90%] min-h-[90%] max-h-[90%] overflow-y-auto scrollbar-none"
+        className="border shadow-xl w-[1100px] max-w-[90vw] h-[85vh] overflow-hidden flex flex-col"
       >
-        <div>
+        {/* Header */}
+        <div className="flex items-center justify-between pr-8">
+          <DialogTitle className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Server className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <span className="text-muted-foreground font-normal">Node</span>{" "}
+              <span className="font-mono text-primary">{nodename}</span>
+            </div>
+          </DialogTitle>
+
+          <div className="flex items-center gap-4">
+            <PromComboBox
+              metricValue={metricValue}
+              setMetricValue={setMetricValue}
+              daysValue={daysValue}
+              setDaysValue={setDaysValue}
+            />
+            <NodeUtilization nodeName={nodename} />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+          {/* Metrics Panel - stat card + chart */}
+          <NodeMetricsPanel 
+            data={promData} 
+            metricName={metricValue}
+            isLoading={promIsLoading}
+          />
+
+          {/* Jobs Section */}
           {jobIsLoading ? (
-            // Show skeleton UI while loading
-            <>
-              <DialogTitle className="text-2xl font-extralight mb-3">
-                {nodename}
-              </DialogTitle>
-              {renderSkeletonChart()}
-              {renderSkeletonTable()}
-            </>
+            <div className="space-y-2">
+              {Array.from({ length: 3 }, (_, i) => (
+                <SkeletonJobCard key={i} />
+              ))}
+            </div>
           ) : (
-            // Show actual content when loaded
             <>
-              <div className="flex justify-between items-center mb-4 mr-10">
-                <DialogTitle className="text-2xl font-extralight">
-                  {nodename}
-                </DialogTitle>
+              {/* Jobs Section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Current Jobs on System
+                  </h3>
+                  <Badge variant="secondary" className="text-xs rounded-md">
+                    {runningJobsCount} running
+                  </Badge>
+                </div>
 
-                {!promError && !promIsLoading && promData?.status !== 404 && (
-                  <div className="flex items-center gap-8">
-                    <div>
-                      <PromComboBox
-                        metricValue={metricValue}
-                        setMetricValue={setMetricValue}
-                        daysValue={daysValue}
-                        setDaysValue={setDaysValue}
-                      />
-                    </div>
-                    <NodeUtilization nodeName={nodename} />
+                <Card className="border-muted">
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {jobData?.jobs?.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        No jobs currently running on this node
+                      </div>
+                    ) : (
+                      jobData?.jobs.map((job: Job) => (
+                        <JobRow
+                          key={job.job_id}
+                          job={job}
+                          isExpanded={expandedJobId === job.job_id}
+                          onToggle={() => handleJobRowClick(job.job_id)}
+                          jobDetails={expandedJobId === job.job_id ? jobDetails : undefined}
+                          jobDetailsIsLoading={expandedJobId === job.job_id && jobDetailsIsLoading}
+                          jobDetailsError={expandedJobId === job.job_id ? jobDetailsError : null}
+                        />
+                      ))
+                    )}
                   </div>
-                )}
+                </Card>
               </div>
-
-              {promIsLoading ? (
-                <Skeleton className="h-72 w-full mb-6" />
-              ) : (
-                !promError &&
-                promData?.status !== 404 && <NodeCpuChart data={promData} />
-              )}
-
-              <div className="mb-5">Current Jobs on System</div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Job ID</TableHead>
-                    <TableHead>Task ID</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Job Name</TableHead>
-                    <TableHead>Partition</TableHead>
-                    <TableHead>Group</TableHead>
-                    <TableHead>QOS</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {jobData?.jobs.map((job: Job) => (
-                    <React.Fragment key={job.job_id}>
-                      <TableRow
-                        key={job.job_id}
-                        className="cursor-pointer"
-                        onClick={() =>
-                          setExpandedJobId(
-                            expandedJobId === job.job_id ? null : job.job_id
-                          )
-                        }
-                      >
-                        <TableCell>{job.job_id}</TableCell>
-                        <TableCell>
-                          {job.array && job.array.task_id.set
-                            ? `${job.array.job_id}[${job.array.task_id.number}]`
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell>{job.user}</TableCell>
-                        <TableCell className="truncate max-w-[100px]">
-                          {job.name}
-                        </TableCell>
-                        <TableCell className="truncate max-w-[100px]">
-                          {job.partition}
-                        </TableCell>
-                        <TableCell className="truncate max-w-[100px]">
-                          {job.group}
-                        </TableCell>
-                        <TableCell className="truncate max-w-[100px]">
-                          {job.qos}
-                        </TableCell>
-                        <TableCell>
-                          {convertUnixToHumanReadable(job.time.start)}
-                        </TableCell>
-                        <TableCell className="flex justify-end">
-                          {expandedJobId === job.job_id ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      {expandedJobId === job.job_id && (
-                        <TableRow>
-                          <TableCell colSpan={9}>
-                            {jobDetailsIsLoading ? (
-                              <Card>
-                                <CardHeader>
-                                  <Skeleton className="h-6 w-32" />
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    {Array(12)
-                                      .fill(0)
-                                      .map((_, i) => (
-                                        <div key={i}>
-                                          <Skeleton className="h-4 w-32 mb-2" />
-                                          <Skeleton className="h-4 w-full" />
-                                        </div>
-                                      ))}
-                                  </div>
-                                  <Separator className="my-4" />
-                                  <div>
-                                    <Skeleton className="h-4 w-20 mb-2" />
-                                    <div className="flex flex-wrap gap-2">
-                                      {Array(5)
-                                        .fill(0)
-                                        .map((_, i) => (
-                                          <Skeleton
-                                            key={i}
-                                            className="h-6 w-16 rounded-full"
-                                          />
-                                        ))}
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ) : jobDetailsError ? (
-                              <div className="py-4 text-center text-red-500">
-                                Error loading job details
-                              </div>
-                            ) : jobDetails && jobDetails.jobs[0] ? (
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle>Job Details</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <p className="font-semibold">Nodes</p>
-                                      <p>{jobDetails.jobs[0].nodes}</p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">Command</p>
-                                      <p className="truncate">
-                                        {jobDetails.jobs[0].command}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">State</p>
-                                      <p>
-                                        {jobDetails.jobs[0].job_state.join(
-                                          ", "
-                                        )}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">
-                                        CPUs Per Task
-                                      </p>
-                                      <p>
-                                        {
-                                          jobDetails.jobs[0].cpus_per_task
-                                            .number
-                                        }
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">
-                                        Memory per Node (GB)
-                                      </p>
-                                      <p>
-                                        {jobDetails.jobs[0].memory_per_node
-                                          .number / 1024}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">
-                                        Gres Detail
-                                      </p>
-                                      <p>
-                                        {jobDetails.jobs[0].gres_detail.join(
-                                          ", "
-                                        )}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">
-                                        Output Path
-                                      </p>
-                                      <p className="truncate">
-                                        {jobDetails.jobs[0].standard_output}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">
-                                        Error Path
-                                      </p>
-                                      <p className="truncate">
-                                        {jobDetails.jobs[0].standard_error}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">
-                                        Input Path
-                                      </p>
-                                      <p className="truncate">
-                                        {jobDetails.jobs[0].standard_input}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">
-                                        Time Limit (mins)
-                                      </p>
-                                      <p>
-                                        {jobDetails.jobs[0].time_limit.number}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">Priority</p>
-                                      <p>
-                                        {jobDetails.jobs[0].priority.number}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <Separator className="my-4" />
-                                  <div>
-                                    <p className="font-semibold mb-2">Flags</p>
-                                    <div className="flex flex-wrap gap-2">
-                                      {jobDetails.jobs[0].flags.map(
-                                        (flag, index) => (
-                                          <Badge
-                                            key={index}
-                                            variant="secondary"
-                                          >
-                                            {flag}
-                                          </Badge>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ) : (
-                              <div className="py-4 text-center">
-                                No job details available
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-right">
-                      Total Number of jobs running on system:{" "}
-                      {
-                        jobData?.jobs.filter((job: Job) =>
-                          job.state.current.includes("RUNNING")
-                        ).length
-                      }
-                    </TableCell>
-                  </TableRow>
-                </TableFooter>
-              </Table>
             </>
           )}
         </div>
@@ -432,4 +395,4 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
   );
 };
 
-export default NodeCardModal;
+export default memo(NodeCardModal);

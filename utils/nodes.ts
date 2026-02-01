@@ -1,5 +1,28 @@
-export function getStatusDef(status: string): string {
-  const statusLevel = status[1] || status[0];
+export function getStatusDef(status: string | string[]): string {
+  // Normalize status to find the primary state
+  let statusArray: string[];
+  if (Array.isArray(status)) {
+    statusArray = status;
+  } else if (typeof status === "string") {
+    statusArray = status.split(/[+\s]+/).filter(Boolean).map(s => s.toUpperCase());
+  } else {
+    return "System status unknown, this is likely due to the system being offline.";
+  }
+  
+  // Priority order for status definitions
+  const priorityOrder = [
+    "DOWN", "NOT_RESPONDING", "DRAIN", "REBOOT_REQUESTED",
+    "RESERVED", "COMPLETING", "MIXED", "ALLOCATED", "PLANNED", "FUTURE", "IDLE"
+  ];
+  
+  let statusLevel = "UNKNOWN";
+  for (const priorityStatus of priorityOrder) {
+    if (statusArray.some(s => s.includes(priorityStatus))) {
+      statusLevel = priorityStatus;
+      break;
+    }
+  }
+  
   switch (statusLevel) {
     case "DRAIN":
     case "NOT_RESPONDING":

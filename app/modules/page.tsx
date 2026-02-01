@@ -13,7 +13,7 @@ export default function ModulesPage() {
 
   return (
     <div className="mb-5">
-      <div className="p-8 pt-6 ml-2 mx-auto">
+      <div className="p-2 ml-2 mx-auto">
         <UnifiedHeader
           title="Software Modules"
           description="Browse available software modules on the cluster."

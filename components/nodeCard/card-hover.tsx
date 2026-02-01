@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useMemo } from "react";
 import {
   ServerIcon,
   CpuIcon,
@@ -64,11 +64,18 @@ const parseGPUResources = (gres: string, gresUsed: string): GPUResources => {
   return resources;
 };
 
-const CardHover = ({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
-  const gpuResources = parseGPUResources(nodeData.gres, nodeData.gres_used);
-  const memUsedGB = (nodeData.alloc_memory / 1024).toFixed(1);
-  const memTotalGB = (nodeData.real_memory / 1024).toFixed(1);
-  const memPercent = Math.round((nodeData.alloc_memory / nodeData.real_memory) * 100);
+const CardHover = memo(({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
+  // Memoize expensive calculations
+  const gpuResources = useMemo(
+    () => parseGPUResources(nodeData.gres, nodeData.gres_used),
+    [nodeData.gres, nodeData.gres_used]
+  );
+  const memUsedGB = useMemo(() => (nodeData.alloc_memory / 1024).toFixed(1), [nodeData.alloc_memory]);
+  const memTotalGB = useMemo(() => (nodeData.real_memory / 1024).toFixed(1), [nodeData.real_memory]);
+  const memPercent = useMemo(
+    () => Math.round((nodeData.alloc_memory / nodeData.real_memory) * 100),
+    [nodeData.alloc_memory, nodeData.real_memory]
+  );
 
   return (
     <div className="space-y-2">
@@ -152,6 +159,7 @@ const CardHover = ({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
       </div>
     </div>
   );
-};
+});
+CardHover.displayName = "CardHover";
 
 export default CardHover;

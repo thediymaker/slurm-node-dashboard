@@ -12,7 +12,7 @@ export default function RewindPage() {
 
   return (
     <div className="mb-5">
-      <div className="p-8 pt-6 ml-2 mx-auto">
+      <div className="p-2 ml-2 mx-auto">
         <UnifiedHeader
           title="Cluster Rewind"
           description="Replay historical cluster state and utilization."

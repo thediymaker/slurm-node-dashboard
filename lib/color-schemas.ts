@@ -40,7 +40,7 @@ export const COLOR_SCHEMAS: ColorSchema[] = [
       DOWN: { bgColor: "bg-blue-400", textColor: "text-white" },
       DRAIN: { bgColor: "bg-blue-400", textColor: "text-white" },
       NOT_RESPONDING: { bgColor: "bg-blue-400", textColor: "text-white" },
-      PLANNED: { bgColor: "bg-indigo-500", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-cyan-600", textColor: "text-white" },
       COMPLETING: { bgColor: "bg-yellow-500", textColor: "text-white" },
       RESERVED: { bgColor: "bg-indigo-800", textColor: "text-white" },
       FUTURE: { bgColor: "bg-emerald-500", textColor: "text-white" },
@@ -56,29 +56,29 @@ export const COLOR_SCHEMAS: ColorSchema[] = [
     },
   },
   {
-    value: "neon",
-    label: "Neon",
-    colors: ["#d946ef", "#22d3ee", "#eab308", "#9333ea", "#ec4899", "#2dd4bf"],
+    value: "midnight",
+    label: "Midnight",
+    colors: ["#6366f1", "#a78bfa", "#f472b6", "#38bdf8", "#818cf8", "#c084fc"],
     stateColors: {
-      IDLE: { bgColor: "bg-cyan-400", textColor: "text-black" },
-      MIXED: { bgColor: "bg-yellow-400", textColor: "text-black" },
-      ALLOCATED: { bgColor: "bg-rose-500", textColor: "text-white" },
-      DOWN: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
-      DRAIN: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
-      NOT_RESPONDING: { bgColor: "bg-fuchsia-500", textColor: "text-black" },
-      PLANNED: { bgColor: "bg-purple-600", textColor: "text-white" },
-      COMPLETING: { bgColor: "bg-lime-400", textColor: "text-black" },
-      RESERVED: { bgColor: "bg-violet-600", textColor: "text-white" },
-      FUTURE: { bgColor: "bg-teal-400", textColor: "text-black" },
-      REBOOT_REQUESTED: { bgColor: "bg-zinc-800", textColor: "text-white" },
+      IDLE: { bgColor: "bg-violet-400", textColor: "text-black" },
+      MIXED: { bgColor: "bg-indigo-500", textColor: "text-white" },
+      ALLOCATED: { bgColor: "bg-fuchsia-700", textColor: "text-white" },
+      DOWN: { bgColor: "bg-slate-500", textColor: "text-white" },
+      DRAIN: { bgColor: "bg-slate-500", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-slate-500", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-sky-500", textColor: "text-white" },
+      COMPLETING: { bgColor: "bg-pink-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-purple-800", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-blue-400", textColor: "text-black" },
+      REBOOT_REQUESTED: { bgColor: "bg-gray-700", textColor: "text-white" },
     },
     progressColors: {
-      idle: "#22d3ee", // cyan-400
-      mixed: "#facc15", // yellow-400
-      allocated: "#f43f5e", // rose-500
-      down: "#d946ef", // fuchsia-500
-      drain: "#d946ef", // fuchsia-500
-      unknown: "#d946ef", // fuchsia-500
+      idle: "#a78bfa", // violet-400
+      mixed: "#6366f1", // indigo-500
+      allocated: "#a21caf", // fuchsia-700
+      down: "#64748b", // slate-500
+      drain: "#64748b", // slate-500
+      unknown: "#64748b", // slate-500
     },
   },
   {
@@ -108,29 +108,29 @@ export const COLOR_SCHEMAS: ColorSchema[] = [
     },
   },
   {
-    value: "candy",
-    label: "Candy",
-    colors: ["#ec4899", "#4ade80", "#a855f7", "#eab308", "#dc2626", "#3b82f6"],
+    value: "autumn",
+    label: "Autumn",
+    colors: ["#f59e0b", "#ef4444", "#84cc16", "#d97706", "#b45309", "#eab308"],
     stateColors: {
-      IDLE: { bgColor: "bg-green-400", textColor: "text-black" },
-      MIXED: { bgColor: "bg-purple-500", textColor: "text-white" },
-      ALLOCATED: { bgColor: "bg-red-600", textColor: "text-white" },
-      DOWN: { bgColor: "bg-pink-500", textColor: "text-white" },
-      DRAIN: { bgColor: "bg-pink-500", textColor: "text-white" },
-      NOT_RESPONDING: { bgColor: "bg-pink-500", textColor: "text-white" },
-      PLANNED: { bgColor: "bg-yellow-400", textColor: "text-black" },
-      COMPLETING: { bgColor: "bg-blue-400", textColor: "text-black" },
-      RESERVED: { bgColor: "bg-violet-500", textColor: "text-white" },
-      FUTURE: { bgColor: "bg-lime-400", textColor: "text-black" },
-      REBOOT_REQUESTED: { bgColor: "bg-neutral-600", textColor: "text-white" },
+      IDLE: { bgColor: "bg-lime-500", textColor: "text-black" },
+      MIXED: { bgColor: "bg-amber-500", textColor: "text-black" },
+      ALLOCATED: { bgColor: "bg-red-700", textColor: "text-white" },
+      DOWN: { bgColor: "bg-stone-500", textColor: "text-white" },
+      DRAIN: { bgColor: "bg-stone-500", textColor: "text-white" },
+      NOT_RESPONDING: { bgColor: "bg-stone-500", textColor: "text-white" },
+      PLANNED: { bgColor: "bg-yellow-500", textColor: "text-black" },
+      COMPLETING: { bgColor: "bg-orange-400", textColor: "text-black" },
+      RESERVED: { bgColor: "bg-amber-800", textColor: "text-white" },
+      FUTURE: { bgColor: "bg-emerald-500", textColor: "text-white" },
+      REBOOT_REQUESTED: { bgColor: "bg-zinc-600", textColor: "text-white" },
     },
     progressColors: {
-      idle: "#4ade80", // green-400
-      mixed: "#a855f7", // purple-500
-      allocated: "#dc2626", // red-600
-      down: "#ec4899", // pink-500
-      drain: "#ec4899", // pink-500
-      unknown: "#ec4899", // pink-500
+      idle: "#84cc16", // lime-500
+      mixed: "#f59e0b", // amber-500
+      allocated: "#b91c1c", // red-700
+      down: "#78716c", // stone-500
+      drain: "#78716c", // stone-500
+      unknown: "#78716c", // stone-500
     },
   },
   {
@@ -196,14 +196,33 @@ export function getColorSchema(value: string): ColorSchema {
 
 // Helper function to get status colors for node cards
 export function getStatusColor(
-  status: string,
+  status: string | string[],
   colorSchema: string = "default"
 ) {
   const schema = getColorSchema(colorSchema);
-  const statusLevel = Array.isArray(status) ? status[1] || status[0] : status;
+  
+  // Normalize status to an array
+  let statusArray: string[];
+  if (Array.isArray(status)) {
+    statusArray = status;
+  } else if (typeof status === "string") {
+    // Handle both "+" joined and space-separated formats
+    statusArray = status.split(/[+\s]+/).filter(Boolean).map(s => s.toUpperCase());
+  } else {
+    statusArray = ["IDLE"];
+  }
+  
+  // Priority order for status colors (check in order of visual importance)
+  const priorityOrder = [
+    "DOWN", "NOT_RESPONDING", "DRAIN", "REBOOT_REQUESTED",
+    "RESERVED", "COMPLETING", "MIXED", "ALLOCATED", "PLANNED", "FUTURE", "IDLE"
+  ];
+  
+  for (const priorityStatus of priorityOrder) {
+    if (statusArray.some(s => s.includes(priorityStatus))) {
+      return schema.stateColors[priorityStatus as keyof typeof schema.stateColors];
+    }
+  }
 
-  return (
-    schema.stateColors[statusLevel as keyof typeof schema.stateColors] ||
-    schema.stateColors.IDLE // Fallback to IDLE if status not found
-  );
+  return schema.stateColors.IDLE; // Fallback to IDLE if status not found
 }

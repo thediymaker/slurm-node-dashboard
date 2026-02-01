@@ -111,7 +111,7 @@ export default async function MetricsPage({ searchParams }: PageProps) {
 
   return (
     <div className="mb-5">
-      <div className="flex-1 space-y-4 p-8 pt-6 bg-background min-h-screen">
+      <div className="flex-1 space-y-4 p-2 ml-2 mx-auto bg-background min-h-screen">
         <UnifiedHeader
           title="Job Metrics Dashboard"
           description="Historical analysis of cluster usage, efficiency, and user activity."

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useMemo } from "react";
 import useSWR from "swr";
 import {
   Dialog,
@@ -13,113 +13,97 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 
+// Rubric defined outside component - constant
 const rubric: { [key: string]: { threshold: number; color: string } } = {
-  A: {
-    threshold: 90,
-    color: "#0f0",
-  },
-  B: {
-    threshold: 80,
-    color: "#cf0",
-  },
-  C: {
-    threshold: 70,
-    color: "#ff0",
-  },
-  D: {
-    threshold: 60,
-    color: "#f70",
-  },
-  E: {
-    threshold: 0,
-    color: "#f00",
-  },
+  A: { threshold: 90, color: "#0f0" },
+  B: { threshold: 80, color: "#cf0" },
+  C: { threshold: 70, color: "#ff0" },
+  D: { threshold: 60, color: "#f70" },
+  E: { threshold: 0, color: "#f00" },
 };
+
+// Utility functions moved outside component
+const convertUnixToHumanReadable = (unixTimestamp: number): string => {
+  const date = new Date(unixTimestamp * 1000);
+  return date.toLocaleString();
+};
+
+const formatDuration = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  return `${hours}h ${minutes}m ${remainingSeconds}s`;
+};
+
+const calculateMemEfficiency = (job: HistoricalJob): string => {
+  const maxUsedMem_Bytes = job.steps.reduce((max, step) => {
+    const maxRAM =
+      step.tres.requested.max.find((t: any) => t.type === "mem")?.count || 0;
+    return maxRAM > max ? maxRAM : max;
+  }, 0);
+  const allocMem_MiB =
+    job.tres.requested.find((t) => t.type === "mem")?.count || 0;
+  const efficiency = (maxUsedMem_Bytes / (allocMem_MiB * 1048576)) * 100;
+  return `${efficiency.toFixed(2)}%`;
+};
+
+const calculateCPUEfficiency = (job: HistoricalJob): string => {
+  const allocatedCPUs =
+    job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
+  const elapsedTime = job.time.elapsed;
+
+  const totalCPUTime = job.steps.reduce((sum, step) => {
+    const stepUserTime =
+      step.time.user.seconds + step.time.user.microseconds / 1e6;
+    const stepSystemTime =
+      step.time.system.seconds + step.time.system.microseconds / 1e6;
+    return sum + stepUserTime + stepSystemTime;
+  }, 0);
+
+  if (allocatedCPUs === 0 || elapsedTime === 0) return "N/A";
+  if (totalCPUTime === 0) return "No CPU usage recorded";
+
+  const coreWallTime = allocatedCPUs * elapsedTime;
+  const efficiency = (totalCPUTime / coreWallTime) * 100;
+  return `${efficiency.toFixed(2)}%`;
+};
+
+const getLetterGrade = (score: number): keyof typeof rubric => {
+  for (const [key, subobj] of Object.entries(rubric)) {
+    if (score >= subobj.threshold) {
+      return key as keyof typeof rubric;
+    }
+  }
+  return "E";
+};
+
+const gradeEfficiency = (efficiencyStr: string): keyof typeof rubric => {
+  const eff = Number(efficiencyStr.replace("%", ""));
+  return getLetterGrade(eff);
+};
+
+// Shared fetcher for SWR
+const jsonFetcher = (url: string) =>
+  fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  }).then((res) => res.json());
 
 const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   open,
   setOpen,
   searchID,
 }) => {
-  const jobFetcher = () =>
-    fetch(`/api/slurm/job/completed/${searchID}`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((res) => res.json());
+  // Memoize URL
+  const jobURL = useMemo(
+    () => `/api/slurm/job/completed/${searchID}`,
+    [searchID]
+  );
 
   const {
     data: jobData,
     error: jobError,
     isLoading: jobIsLoading,
-  } = useSWR<{
-    jobs: HistoricalJob[];
-  }>(open ? `/api/slurm/job/completed/${searchID}` : null, jobFetcher);
-
-  function convertUnixToHumanReadable(unixTimestamp: number) {
-    const date = new Date(unixTimestamp * 1000);
-    return date.toLocaleString();
-  }
-
-  function formatDuration(seconds: number) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-    return `${hours}h ${minutes}m ${remainingSeconds}s`;
-  }
-
-  function calculateMemEfficiency(job: HistoricalJob) {
-    const maxUsedMem_Bytes = job.steps.reduce((max, step) => {
-      const maxRAM =
-        step.tres.requested.max.find((t: any) => t.type === "mem")?.count || 0;
-      return maxRAM > max ? maxRAM : max;
-    }, 0);
-    const allocMem_MiB =
-      job.tres.requested.find((t) => t.type === "mem")?.count || 0;
-    // compute percent ratio by converting denominator to bytes
-    const efficiency = (maxUsedMem_Bytes / (allocMem_MiB * 1048576)) * 100;
-    return `${efficiency.toFixed(2)}%`;
-  }
-
-  function calculateCPUEfficiency(job: HistoricalJob) {
-    const allocatedCPUs =
-      job.tres.allocated.find((t) => t.type === "cpu")?.count || 0;
-    const elapsedTime = job.time.elapsed;
-
-    const totalCPUTime = job.steps.reduce((sum, step) => {
-      const stepUserTime =
-        step.time.user.seconds + step.time.user.microseconds / 1e6;
-      const stepSystemTime =
-        step.time.system.seconds + step.time.system.microseconds / 1e6;
-      const stepTotalSeconds = stepUserTime + stepSystemTime;
-
-      return sum + stepTotalSeconds;
-    }, 0);
-
-    if (allocatedCPUs === 0 || elapsedTime === 0) return "N/A";
-    if (totalCPUTime === 0) return "No CPU usage recorded";
-
-    const coreWallTime = allocatedCPUs * elapsedTime;
-    const efficiency = (totalCPUTime / coreWallTime) * 100;
-
-    return `${efficiency.toFixed(2)}%`;
-  }
-
-  function get_letter_grade(score: number): keyof typeof rubric {
-    let letter: keyof typeof rubric = "E";
-    for (const [key, subobj] of Object.entries(rubric)) {
-      if (score >= subobj.threshold) {
-        letter = key as keyof typeof rubric;
-        break;
-      }
-    }
-    return letter;
-  }
-
-  function grade_efficiency(efficiencyStr: string): keyof typeof rubric {
-    const eff = Number(efficiencyStr.replace("%", ""));
-    return get_letter_grade(eff);
-  }
+  } = useSWR<{ jobs: HistoricalJob[] }>(open ? jobURL : null, jsonFetcher);
 
   // Skeleton components for loading state
   const renderSkeletonOverview = () => (
@@ -256,8 +240,8 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   const renderJobOverview = (job: HistoricalJob) => {
     const CPUEfficiency = calculateCPUEfficiency(job);
     const MemEfficiency = calculateMemEfficiency(job);
-    const CPUEffLetter = grade_efficiency(CPUEfficiency);
-    const MemEffLetter = grade_efficiency(MemEfficiency);
+    const CPUEffLetter = gradeEfficiency(CPUEfficiency);
+    const MemEffLetter = gradeEfficiency(MemEfficiency);
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -527,4 +511,4 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   );
 };
 
-export default HistoricalJobDetailModal;
+export default memo(HistoricalJobDetailModal);

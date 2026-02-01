@@ -1,211 +1,178 @@
 "use client";
-import React from "react";
+import React, { memo, useMemo } from "react";
 import { CardTitle, CardContent, Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
 import {
-    Server,
-    Cpu,
-    Clock,
-    Layers,
-    Activity,
-    HardDrive,
+  Server,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
-
-interface PartitionInfo {
-    name: string;
-    nodes: string | { allowed_allocation: string; configured: string; total: number };
-    total_nodes?: number | { total?: number; configured?: number };
-    total_cpus?: number | { total?: number; configured?: number };
-    cpus?: { total: number };
-    state?: string;
-    partition?: { state: string[] };
-    max_time?: { number: number } | string;
-    maximums?: { time: { number: number; infinite?: boolean } };
-    default_memory_per_cpu?: { number: number };
-    def_mem_per_cpu?: { number: number };
-    defaults?: {
-        partition_memory_per_cpu?: { number: number };
-        partition_memory_per_node?: { number: number };
-        memory_per_cpu?: number;
-    };
-    qos_char?: string;
-}
+import {
+  CopyButton,
+  EmptyState,
+  formatDuration,
+  formatMemory,
+} from "./llm-shared-utils";
 
 interface SlurmPartitionDetailsProps {
-    partition: {
-        partitions: PartitionInfo[];
+  partition: {
+    partitions: any[];
+  };
+}
+
+const getStateColor = (state: string) => {
+  if (state === 'UP') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+  if (state === 'DOWN') return 'bg-red-500/20 text-red-400 border-red-500/30';
+  if (state === 'DRAIN') return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+  return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+};
+
+function SlurmPartitionDetailsComponent({ partition }: SlurmPartitionDetailsProps) {
+  const partitionData = useMemo(() => {
+    if (!partition?.partitions?.length) return null;
+    
+    const p = partition.partitions[0];
+    
+    // Get state
+    let state = 'Unknown';
+    if (p.partition?.state?.length) state = p.partition.state[0];
+    else if (typeof p.state === 'string') state = p.state;
+
+    // Get total nodes
+    let totalNodes = 0;
+    if (typeof p.nodes === 'object' && p.nodes !== null) {
+      totalNodes = p.nodes.total || 0;
+    } else if (p.total_nodes) {
+      totalNodes = typeof p.total_nodes === 'number' ? p.total_nodes : p.total_nodes.total || 0;
+    }
+
+    // Get node list
+    let nodeList = '';
+    if (typeof p.nodes === 'object' && p.nodes !== null) {
+      nodeList = p.nodes.configured || '';
+    } else if (typeof p.nodes === 'string') {
+      nodeList = p.nodes;
+    }
+
+    // Get total CPUs
+    let totalCPUs = 0;
+    if (p.cpus?.total) totalCPUs = p.cpus.total;
+    else if (p.total_cpus) {
+      totalCPUs = typeof p.total_cpus === 'number' ? p.total_cpus : p.total_cpus.total || 0;
+    }
+
+    // Get max time
+    let maxTime: string | number = '∞';
+    if (p.maximums?.time) {
+      maxTime = p.maximums.time.infinite ? '∞' : p.maximums.time.number;
+    } else if (p.max_time) {
+      maxTime = typeof p.max_time === 'string' ? p.max_time : p.max_time.number;
+    }
+
+    // Get memory config
+    let memoryConfig = '';
+    if (p.defaults?.partition_memory_per_cpu?.number) {
+      memoryConfig = `${formatMemory(p.defaults.partition_memory_per_cpu.number)}/CPU`;
+    } else if (p.defaults?.partition_memory_per_node?.number) {
+      memoryConfig = `${formatMemory(p.defaults.partition_memory_per_node.number)}/Node`;
+    } else if (p.default_memory_per_cpu?.number) {
+      memoryConfig = `${formatMemory(p.default_memory_per_cpu.number)}/CPU`;
+    } else if (p.def_mem_per_cpu?.number) {
+      memoryConfig = `${formatMemory(p.def_mem_per_cpu.number)}/CPU`;
+    }
+
+    return {
+      name: p.name,
+      state,
+      totalNodes,
+      nodeList,
+      totalCPUs,
+      maxTime,
+      memoryConfig,
+      qos: p.qos_char || '',
+      isUp: state === 'UP',
     };
-}
+  }, [partition]);
 
-// Helper to get state
-const getState = (partInfo: PartitionInfo) => {
-    if (partInfo.partition?.state?.length) return partInfo.partition.state[0];
-    if (typeof partInfo.state === 'string') return partInfo.state;
-    return "Unknown";
-};
-
-// Helper to get total nodes
-const getTotalNodes = (partInfo: PartitionInfo) => {
-    if (typeof partInfo.nodes === 'object' && partInfo.nodes !== null) {
-        return partInfo.nodes.total || 0;
-    }
-    if (partInfo.total_nodes) {
-        if (typeof partInfo.total_nodes === 'number') return partInfo.total_nodes;
-        if (typeof partInfo.total_nodes === 'object') return partInfo.total_nodes.total || 0;
-    }
-    return 0;
-};
-
-// Helper to get node list string
-const getNodeList = (partInfo: PartitionInfo) => {
-    if (typeof partInfo.nodes === 'object' && partInfo.nodes !== null) {
-        return partInfo.nodes.configured || "";
-    }
-    if (typeof partInfo.nodes === 'string') return partInfo.nodes;
-    return "";
-};
-
-// Helper to get total CPUs
-const getTotalCPUs = (partInfo: PartitionInfo) => {
-    if (partInfo.cpus?.total) return partInfo.cpus.total;
-    if (partInfo.total_cpus) {
-        if (typeof partInfo.total_cpus === 'number') return partInfo.total_cpus;
-        if (typeof partInfo.total_cpus === 'object') return partInfo.total_cpus.total || 0;
-    }
-    return 0;
-};
-
-// Helper for max time
-const getMaxTime = (partInfo: PartitionInfo) => {
-    if (partInfo.maximums?.time) {
-        return partInfo.maximums.time.infinite ? "Infinite" : partInfo.maximums.time.number;
-    }
-    if (partInfo.max_time) {
-        if (typeof partInfo.max_time === 'string') return partInfo.max_time;
-        return partInfo.max_time.number;
-    }
-    return "Unlimited";
-};
-
-// Helper for memory
-const getMemory = (partInfo: PartitionInfo) => {
-    if (partInfo.defaults?.partition_memory_per_cpu?.number) return `${partInfo.defaults.partition_memory_per_cpu.number} MB (Per CPU)`;
-    if (partInfo.defaults?.partition_memory_per_node?.number) return `${partInfo.defaults.partition_memory_per_node.number} MB (Per Node)`;
-    if (partInfo.default_memory_per_cpu?.number) return `${partInfo.default_memory_per_cpu.number} MB (Per CPU)`;
-    if (partInfo.def_mem_per_cpu?.number) return `${partInfo.def_mem_per_cpu.number} MB (Per CPU)`;
-    return "Not Configured";
-};
-
-export function SlurmPartitionDetails({ partition }: SlurmPartitionDetailsProps) {
-    if (!partition.partitions || !partition.partitions.length) {
-        return (
-            <div className="text-center p-4 text-red-400">
-                Sorry, I couldn't find any partition details.
-            </div>
-        );
-    }
-
-    const partInfo = partition.partitions[0];
-
+  if (!partitionData) {
     return (
-        <Card className="w-full mx-auto bg-card border rounded-xl shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between p-6">
-                <div className="flex items-center gap-4">
-                    <div>
-                        <CardTitle className="text-2xl font-semibold">
-                            Partition:{" "}
-                            <span className="text-primary font-mono">
-                                {partInfo.name}
-                            </span>
-                        </CardTitle>
-                    </div>
-                </div>
-            </div>
-
-            <Separator />
-
-            <CardContent className="p-4 grid gap-4">
-                {/* Status Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-4"
-                >
-                    <div className="p-4 rounded-xl border bg-muted flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Activity className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium">State</span>
-                        </div>
-                        <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                            {getState(partInfo)}
-                        </Badge>
-                    </div>
-                </motion.div>
-
-                {/* Resources Grid */}
-                <div className="grid sm:grid-cols-2 gap-4">
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        className="flex items-center gap-3 p-4 rounded-xl border bg-muted transition-all"
-                    >
-                        <Server className="w-4 h-4 text-primary" />
-                        <div>
-                            <div className="text-sm text-muted-foreground">Total Nodes</div>
-                            <div className="font-medium">{getTotalNodes(partInfo)}</div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        className="flex items-center gap-3 p-4 rounded-xl border bg-muted transition-all"
-                    >
-                        <Cpu className="w-4 h-4 text-primary" />
-                        <div>
-                            <div className="text-sm text-muted-foreground">Total CPUs</div>
-                            <div className="font-medium">{getTotalCPUs(partInfo)}</div>
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Configuration Grid */}
-                <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2 p-4 rounded-xl border bg-muted">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Clock className="w-4 h-4 text-primary" />
-                            <div className="text-sm text-muted-foreground">Max Time</div>
-                        </div>
-                        <div className="font-medium">
-                            {getMaxTime(partInfo)}
-                        </div>
-                    </div>
-
-                    <div className="space-y-2 p-4 rounded-xl border bg-muted">
-                        <div className="flex items-center gap-2 mb-2">
-                            <HardDrive className="w-4 h-4 text-primary" />
-                            <div className="text-sm text-muted-foreground">Default Mem/CPU</div>
-                        </div>
-                        <div className="font-medium">
-                            {getMemory(partInfo)}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Nodes List */}
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="p-4 rounded-xl border bg-muted transition-all"
-                >
-                    <div className="flex items-center gap-2 mb-2">
-                        <Layers className="w-4 h-4 text-primary" />
-                        <div className="text-sm text-muted-foreground">Nodes</div>
-                    </div>
-                    <div className="font-medium text-sm break-all font-mono">
-                        {getNodeList(partInfo)}
-                    </div>
-                </motion.div>
-            </CardContent>
-        </Card>
+      <EmptyState 
+        message="Sorry, I couldn't find any partition details."
+        icon={<AlertCircle className="w-8 h-8 mx-auto" />}
+      />
     );
+  }
+
+  const { name, state, totalNodes, nodeList, totalCPUs, maxTime, memoryConfig, qos, isUp } = partitionData;
+
+  return (
+    <Card className="w-full mx-auto bg-card border rounded-xl shadow-sm relative overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${isUp ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+            {isUp ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-400" />
+            )}
+          </div>
+          <div>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <span className="text-muted-foreground">Partition</span>
+              <span className="text-primary font-mono">{name}</span>
+              <CopyButton text={name} />
+            </CardTitle>
+            {qos && <div className="text-xs text-muted-foreground">QoS: {qos}</div>}
+          </div>
+        </div>
+        <Badge variant="secondary" className={getStateColor(state)}>
+          {state}
+        </Badge>
+      </div>
+
+      <Separator />
+
+      <CardContent className="p-4 space-y-3">
+        {/* Stats Row */}
+        <div className="grid grid-cols-4 gap-3 text-center">
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">Nodes</div>
+            <div className="font-semibold text-primary">{totalNodes}</div>
+          </div>
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">CPUs</div>
+            <div className="font-semibold">{totalCPUs.toLocaleString()}</div>
+          </div>
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">Max Time</div>
+            <div className="font-medium text-sm">
+              {typeof maxTime === 'number' ? formatDuration(maxTime) : maxTime}
+            </div>
+          </div>
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">Memory</div>
+            <div className="font-medium text-sm">{memoryConfig || 'Default'}</div>
+          </div>
+        </div>
+
+        {/* Node List - only if present */}
+        {nodeList && (
+          <div className="py-2 px-3 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Nodes</span>
+              <CopyButton text={nodeList} />
+            </div>
+            <code className="text-xs font-mono text-muted-foreground break-all block">
+              {nodeList.length > 100 ? `${nodeList.slice(0, 100)}...` : nodeList}
+            </code>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
+
+export const SlurmPartitionDetails = memo(SlurmPartitionDetailsComponent);
+export default SlurmPartitionDetails;

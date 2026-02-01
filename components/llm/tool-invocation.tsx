@@ -24,6 +24,15 @@ export const ToolInvocationRenderer = memo(function ToolInvocationRenderer({ too
 
     switch (toolName) {
       case "get_job_details":
+        if (result.error) {
+          return (
+            <BotCard>
+              <div className="text-center p-4 text-red-400">
+                {result.error}
+              </div>
+            </BotCard>
+          );
+        }
         return (
           <BotCard>
             <SlurmJobDetails job={result} />

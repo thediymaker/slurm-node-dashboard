@@ -45,35 +45,113 @@ export async function GET(req: Request) {
       });
     }
 
-    const prometheusQuery = `${query}{instance="${instance}"}`;
+    // Build the appropriate query based on metric type
+    let prometheusQuery: string;
+    
+    if (query.startsWith("DCGM_")) {
+      // DCGM exporter uses Hostname label (capital H) matching the node name
+      prometheusQuery = `${query}{Hostname="${node}"}`;
+    } else if (query === "node_hwmon_temp_celsius") {
+      // Get CPU package temperature (sensor temp1 on coretemp)
+      prometheusQuery = `${query}{instance="${instance}", chip=~".*coretemp.*", sensor="temp1"}`;
+    } else if (query.includes("network") && query.includes("_bytes_total")) {
+      // Network counters need rate() to show throughput, exclude loopback and virtual interfaces
+      prometheusQuery = `rate(${query}{instance="${instance}", device!~"lo|veth.*|docker.*|br.*|virbr.*"}[5m])`;
+    } else {
+      prometheusQuery = `${query}{instance="${instance}"}`;
+    }
 
-    const loadRes: PrometheusQueryResponse = await prom.rangeQuery(
-      prometheusQuery,
-      start,
-      end,
-      step
-    );
-
-    const series = loadRes.result;
-
-    if (series.length === 0) {
+    let loadRes: PrometheusQueryResponse;
+    try {
+      loadRes = await prom.rangeQuery(
+        prometheusQuery,
+        start,
+        end,
+        step
+      );
+    } catch (queryError) {
+      console.error("Prometheus query error:", queryError);
       return NextResponse.json({
         status: 404,
-        message: "No data found for the specified instance.",
+        message: `Query failed for metric: ${query}`,
       });
     }
 
-    // Convert bytes to GB if the query is "node_memory_Active_bytes"
-    const dataPoints = series.flatMap((serie) =>
-      serie.values.map(({ time, value }) => ({
+    const series = loadRes.result;
+
+    if (!series || series.length === 0) {
+      return NextResponse.json({
+        status: 404,
+        message: `No data found for metric: ${query}. This metric may not be available on this node.`,
+      });
+    }
+
+    // Define metrics that need specific conversions
+    const bytesToGBMetrics = [
+      "node_memory_Active_bytes",
+      "node_memory_SwapFree_bytes",
+      "node_memory_MemAvailable_bytes",
+    ];
+    
+    const bytesToMBPerSecMetrics = [
+      "node_network_receive_bytes_total",
+      "node_network_transmit_bytes_total",
+    ];
+    
+    const celsiusToFahrenheitMetrics = [
+      "node_hwmon_temp_celsius",
+      "DCGM_FI_DEV_GPU_TEMP",
+    ];
+    
+    const dcgmMemoryMetrics = [
+      "DCGM_FI_DEV_FB_USED",
+      "DCGM_FI_DEV_FB_FREE",
+    ];
+
+    // Transform values based on metric type
+    const transformValue = (value: number): string | number => {
+      if (bytesToGBMetrics.includes(query)) {
+        return (value / (1024 * 1024 * 1024)).toFixed(1);
+      }
+      if (bytesToMBPerSecMetrics.includes(query)) {
+        // rate() gives bytes/sec, convert to MB/s (more readable than GB/s for typical network)
+        return (value / (1024 * 1024)).toFixed(2);
+      }
+      if (celsiusToFahrenheitMetrics.includes(query)) {
+        // Convert Celsius to Fahrenheit
+        return ((value * 9/5) + 32).toFixed(0);
+      }
+      if (dcgmMemoryMetrics.includes(query)) {
+        // DCGM memory is in MiB, convert to GB
+        return (value / 1024).toFixed(2);
+      }
+      return value;
+    };
+
+    // For network metrics, aggregate all interfaces
+    let dataPoints;
+    if (bytesToMBPerSecMetrics.includes(query) && series.length > 1) {
+      // Sum across all network interfaces per timestamp
+      const timeMap = new Map<number, number>();
+      series.forEach((serie) => {
+        serie.values.forEach(({ time, value }) => {
+          const t = time.getTime();
+          timeMap.set(t, (timeMap.get(t) || 0) + value);
+        });
+      });
+      dataPoints = Array.from(timeMap.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([time, value]) => ({
+          time: new Date(time),
+          value: transformValue(value),
+        }));
+    } else {
+      // Use first series for single-value metrics
+      dataPoints = series[0].values.map(({ time, value }) => ({
         time,
-        value:
-          query === "node_memory_Active_bytes" ||
-          query === "node_memory_SwapFree_bytes"
-            ? (value / (1024 * 1024 * 1024)).toFixed(1)
-            : value,
-      }))
-    );
+        value: transformValue(value),
+      }));
+    }
 
     return NextResponse.json({ status: 200, data: dataPoints });
   } catch (error) {
