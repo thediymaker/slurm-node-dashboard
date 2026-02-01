@@ -79,7 +79,7 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
   }, [colorSchema, form]);
 
   return (
-    <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-xl border shadow-sm my-4">
+    <div className="sticky top-4 z-30 flex flex-wrap items-center justify-between gap-4 bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-xl border shadow-sm my-4">
       <div className="flex items-center gap-3">
         <JobSearch />
         
