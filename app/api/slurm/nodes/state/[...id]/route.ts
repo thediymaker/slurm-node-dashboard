@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { fetchSlurmData } from "@/lib/slurm-api";
 
@@ -40,8 +42,11 @@ export async function POST(
     }
 
     return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error:", error);
-    return NextResponse.json({ Error: error });
+  } catch (err) {
+    console.error("Error updating node state:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to update node state" },
+      { status: 500 }
+    );
   }
 }

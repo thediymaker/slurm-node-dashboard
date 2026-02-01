@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   useNodesState,
@@ -71,20 +71,25 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { fitView } = useReactFlow();
 
+  // Memoize node style based on theme
+  const nodeStyle = useMemo(() => ({
+    background: theme === 'dark' ? '#1e293b' : '#ffffff',
+    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+    border: '1px solid #94a3b8',
+    borderRadius: '8px',
+    padding: '8px',
+    fontSize: '12px',
+    width: nodeWidth,
+  }), [theme]);
+
   useEffect(() => {
+    if (!data.length) return;
+
     const initialNodes: Node[] = data.map((org) => ({
       id: org.id.toString(),
       data: { label: org.name, original: org },
       position: { x: 0, y: 0 },
-      style: {
-        background: theme === 'dark' ? '#1e293b' : '#ffffff',
-        color: theme === 'dark' ? '#f8fafc' : '#0f172a',
-        border: '1px solid #94a3b8',
-        borderRadius: '8px',
-        padding: '8px',
-        fontSize: '12px',
-        width: nodeWidth,
-      },
+      style: nodeStyle,
     }));
 
     const initialEdges: Edge[] = data
@@ -105,13 +110,7 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-    
-    // Fit view after a short delay to allow rendering
-    setTimeout(() => {
-        fitView();
-    }, 100);
-
-  }, [data, theme, setNodes, setEdges, fitView]);
+  }, [data, nodeStyle, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) =>
@@ -121,9 +120,16 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
     [setEdges]
   );
 
-  const handleNodeClick = (_: React.MouseEvent, node: Node) => {
+  const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     onNodeClick(node.data.original as Organization);
-  };
+  }, [onNodeClick]);
+
+  // Fit view when nodes change
+  useEffect(() => {
+    if (nodes.length > 0) {
+      fitView({ padding: 0.2 });
+    }
+  }, [nodes.length, fitView]);
 
   return (
     <ReactFlow
@@ -135,8 +141,9 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
       onNodeClick={handleNodeClick}
       fitView
       attributionPosition="bottom-right"
+      proOptions={{ hideAttribution: true }}
     >
-      <Controls />
+      <Controls showInteractive={false} />
       <Background color="#aaa" gap={16} />
     </ReactFlow>
   );

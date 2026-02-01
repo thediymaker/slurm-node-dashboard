@@ -1,19 +1,12 @@
+export const dynamic = 'force-dynamic';
+
 import { PrometheusQueryResponse } from "@/types/types";
 import { NextResponse } from "next/server";
-import { PrometheusDriver } from "prometheus-query";
+import { prom } from "@/lib/prometheus";
+import { fetchSlurmData } from "@/lib/slurm-api";
 
-export const revalidate = 0;
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
 const MAX_DATA_POINTS = 200;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache for node list
-
-let prom: PrometheusDriver | null = null;
-if (PROMETHEUS_URL) {
-  prom = new PrometheusDriver({
-    endpoint: PROMETHEUS_URL,
-    baseURL: "/api/v1",
-  });
-}
 
 // Cache for cluster nodes
 let clusterNodesCache: {
@@ -32,23 +25,15 @@ async function getClusterNodes(): Promise<string[]> {
     now - clusterNodesCache.timestamp < CACHE_TTL &&
     clusterNodesCache.nodes.length > 0
   ) {
-    console.log("Using cached cluster nodes list");
     return clusterNodesCache.nodes;
   }
 
   try {
-    // Fetch node information from Slurm API
-    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const response = await fetch(`${baseURL}/api/slurm/nodes`);
+    // Fetch node information directly from Slurm API
+    const { data, error } = await fetchSlurmData('/nodes');
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch nodes: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    if (!data.nodes || !Array.isArray(data.nodes)) {
-      console.warn("Invalid nodes data format from Slurm API");
+    if (error || !data?.nodes || !Array.isArray(data.nodes)) {
+      console.warn("Failed to fetch nodes from Slurm API");
       return [];
     }
 
@@ -64,8 +49,8 @@ async function getClusterNodes(): Promise<string[]> {
     };
 
     return nodeNames;
-  } catch (error) {
-    console.error("Error fetching cluster nodes:", error);
+  } catch (err) {
+    console.error("Error fetching cluster nodes:", err);
     return [];
   }
 }
@@ -120,7 +105,6 @@ export async function GET(req: Request) {
 
       // Try each pattern until we get results
       for (const pattern of patterns) {
-        console.log(`Trying power query pattern: ${pattern}`);
         powerQuery = pattern;
 
         try {
@@ -132,22 +116,16 @@ export async function GET(req: Request) {
           );
 
           if (historicalRes?.result?.length) {
-            console.log(
-              `Found ${historicalRes.result.length} series with pattern: ${pattern}`
-            );
             break;
           }
         } catch (error) {
-          console.warn(`Pattern failed: ${pattern}`, error);
+          // Pattern didn't match, try next one
         }
       }
     }
 
     // If we still have no results, try unfiltered query as fallback
     if (!historicalRes?.result?.length) {
-      console.log(
-        "No results with filtered queries, trying unfiltered query as fallback"
-      );
       powerQuery =
         'avg_over_time(ipmi_power_watts{name="Pwr Consumption"}[15m]) or avg_over_time(ipmi_dcmi_power_consumption_watts[15m])';
       unfilteredFallback = true;
@@ -160,7 +138,7 @@ export async function GET(req: Request) {
           stepSize
         );
       } catch (error) {
-        console.error("Error with unfiltered query:", error);
+        // Fallback query also failed
       }
     }
 
@@ -179,7 +157,7 @@ export async function GET(req: Request) {
       });
     }
 
-    // Log which nodes are included in the results for debugging
+    // Collect nodes from results for cluster matching
     const nodesInResults = new Set<string>();
     historicalRes.result.forEach((series) => {
       for (const label of ["hostname", "instance", "node"]) {
@@ -187,9 +165,6 @@ export async function GET(req: Request) {
         if (value) nodesInResults.add(value);
       }
     });
-    console.log(
-      `Nodes included in results: ${Array.from(nodesInResults).join(", ")}`
-    );
 
     // If using unfiltered query, check how many of the result nodes are actually in our cluster
     let clusterNodeMatch = [];

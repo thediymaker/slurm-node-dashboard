@@ -1,0 +1,321 @@
+// =============================================================================
+// ADMIN UTILITIES
+// =============================================================================
+// Shared utilities, configurations, and types for admin components
+
+import useSWR, { SWRConfiguration } from "swr";
+
+// -----------------------------------------------------------------------------
+// API Fetcher
+// -----------------------------------------------------------------------------
+
+export const adminFetcher = async (url: string) => {
+    const res = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+        const error = new Error("Failed to fetch data");
+        (error as any).status = res.status;
+        throw error;
+    }
+    return res.json();
+};
+
+// -----------------------------------------------------------------------------
+// SWR Configuration
+// -----------------------------------------------------------------------------
+
+export const DEFAULT_REFRESH_INTERVAL = 15000; // 15 seconds
+export const SLOW_REFRESH_INTERVAL = 60000; // 1 minute
+
+export const defaultSWRConfig: SWRConfiguration = {
+    refreshInterval: DEFAULT_REFRESH_INTERVAL,
+    revalidateOnFocus: true,
+    dedupingInterval: 5000,
+    errorRetryCount: 3,
+};
+
+// -----------------------------------------------------------------------------
+// API Endpoints
+// -----------------------------------------------------------------------------
+
+export const API_ENDPOINTS = {
+    DIAG: "/api/slurm/diag",
+    NODES: "/api/slurm/nodes",
+    PARTITIONS: "/api/slurm/partitions",
+    JOBS: "/api/slurm/jobs",
+    RESERVATIONS: "/api/slurm/reservations",
+    QOS: "/api/slurm/qos",
+    CLUSTER: "/api/slurm/cluster",
+} as const;
+
+// -----------------------------------------------------------------------------
+// Custom Hooks for Admin Data
+// -----------------------------------------------------------------------------
+
+export function useAdminDiag() {
+    return useSWR(API_ENDPOINTS.DIAG, adminFetcher, defaultSWRConfig);
+}
+
+export function useAdminNodes() {
+    return useSWR(API_ENDPOINTS.NODES, adminFetcher, defaultSWRConfig);
+}
+
+export function useAdminPartitions() {
+    return useSWR(API_ENDPOINTS.PARTITIONS, adminFetcher, defaultSWRConfig);
+}
+
+export function useAdminJobs() {
+    return useSWR(API_ENDPOINTS.JOBS, adminFetcher, defaultSWRConfig);
+}
+
+export function useAdminReservations() {
+    return useSWR(API_ENDPOINTS.RESERVATIONS, adminFetcher, defaultSWRConfig);
+}
+
+export function useAdminQoS() {
+    return useSWR(API_ENDPOINTS.QOS, adminFetcher, defaultSWRConfig);
+}
+
+export function useAdminCluster() {
+    return useSWR(API_ENDPOINTS.CLUSTER, adminFetcher, defaultSWRConfig);
+}
+
+// -----------------------------------------------------------------------------
+// Slurm Value Helpers
+// -----------------------------------------------------------------------------
+
+export interface SlurmValue {
+    set?: boolean;
+    infinite?: boolean;
+    number?: number;
+}
+
+/**
+ * Extract a displayable value from Slurm's {set, infinite, number} format
+ */
+export function extractSlurmValue(val: SlurmValue | number | undefined): string {
+    if (val === undefined || val === null) return "—";
+    if (typeof val === "number") return val.toLocaleString();
+    if (val.infinite) return "Unlimited";
+    if (val.number !== undefined && val.number >= 0) return val.number.toLocaleString();
+    return "—";
+}
+
+/**
+ * Get the raw number from a Slurm value, or undefined if not set
+ */
+export function getSlurmNumber(val: SlurmValue | number | undefined): number | undefined {
+    if (val === undefined || val === null) return undefined;
+    if (typeof val === "number") return val;
+    if (val.infinite) return Infinity;
+    if (val.number !== undefined && val.number >= 0) return val.number;
+    return undefined;
+}
+
+// -----------------------------------------------------------------------------
+// Time Formatting
+// -----------------------------------------------------------------------------
+
+/**
+ * Format seconds into a human-readable duration string
+ */
+export function formatDuration(seconds?: number, options?: { infinite?: boolean; showSeconds?: boolean }): string {
+    if (options?.infinite) return "Unlimited";
+    if (!seconds || seconds <= 0) return "—";
+
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    if (mins > 0) return `${mins}m`;
+    if (options?.showSeconds) return `${secs}s`;
+    return "< 1m";
+}
+
+/**
+ * Format a Unix timestamp to a localized string
+ */
+export function formatTimestamp(unixSeconds?: number, options?: Intl.DateTimeFormatOptions): string {
+    if (!unixSeconds || unixSeconds <= 0) return "—";
+    const defaultOptions: Intl.DateTimeFormatOptions = {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    };
+    return new Date(unixSeconds * 1000).toLocaleString(undefined, options || defaultOptions);
+}
+
+/**
+ * Calculate remaining time from a future Unix timestamp
+ */
+export function getTimeRemaining(endTimeSeconds?: number): { text: string; isExpired: boolean; urgency: "normal" | "warning" | "critical" } {
+    if (!endTimeSeconds) return { text: "—", isExpired: false, urgency: "normal" };
+    
+    const now = Math.floor(Date.now() / 1000);
+    const remaining = endTimeSeconds - now;
+
+    if (remaining <= 0) return { text: "Expired", isExpired: true, urgency: "critical" };
+
+    const hours = Math.floor(remaining / 3600);
+    const mins = Math.floor((remaining % 3600) / 60);
+
+    let urgency: "normal" | "warning" | "critical" = "normal";
+    if (remaining < 3600) urgency = "critical"; // Less than 1 hour
+    else if (remaining < 86400) urgency = "warning"; // Less than 1 day
+
+    if (hours > 24) {
+        const days = Math.floor(hours / 24);
+        return { text: `${days}d ${hours % 24}h`, isExpired: false, urgency };
+    }
+    if (hours > 0) return { text: `${hours}h ${mins}m`, isExpired: false, urgency };
+    return { text: `${mins}m`, isExpired: false, urgency };
+}
+
+// -----------------------------------------------------------------------------
+// Node State Helpers
+// -----------------------------------------------------------------------------
+
+export type NodeState = "IDLE" | "ALLOCATED" | "MIXED" | "DOWN" | "DRAIN" | "DRAINING" | "RESERVED" | "UNKNOWN";
+
+export interface NodeStateFlags {
+    isDown: boolean;
+    isDraining: boolean;
+    isDrained: boolean;
+    isReserved: boolean;
+    isMaintenance: boolean;
+    isAllocated: boolean;
+    isMixed: boolean;
+    isIdle: boolean;
+}
+
+/**
+ * Parse node state array into individual flags
+ */
+export function parseNodeState(state?: string[]): NodeStateFlags {
+    const stateSet = new Set((state || []).map(s => s?.toUpperCase()));
+    
+    return {
+        isDown: stateSet.has("DOWN"),
+        isDraining: stateSet.has("DRAINING"),
+        isDrained: stateSet.has("DRAIN") || stateSet.has("DRAINED"),
+        isReserved: stateSet.has("RESERVED"),
+        isMaintenance: stateSet.has("MAINTENANCE"),
+        isAllocated: stateSet.has("ALLOCATED"),
+        isMixed: stateSet.has("MIXED"),
+        isIdle: stateSet.has("IDLE"),
+    };
+}
+
+/**
+ * Check if a node is available for scheduling
+ */
+export function isNodeAvailable(state?: string[]): boolean {
+    const flags = parseNodeState(state);
+    return !flags.isDown && !flags.isDraining && !flags.isDrained && !flags.isMaintenance;
+}
+
+/**
+ * Get the primary state for display purposes
+ */
+export function getPrimaryNodeState(state?: string[]): NodeState {
+    const flags = parseNodeState(state);
+    
+    if (flags.isDown) return "DOWN";
+    if (flags.isDraining) return "DRAINING";
+    if (flags.isDrained) return "DRAIN";
+    if (flags.isMaintenance) return "RESERVED";
+    if (flags.isReserved) return "RESERVED";
+    if (flags.isAllocated) return "ALLOCATED";
+    if (flags.isMixed) return "MIXED";
+    if (flags.isIdle) return "IDLE";
+    return "UNKNOWN";
+}
+
+// -----------------------------------------------------------------------------
+// Partition State Helpers
+// -----------------------------------------------------------------------------
+
+export function getPartitionState(partition: { 
+    state?: string[] | { current?: string[] };
+    partition?: { state?: string[] };
+}): string {
+    // Check nested partition.state first (common API structure)
+    if (partition.partition?.state?.length) {
+        return partition.partition.state[0];
+    }
+    // Check top-level state as array
+    if (Array.isArray(partition.state)) {
+        return partition.state[0] ?? "UNKNOWN";
+    }
+    // Check top-level state.current
+    return (partition.state as any)?.current?.[0] ?? "UNKNOWN";
+}
+
+// -----------------------------------------------------------------------------
+// Resource Categorization
+// -----------------------------------------------------------------------------
+
+export interface ResourceCategory {
+    name: string;
+    icon: string;
+    resources: { type: string; name: string; count: number }[];
+}
+
+export function categorizeResources(tres: { type: string; name: string; count: number }[]): ResourceCategory[] {
+    const categories: Record<string, ResourceCategory> = {
+        compute: { name: "Compute", icon: "cpu", resources: [] },
+        memory: { name: "Memory", icon: "memory", resources: [] },
+        gpu: { name: "GPU", icon: "gpu", resources: [] },
+        storage: { name: "Storage", icon: "storage", resources: [] },
+        network: { name: "Network", icon: "network", resources: [] },
+        other: { name: "Other", icon: "other", resources: [] },
+    };
+
+    for (const resource of tres) {
+        if (resource.count <= 0) continue;
+        
+        const type = resource.type?.toLowerCase() || "";
+        const name = resource.name?.toLowerCase() || "";
+        
+        if (type === "cpu" || type === "node") {
+            categories.compute.resources.push(resource);
+        } else if (type === "mem" || type === "memory") {
+            categories.memory.resources.push(resource);
+        } else if (type === "gres" && name.includes("gpu")) {
+            categories.gpu.resources.push(resource);
+        } else if (type === "gres" || type === "fs") {
+            categories.storage.resources.push(resource);
+        } else if (type === "license") {
+            categories.network.resources.push(resource);
+        } else {
+            categories.other.resources.push(resource);
+        }
+    }
+
+    return Object.values(categories).filter(c => c.resources.length > 0);
+}
+
+// -----------------------------------------------------------------------------
+// Sorting & Filtering
+// -----------------------------------------------------------------------------
+
+export type SortDirection = "asc" | "desc";
+
+export function sortByKey<T>(items: T[], key: keyof T, direction: SortDirection = "asc"): T[] {
+    return [...items].sort((a, b) => {
+        const aVal = a[key];
+        const bVal = b[key];
+        
+        if (aVal === bVal) return 0;
+        if (aVal === undefined || aVal === null) return 1;
+        if (bVal === undefined || bVal === null) return -1;
+        
+        const comparison = aVal < bVal ? -1 : 1;
+        return direction === "asc" ? comparison : -comparison;
+    });
+}

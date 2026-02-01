@@ -22,7 +22,7 @@ interface GroupedNodesProps {
 
 interface StatusBadgeProps {
   count: number;
-  type: "idle" | "allocated" | "mixed" | "drain";
+  type: "idle" | "allocated" | "mixed" | "drain" | "down";
   colorSchema?: string;
   className?: string;
 }
@@ -82,6 +82,7 @@ const getStatusColor = (type: string, colorSchema: string = "default") => {
       mixed:
         "bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400",
       drain: "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400",
+      down: "bg-gray-100 dark:bg-gray-500/10 text-gray-700 dark:text-gray-400",
     },
     neon: {
       idle: "bg-cyan-100 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
@@ -91,6 +92,7 @@ const getStatusColor = (type: string, colorSchema: string = "default") => {
         "bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
       drain:
         "bg-fuchsia-100 dark:bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400",
+      down: "bg-gray-100 dark:bg-gray-500/10 text-gray-700 dark:text-gray-400",
     },
     nordic: {
       idle: "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -99,6 +101,7 @@ const getStatusColor = (type: string, colorSchema: string = "default") => {
       mixed:
         "bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
       drain: "bg-teal-100 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400",
+      down: "bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-400",
     },
     candy: {
       idle: "bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400",
@@ -106,6 +109,7 @@ const getStatusColor = (type: string, colorSchema: string = "default") => {
       mixed:
         "bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400",
       drain: "bg-pink-100 dark:bg-pink-500/10 text-pink-700 dark:text-pink-400",
+      down: "bg-gray-100 dark:bg-gray-500/10 text-gray-700 dark:text-gray-400",
     },
     desert: {
       idle: "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400",
@@ -114,6 +118,7 @@ const getStatusColor = (type: string, colorSchema: string = "default") => {
       mixed: "bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400",
       drain:
         "bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400",
+      down: "bg-stone-100 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400",
     },
     ocean: {
       idle: "bg-cyan-100 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
@@ -121,6 +126,7 @@ const getStatusColor = (type: string, colorSchema: string = "default") => {
         "bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
       mixed: "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400",
       drain: "bg-sky-100 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400",
+      down: "bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-400",
     },
   };
 
@@ -214,21 +220,56 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
     return ["UNKNOWN"];
   }, []);
 
-  // Memoize group stats calculation - now computed once per config change
+  // Compute "Other" nodes (not in any rack) - this updates when nodes change
+  const configWithOther = useMemo(() => {
+    if (Object.keys(config).length === 0) {
+      // No config loaded yet, or error - show all nodes as Uncategorized
+      if (!isLoading && nodes.length > 0) {
+        return {
+          Uncategorized: {
+            nodes: nodes.map((node: any) => node.hostname).filter(Boolean),
+            description: "All nodes",
+          },
+        };
+      }
+      return config;
+    }
+
+    const otherNodes = nodes
+      .filter((node: any) => !isNodeInAnyRack(node.hostname || "", config))
+      .map((node: any) => node.hostname)
+      .filter(Boolean);
+
+    if (otherNodes.length > 0) {
+      return {
+        ...config,
+        Other: {
+          nodes: otherNodes,
+          description: "Nodes not assigned to any rack",
+        },
+      };
+    }
+
+    return config;
+  }, [config, nodes, isLoading]);
+
+  // Memoize group stats calculation - now uses configWithOther to include "Other" group
   const groupStats = useMemo(() => {
-    const statsMap = new Map<string, { total: number; allocated: number; idle: number; mixed: number; drain: number }>();
+    const statsMap = new Map<string, { total: number; allocated: number; idle: number; mixed: number; drain: number; down: number }>();
 
-    Object.entries(config).forEach(([group, { nodes: groupNodes }]) => {
-      const stats = { total: 0, allocated: 0, idle: 0, mixed: 0, drain: 0 };
+    Object.entries(configWithOther).forEach(([group, { nodes: groupNodes }]) => {
+      const stats = { total: 0, allocated: 0, idle: 0, mixed: 0, drain: 0, down: 0 };
 
-      groupNodes.forEach((nodeName) => {
+      groupNodes.forEach((nodeName: string) => {
         const nodeDataArray = getNodeData(nodeName);
         nodeDataArray.forEach((node) => {
           stats.total++;
           const stateArray = normalizeState(node.state);
           const stateStr = stateArray.join(" ");
 
-          if (stateStr.includes("DRAIN")) {
+          if (stateStr.includes("DOWN")) {
+            stats.down++;
+          } else if (stateStr.includes("DRAIN")) {
             stats.drain++;
           } else if (stateStr.includes("MIXED")) {
             stats.mixed++;
@@ -244,7 +285,7 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
     });
 
     return statsMap;
-  }, [config, getNodeData, normalizeState]);
+  }, [configWithOther, getNodeData, normalizeState]);
 
   // Expand/collapse all handlers
   const handleExpandAll = useCallback(() => {
@@ -279,39 +320,6 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
 
     loadConfig();
   }, []); // Empty dependency - load once on mount
-
-  // Compute "Other" nodes (not in any rack) - this updates when nodes change
-  const configWithOther = useMemo(() => {
-    if (Object.keys(config).length === 0) {
-      // No config loaded yet, or error - show all nodes as Uncategorized
-      if (!isLoading && nodes.length > 0) {
-        return {
-          Uncategorized: {
-            nodes: nodes.map((node: any) => node.hostname).filter(Boolean),
-            description: "All nodes",
-          },
-        };
-      }
-      return config;
-    }
-
-    const otherNodes = nodes
-      .filter((node: any) => !isNodeInAnyRack(node.hostname || "", config))
-      .map((node: any) => node.hostname)
-      .filter(Boolean);
-
-    if (otherNodes.length > 0) {
-      return {
-        ...config,
-        Other: {
-          nodes: otherNodes,
-          description: "Nodes not assigned to any rack",
-        },
-      };
-    }
-
-    return config;
-  }, [config, nodes, isLoading]);
 
   const configEntries = Object.entries(configWithOther);
 
@@ -364,7 +372,7 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
           >
             {configEntries.map(
               ([group, { nodes: groupNodes, description }]) => {
-                const stats = groupStats.get(group) || { total: 0, allocated: 0, idle: 0, mixed: 0, drain: 0 };
+                const stats = groupStats.get(group) || { total: 0, allocated: 0, idle: 0, mixed: 0, drain: 0, down: 0 };
 
                 return (
                   <AccordionItem
@@ -401,6 +409,11 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
                           <StatusBadge
                             count={stats.drain}
                             type="drain"
+                            colorSchema={colorSchema}
+                          />
+                          <StatusBadge
+                            count={stats.down}
+                            type="down"
                             colorSchema={colorSchema}
                           />
                           <Badge variant="outline" className="ml-2 py-0.5 px-1.5">

@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
-  const { data, error, status } = await fetchSlurmData(`/qos/${name}`, 'slurmdb');
+  const { data, error, status } = await fetchSlurmData(`/qos/${name}`, { type: 'slurmdb' });
 
   if (error) {
     return NextResponse.json({ error }, { status });

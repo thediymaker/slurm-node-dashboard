@@ -11,21 +11,11 @@ export async function POST(req: Request) {
   const openai = createOpenAI({
     baseURL: process.env.OPENAI_API_URL,
     apiKey: process.env.OPENAI_API_KEY,
-    fetch: async (url, options) => {
-      console.log("OpenAI Fetch URL:", url);
-      // console.log("OpenAI Fetch Options:", JSON.stringify(options, null, 2)); // Don't log full options to avoid leaking keys in logs if possible, or just log headers keys
-      const response = await fetch(url, options);
-      console.log("OpenAI Fetch Status:", response.status);
-      return response;
-    },
   });
 
   const result = await streamText({
     model: openai.chat(process.env.OPENAI_API_MODEL || "gpt-3.5-turbo"),
     messages: convertToModelMessages(messages),
-    onError: (error) => {
-      console.error("StreamText Error:", error);
-    },
     system: `
       You are a specialized Slurm HPC (High Performance Computing) assistant. Your ONLY purpose is to assist users with Slurm workload manager tasks, HPC cluster operations, and related scripting (bash, sbatch, etc.).
 
@@ -66,7 +56,7 @@ export async function POST(req: Request) {
           }
           
           // If not found in active jobs, check historical/completed jobs in slurmdb
-          const { data: histData, error: histError } = await fetchSlurmData(`/job/${job}`, 'slurmdb');
+          const { data: histData, error: histError } = await fetchSlurmData(`/job/${job}`, { type: 'slurmdb' });
           
           // Check if we found a historical job
           if (!histError && histData?.jobs?.length && !histData?.errors?.length) {
@@ -154,15 +144,10 @@ export async function POST(req: Request) {
           qos: z.string().describe("The name of the QoS."),
         }),
         execute: async ({ qos }) => {
-          console.log(`Fetching QoS details for: ${qos}`);
-          // Use slurmdb for specific QoS details as per app/api/slurm/qos/[name]/route.ts
-          const { data, error } = await fetchSlurmData(`/qos/${qos}`, 'slurmdb');
-          console.log(`QoS fetch result: error=${error}`);
+          const { data, error } = await fetchSlurmData(`/qos/${qos}`, { type: 'slurmdb' });
           
           if (error || (data?.qos && Array.isArray(data.qos) && data.qos.length === 0)) {
-            console.log("QoS not found or error, fetching list...");
-            const { data: listData, error: listError } = await fetchSlurmData(`/qos`, 'slurmdb');
-            console.log(`QoS list result: error=${listError}`);
+            const { data: listData, error: listError } = await fetchSlurmData(`/qos`, { type: 'slurmdb' });
             
             if (!listError && listData?.qos) {
               const qosList = listData.qos.map((q: any) => q.name).join(", ");
@@ -177,7 +162,7 @@ export async function POST(req: Request) {
         description: "Get general cluster information and status.",
         inputSchema: z.object({}),
         execute: async () => {
-          const { data, error } = await fetchSlurmData('/clusters', 'slurmdb');
+          const { data, error } = await fetchSlurmData('/clusters', { type: 'slurmdb' });
           if (error) {
             return { error: `Error fetching cluster info: ${error}` };
           }
@@ -188,7 +173,7 @@ export async function POST(req: Request) {
         description: "List all QoS (Quality of Service) available in the cluster.",
         inputSchema: z.object({}),
         execute: async () => {
-          const { data, error } = await fetchSlurmData(`/qos`, 'slurmdb');
+          const { data, error } = await fetchSlurmData(`/qos`, { type: 'slurmdb' });
           if (error) {
             return { error: `Error fetching QoS list: ${error}` };
           }

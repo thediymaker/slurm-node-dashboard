@@ -1,6 +1,7 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
     Table,
     TableBody,
@@ -11,41 +12,113 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import useSWR from "swr";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuCheckboxItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAdminPartitions, formatDuration, getPartitionState, sortByKey, SortDirection } from "./admin-utils";
+import { Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
 
 interface Partition {
     name: string;
-    state: { current: string[] } | string[];
+    state?: { current: string[] } | string[];
+    partition?: { state?: string[]; default?: boolean };
     nodes: { total: number; configured?: string };
     cpus: { total: number };
     maximums?: { time?: { number?: number; infinite?: boolean } };
     defaults?: { time?: { number?: number } };
-    partition?: { default?: boolean };
+    priority?: { job_factor?: number; tier?: number };
 }
 
-const fetcher = async (url: string) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch");
-    return res.json();
-};
-
-function formatTime(seconds?: number, infinite?: boolean): string {
-    if (infinite) return "Unlimited";
-    if (!seconds || seconds <= 0) return "—";
-
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
-}
+type SortKey = "name" | "state" | "nodes" | "cpus";
 
 export function PartitionsPanel() {
-    const { data, isLoading, error } = useSWR("/api/slurm/partitions", fetcher, {
-        refreshInterval: 15000,
-    });
+    const { data, isLoading, error } = useAdminPartitions();
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortKey, setSortKey] = useState<SortKey>("name");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+    const [showOnlyUp, setShowOnlyUp] = useState(false);
+    const [showOnlyDefault, setShowOnlyDefault] = useState(false);
+
+    // Process partitions with sorting and filtering
+    const processedPartitions = useMemo(() => {
+        if (!data?.partitions) return [];
+        
+        let partitions: Partition[] = data.partitions;
+        
+        // Filter by search term
+        if (searchTerm) {
+            const search = searchTerm.toLowerCase();
+            partitions = partitions.filter(p => 
+                p.name.toLowerCase().includes(search)
+            );
+        }
+        
+        // Filter by state
+        if (showOnlyUp) {
+            partitions = partitions.filter(p => {
+                const state = getPartitionState(p);
+                return state === "UP";
+            });
+        }
+        
+        // Filter by default
+        if (showOnlyDefault) {
+            partitions = partitions.filter(p => p.partition?.default);
+        }
+        
+        // Sort
+        partitions = [...partitions].sort((a, b) => {
+            let aVal: any, bVal: any;
+            
+            switch (sortKey) {
+                case "name":
+                    aVal = a.name;
+                    bVal = b.name;
+                    break;
+                case "state":
+                    aVal = getPartitionState(a);
+                    bVal = getPartitionState(b);
+                    break;
+                case "nodes":
+                    aVal = a.nodes?.total ?? 0;
+                    bVal = b.nodes?.total ?? 0;
+                    break;
+                case "cpus":
+                    aVal = a.cpus?.total ?? 0;
+                    bVal = b.cpus?.total ?? 0;
+                    break;
+                default:
+                    return 0;
+            }
+            
+            if (aVal === bVal) return 0;
+            const comparison = aVal < bVal ? -1 : 1;
+            return sortDirection === "asc" ? comparison : -comparison;
+        });
+        
+        return partitions;
+    }, [data, searchTerm, sortKey, sortDirection, showOnlyUp, showOnlyDefault]);
+
+    const handleSort = (key: SortKey) => {
+        if (sortKey === key) {
+            setSortDirection(d => d === "asc" ? "desc" : "asc");
+        } else {
+            setSortKey(key);
+            setSortDirection("asc");
+        }
+    };
+
+    const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+        if (sortKey !== columnKey) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+        return sortDirection === "asc" 
+            ? <ArrowUp className="ml-1 h-3 w-3" /> 
+            : <ArrowDown className="ml-1 h-3 w-3" />;
+    };
 
     if (isLoading) {
         return (
@@ -71,74 +144,161 @@ export function PartitionsPanel() {
                     <CardTitle className="text-xl font-medium">Partitions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Failed to load partition data
-                    </p>
+                    <div className="flex items-center gap-2 text-destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="text-sm">Failed to load partition data</span>
+                    </div>
                 </CardContent>
             </Card>
         );
     }
 
-    const partitions: Partition[] = data?.partitions ?? [];
+    const totalPartitions = data?.partitions?.length ?? 0;
+    const upPartitions = data?.partitions?.filter((p: Partition) => getPartitionState(p) === "UP").length ?? 0;
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-xl font-medium">Partitions</CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <CardTitle className="text-xl font-medium">Partitions</CardTitle>
+                        <CardDescription>
+                            {upPartitions} of {totalPartitions} partitions UP
+                        </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search partitions..."
+                                className="pl-8 w-[200px]"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="icon">
+                                    <Filter className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuCheckboxItem
+                                    checked={showOnlyUp}
+                                    onCheckedChange={setShowOnlyUp}
+                                >
+                                    Show only UP
+                                </DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem
+                                    checked={showOnlyDefault}
+                                    onCheckedChange={setShowOnlyDefault}
+                                >
+                                    Show only Default
+                                </DropdownMenuCheckboxItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent>
-                {partitions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No partitions found</p>
+                {processedPartitions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                        {searchTerm || showOnlyUp || showOnlyDefault 
+                            ? "No partitions match your filters" 
+                            : "No partitions found"}
+                    </p>
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>State</TableHead>
-                                <TableHead>Nodes</TableHead>
-                                <TableHead>CPUs</TableHead>
-                                <TableHead>Max Time</TableHead>
-                                <TableHead>Default</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {partitions.map((partition) => {
-                                const state = Array.isArray(partition.state)
-                                    ? partition.state[0]
-                                    : partition.state?.current?.[0] ?? "UNKNOWN";
-                                const isUp = state === "UP";
-                                const isDefault = partition.partition?.default ?? false;
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead 
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort("name")}
+                                    >
+                                        <div className="flex items-center">
+                                            Name
+                                            <SortIcon columnKey="name" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort("state")}
+                                    >
+                                        <div className="flex items-center">
+                                            State
+                                            <SortIcon columnKey="state" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort("nodes")}
+                                    >
+                                        <div className="flex items-center">
+                                            Nodes
+                                            <SortIcon columnKey="nodes" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort("cpus")}
+                                    >
+                                        <div className="flex items-center">
+                                            CPUs
+                                            <SortIcon columnKey="cpus" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead>Max Time</TableHead>
+                                    <TableHead>Priority</TableHead>
+                                    <TableHead>Default</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {processedPartitions.map((partition) => {
+                                    const state = getPartitionState(partition);
+                                    const isUp = state === "UP";
+                                    const isDefault = partition.partition?.default ?? false;
 
-                                return (
-                                    <TableRow key={partition.name}>
-                                        <TableCell className="font-medium">
-                                            {partition.name}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={isUp ? "default" : "secondary"}>
-                                                {state}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{partition.nodes?.total ?? "—"}</TableCell>
-                                        <TableCell>{partition.cpus?.total?.toLocaleString() ?? "—"}</TableCell>
-                                        <TableCell>
-                                            {formatTime(
-                                                partition.maximums?.time?.number,
-                                                partition.maximums?.time?.infinite
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {isDefault ? (
-                                                <Badge variant="outline">Default</Badge>
-                                            ) : (
-                                                "—"
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
+                                    return (
+                                        <TableRow key={partition.name}>
+                                            <TableCell className="font-medium font-mono">
+                                                {partition.name}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge 
+                                                    variant={isUp ? "default" : "secondary"}
+                                                    className={isUp ? "bg-green-600 hover:bg-green-700" : ""}
+                                                >
+                                                    {state}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{partition.nodes?.total?.toLocaleString() ?? "—"}</TableCell>
+                                            <TableCell>{partition.cpus?.total?.toLocaleString() ?? "—"}</TableCell>
+                                            <TableCell>
+                                                {formatDuration(
+                                                    partition.maximums?.time?.number,
+                                                    { infinite: partition.maximums?.time?.infinite }
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
+                                                {partition.priority?.job_factor?.toLocaleString() ?? "—"}
+                                            </TableCell>
+                                            <TableCell>
+                                                {isDefault ? (
+                                                    <Badge variant="outline" className="border-blue-500 text-blue-600">
+                                                        Default
+                                                    </Badge>
+                                                ) : (
+                                                    "—"
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
                 )}
             </CardContent>
         </Card>

@@ -1,30 +1,23 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
-import { PrometheusDriver } from "prometheus-query";
-
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
-
-let prom: PrometheusDriver | null = null;
-
-if (PROMETHEUS_URL) {
-  prom = new PrometheusDriver({
-    endpoint: PROMETHEUS_URL,
-    baseURL: "/api/v1",
-  });
-}
+import { prom } from "@/lib/prometheus";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const node = url.searchParams.get("node") || "";
+  const node = url.searchParams.get("node");
+
+  if (!node) {
+    return NextResponse.json({
+      status: 400,
+      message: "Missing required 'node' parameter",
+    });
+  }
 
   if (!prom) {
-    console.error(
-      "Prometheus client not initialized. PROMETHEUS_URL:",
-      PROMETHEUS_URL
-    );
     return NextResponse.json({
       status: 404,
       message: "Prometheus connection not configured",
-      debug: { prometheusUrl: PROMETHEUS_URL },
     });
   }
 
