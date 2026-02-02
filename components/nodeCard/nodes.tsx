@@ -23,26 +23,52 @@ import NodeGameWrapper from "./node-game-wrapper";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
-  const res = await fetch(nodeURL, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    cache: 'no-store', // Prevent caching to always get fresh data
-  });
-  if (!res.ok) {
-    // Try to extract error message from response
-    let errorMessage = "Network response was not ok";
-    try {
-      const errorData = await res.json();
-      if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch {
-      // Use default message
+  try {
+    const res = await fetch(nodeURL, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: 'no-store', // Prevent caching to always get fresh data
+    });
+    
+    // Handle auth-related redirects or errors
+    if (res.status === 401 || res.status === 403) {
+      const error = new Error("Session expired. Please refresh the page to re-authenticate.");
+      (error as any).isAuthError = true;
+      throw error;
     }
-    throw new Error(errorMessage);
+    
+    // Handle redirects (CAS may redirect on timeout)
+    if (res.redirected || res.type === 'opaqueredirect') {
+      const error = new Error("Session expired. Please refresh the page to re-authenticate.");
+      (error as any).isAuthError = true;
+      throw error;
+    }
+    
+    if (!res.ok) {
+      // Try to extract error message from response
+      let errorMessage = "Network response was not ok";
+      try {
+        const errorData = await res.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Use default message
+      }
+      throw new Error(errorMessage);
+    }
+    return res.json();
+  } catch (err: any) {
+    // Handle network failures gracefully (including auth redirects that fail)
+    if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+      const error = new Error("Connection failed. Please refresh the page.");
+      (error as any).isConnectionError = true;
+      throw error;
+    }
+    // Re-throw other errors (including our custom ones)
+    throw err;
   }
-  return res.json();
 };
 
 const Nodes = ({ username }: { username?: string }) => {
@@ -269,16 +295,23 @@ const Nodes = ({ username }: { username?: string }) => {
 
   // Check if we have an error (using either nodeError or lastFetchError)
   const activeError = nodeError || lastFetchError;
-  const isConnectionError = activeError?.message?.includes("Unable to contact Slurm controller") ||
+  const isAuthError = (activeError as any)?.isAuthError === true;
+  const isConnectionError = (activeError as any)?.isConnectionError === true ||
+                            activeError?.message?.includes("Unable to contact Slurm controller") ||
                             activeError?.message?.includes("service may be down") ||
                             activeError?.message?.includes("Network response was not ok") ||
+                            activeError?.message?.includes("Connection failed") ||
                             activeError?.message?.includes("fetch");
 
   // Only show full error state if we have NO data
   if (nodeError && !nodeData) {
-    const errorMessage = isConnectionError 
-      ? "Unable to contact Slurm controller. The service may be down or unreachable." 
-      : "An error occurred loading node data. Please try refreshing the page.";
+    let errorMessage = "An error occurred loading node data. Please try refreshing the page.";
+    
+    if (isAuthError) {
+      errorMessage = "Your session has expired. Please refresh the page to re-authenticate.";
+    } else if (isConnectionError) {
+      errorMessage = "Unable to connect. The service may be down or unreachable. Please try refreshing the page.";
+    }
     
     return (
       <Alert variant="destructive">

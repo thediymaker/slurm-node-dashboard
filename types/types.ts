@@ -111,8 +111,6 @@ export interface JobDetails extends Job {
   current_working_directory?: string;
   state_reason?: string;
   tres_req_str?: string;
-  partition?: string;
-  qos?: string;
 }
 
 export interface RunningJob extends Partial<JobDetails> {

@@ -129,10 +129,14 @@ export const LastUpdated = ({ data, onEasterEgg, hasConnectionError }: LastUpdat
         <span className="tabular-nums">
           {showHint ? (
             <span className="text-primary">{EASTER_EGG_CLICKS - clickCount} more...</span>
+          ) : hasConnectionError ? (
+            <span className="text-destructive">
+              Using cached data • <span className="underline">Please refresh</span>
+            </span>
           ) : (
             <>Updated: <span className={cn(
               "text-foreground", 
-              (hasConnectionError || isDataStale) && "text-destructive"
+              isDataStale && "text-destructive"
             )}>{lastUpdate}</span></>
           )}
         </span>
