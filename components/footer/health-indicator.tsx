@@ -79,32 +79,46 @@ export function HealthIndicator({
   }
 
   // Memoize status calculation to avoid recalculating on every render
-  const { status, errors, warnings } = useMemo(() => {
+  const { status, errors, warnings, isHeavyLoad } = useMemo(() => {
     const errs = data.errors || [];
     const warns = data.warnings || [];
     const cycleMean = data.statistics?.schedule_cycle_mean || 0;
     const agentQueue = data.statistics?.agent_queue_size || 0;
 
-    let s: "healthy" | "warning" | "critical" = "healthy";
+    // Heavy load is informational, not a warning - agent queue > 500 indicates busy cluster
+    const heavyLoad = agentQueue > 500;
+
+    let s: "healthy" | "warning" | "critical" | "busy" = "healthy";
     if (errs.length > 0) {
       s = "critical";
-    } else if (warns.length > 0 || cycleMean > 100000 || agentQueue > 50) {
+    } else if (warns.length > 0 || cycleMean > 100000) {
       s = "warning";
+    } else if (heavyLoad) {
+      s = "busy";
     }
 
-    return { status: s, errors: errs, warnings: warns };
+    return { status: s, errors: errs, warnings: warns, isHeavyLoad: heavyLoad };
   }, [data]);
 
   const color = {
     healthy: "text-green-600 dark:text-green-500",
+    busy: "text-blue-600 dark:text-blue-500",
     warning: "text-amber-600 dark:text-amber-500",
     critical: "text-red-600 dark:text-red-500",
   }[status];
 
   const Icon = {
     healthy: CheckCircle2,
+    busy: Activity,
     warning: AlertTriangle,
     critical: XCircle,
+  }[status];
+
+  const statusLabel = {
+    healthy: "HEALTHY",
+    busy: "BUSY",
+    warning: "WARNING",
+    critical: "CRITICAL",
   }[status];
 
   return (
@@ -115,7 +129,7 @@ export function HealthIndicator({
         >
           <Icon className={`h-3 w-3 ${color}`} />
           <span className={`${color} font-semibold uppercase`}>
-            {status}
+            {statusLabel}
           </span>
         </div>
       </HoverCardTrigger>
@@ -156,11 +170,12 @@ export function HealthIndicator({
                 {formatNumber(data.statistics.schedule_queue_length)}
               </span>
             </div>
-            <div className="flex flex-col gap-1 p-2 bg-muted/50 rounded-md border">
-              <span className="text-muted-foreground flex items-center gap-1">
+            <div className={`flex flex-col gap-1 p-2 rounded-md border ${isHeavyLoad ? 'bg-blue-500/10 border-blue-500/30' : 'bg-muted/50'}`}>
+              <span className={`flex items-center gap-1 ${isHeavyLoad ? 'text-blue-500' : 'text-muted-foreground'}`}>
                 <Activity className="h-3 w-3" /> Agent Queue
+                {isHeavyLoad && <span className="text-[10px] ml-1">(Heavy Load)</span>}
               </span>
-              <span className="font-mono text-sm font-medium">
+              <span className={`font-mono text-sm font-medium ${isHeavyLoad ? 'text-blue-500' : ''}`}>
                 {formatNumber(data.statistics.agent_queue_size)}
               </span>
             </div>
