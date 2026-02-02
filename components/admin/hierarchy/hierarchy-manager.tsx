@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { HierarchyFlow } from "./hierarchy-flow";
-import { Organization, Account, createOrganization, updateOrganization, deleteOrganization, addAccountMapping, removeAccountMapping, getAccountMappings, deleteAllHierarchy, getHierarchy } from "@/actions/hierarchy";
+import { Organization, Account, createOrganization, updateOrganization, deleteOrganization, addAccountMapping, removeAccountMapping, getAccountMappings, deleteAllHierarchy, getFlatHierarchyFresh } from "@/actions/hierarchy";
 import { importHierarchyCSV, importMappingCSV, exportHierarchyCSV, exportMappingCSV } from "@/actions/hierarchy-import";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +34,12 @@ export function HierarchyManager({ initialOrgs, accounts }: HierarchyManagerProp
   const refreshData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await getHierarchy();
+      const data = await getFlatHierarchyFresh();
       setOrgs(data);
+      setSelectedNode(null);
+      setIsCreating(false);
+      setFormData(DEFAULT_FORM);
+      setMappedAccounts([]);
     } catch (e) {
       console.error("Failed to refresh hierarchy:", e);
     } finally {
