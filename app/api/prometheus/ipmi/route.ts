@@ -42,6 +42,8 @@ async function getClusterNodes(): Promise<string[]> {
       .map((node: any) => node.name || null)
       .filter(Boolean);
 
+    console.log(`Fetched ${nodeNames.length} nodes from Slurm API`);
+
     // Update cache
     clusterNodesCache = {
       timestamp: now,

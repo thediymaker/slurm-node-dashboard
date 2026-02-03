@@ -127,6 +127,7 @@ const getRunningJobsFromSlurm = async (): Promise<Set<string>> => {
       }
     });
 
+    console.log(`Fetched ${runningJobs.size} running jobs from Slurm API`);
     return runningJobs;
   } catch (err) {
     console.error("Error fetching running jobs from Slurm:", err);

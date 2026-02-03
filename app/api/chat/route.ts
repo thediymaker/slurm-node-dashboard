@@ -2,6 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, tool, convertToModelMessages } from "ai";
 import { z } from "zod";
 import { fetchSlurmData } from "@/lib/slurm-api";
+import { env } from "process";
 
 export const maxDuration = 30;
 
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
   });
 
   const result = await streamText({
-    model: openai.chat(process.env.OPENAI_API_MODEL || "gpt-3.5-turbo"),
+    model: openai.chat(env.OPENAI_API_MODEL || "gpt-3.5-turbo"),
     messages: convertToModelMessages(messages),
     system: `
       You are a specialized Slurm HPC (High Performance Computing) assistant. Your ONLY purpose is to assist users with Slurm workload manager tasks, HPC cluster operations, and related scripting (bash, sbatch, etc.).

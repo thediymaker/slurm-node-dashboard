@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
+import { env } from "process";
 
 import { NextResponse } from "next/server";
-import { env } from "process";
 import { fetchSlurmData } from "@/lib/slurm-api";
 
 export async function GET() {
