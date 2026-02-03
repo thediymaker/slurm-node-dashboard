@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { getRandomGeekName } from "@/lib/utils";
 
 import Nodes from "@/components/nodeCard/nodes";
-import { env } from "process";
 
 export default async function Dashboard() {
   const cookieStore = await cookies();
