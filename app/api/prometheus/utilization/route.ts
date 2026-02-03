@@ -1,6 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
-import { PrometheusDriver } from "prometheus-query";
-import { env } from "process";
+import { prom } from "@/lib/prometheus";
 
 type PrometheusMetric = {
   labels: Record<string, string>;
@@ -24,16 +25,8 @@ type UtilizationResponse = {
   error?: string;
 };
 
-const PROMETHEUS_URL = env.PROMETHEUS_URL!;
 const HOURS_TO_ANALYZE = 24;
 const STEP_INTERVAL = 900; // 15 minutes in seconds
-
-const prom = PROMETHEUS_URL
-  ? new PrometheusDriver({
-      endpoint: PROMETHEUS_URL,
-      baseURL: "/api/v1",
-    })
-  : null;
 
 export async function GET(
   req: Request
@@ -45,7 +38,14 @@ export async function GET(
     });
   }
 
-  const node = new URL(req.url).searchParams.get("node") || "";
+  const node = new URL(req.url).searchParams.get("node");
+  if (!node) {
+    return NextResponse.json({
+      status: 400,
+      message: "Missing required 'node' parameter",
+    });
+  }
+
   const end = new Date();
   const start = new Date(end.getTime() - HOURS_TO_ANALYZE * 60 * 60 * 1000);
 

@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import JobSearch from "../job-search";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormMessage,
 } from "../ui/form";
 import {
   Select,
@@ -19,7 +18,6 @@ import {
 import { LayoutGrid, List } from "lucide-react";
 import { useForm } from "react-hook-form";
 import HeaderMenu from "@/components/header/header-menu";
-import { ThemeToggle } from "../theme-toggle";
 import ColorSchemaSelector from "../color-schema-selector";
 import { Button } from "@/components/ui/button";
 import FeatureSelector, { LogicType } from "@/components/feature-selector";
@@ -37,6 +35,7 @@ interface NodeHeaderProps {
   colorSchema: string;
   selectedFeatures?: string[];
   featureLogicType?: LogicType;
+  username?: string;
 }
 
 const NodeHeader: React.FC<NodeHeaderProps> = ({
@@ -52,17 +51,24 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
   colorSchema,
   selectedFeatures = [],
   featureLogicType = "OR",
+  username,
 }) => {
   const [isMounted, setIsMounted] = useState(false);
 
-  const form = useForm({
-    defaultValues: {
+  // Memoize default values to prevent form recreation on every render
+  const defaultValues = useMemo(
+    () => ({
       nodeType: "allNodes",
       partition: "allPartitions",
       state: "allState",
       colorSchema: colorSchema,
-    },
-  });
+    }),
+    // Only use initial colorSchema - form.setValue handles updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const form = useForm({ defaultValues });
 
   useEffect(() => {
     setIsMounted(true);
@@ -73,160 +79,150 @@ const NodeHeader: React.FC<NodeHeaderProps> = ({
   }, [colorSchema, form]);
 
   return (
-    <div className="mt-3 justify-between flex">
-      <div className="flex items-start space-x-4">
+    <div className="sticky top-4 z-30 flex flex-wrap items-center justify-between gap-4 bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-xl border shadow-sm my-4">
+      <div className="flex items-center gap-3">
         <JobSearch />
-
+        
         {isMounted && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg bg-muted p-1">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className={
-                isGroupedView ? undefined : "bg-primary text-primary-foreground"
-              }
+              className={`h-8 w-8 p-1 ${!isGroupedView && "bg-background shadow-sm hover:bg-background"}`}
               onClick={() => handleViewModeChange(false)}
+              title="Grid View"
             >
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className="h-4 w-4 text-muted-foreground" />
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className={
-                !isGroupedView
-                  ? undefined
-                  : "bg-primary text-primary-foreground"
-              }
+              className={`h-8 w-8 p-1 ${isGroupedView && "bg-background shadow-sm hover:bg-background"}`}
               onClick={() => handleViewModeChange(true)}
+              title="List View"
             >
-              <List className="h-4 w-4" />
+              <List className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>
         )}
       </div>
+
+      <div className="flex items-center gap-2">
       <Form {...form}>
-        <form className="mx-1 mb-4 flex items-center justify-end">
+        <form className="flex items-center gap-2">
           <FormField
             control={form.control}
             name="nodeType"
             render={({ field }) => (
-              <FormItem>
-                <div className="flex pr-2">
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleNodeTypeChange(value);
-                    }}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="All Nodes" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-[300px] w-[200px] overflow-y-auto scrollbar-none">
-                      <SelectItem value="allNodes">All Nodes</SelectItem>
-                      <SelectItem value="gpuNodes">GPU Nodes</SelectItem>
-                      <SelectItem value="cpuNodes">CPU Nodes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <FormMessage />
+              <FormItem className="space-y-0">
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    handleNodeTypeChange(value);
+                  }}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[140px] h-9 text-xs bg-muted/50 border-input">
+                      <SelectValue placeholder="All Nodes" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="max-h-[300px] w-[200px]">
+                    <SelectItem value="allNodes" className="text-xs">All Nodes</SelectItem>
+                    <SelectItem value="gpuNodes" className="text-xs">GPU Nodes</SelectItem>
+                    <SelectItem value="cpuNodes" className="text-xs">CPU Nodes</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="partition"
             render={({ field }) => (
-              <FormItem>
-                <div className="flex pr-2">
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleNodePartitionsChange(value);
-                    }}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="All Partitions" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-[300px] w-[200px] overflow-y-auto scrollbar-none">
-                      <SelectItem value="allPartitions">
-                        All Partitions
-                      </SelectItem>
-                      {partitions &&
-                        partitions.map((partition: string) => (
-                          <SelectItem key={partition} value={partition}>
-                            {partition}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <FormMessage />
+              <FormItem className="space-y-0">
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    handleNodePartitionsChange(value);
+                  }}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[140px] h-9 text-xs bg-muted/50 border-input">
+                      <SelectValue placeholder="All Partitions" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="max-h-[300px] w-[200px]">
+                    <SelectItem value="allPartitions" className="text-xs">
+                      All Partitions
+                    </SelectItem>
+                    {partitions &&
+                      partitions.map((partition: string) => (
+                        <SelectItem key={partition} value={partition} className="text-xs">
+                          {partition}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="state"
             render={({ field }) => (
-              <FormItem>
-                <div className="flex pr-2">
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleNodeStateChange(value);
-                    }}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="All States" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-[300px] w-[200px] overflow-y-auto scrollbar-none">
-                      <SelectItem value="allState">All States</SelectItem>
-                      <SelectItem value="idleState">Idle Nodes</SelectItem>
-                      <SelectItem value="mixedState">Mixed Nodes</SelectItem>
-                      <SelectItem value="allocState">
-                        Allocated Nodes
-                      </SelectItem>
-                      <SelectItem value="downState">Down Nodes</SelectItem>
-                      <SelectItem value="drainState">Draining Nodes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <FormMessage />
+              <FormItem className="space-y-0">
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    handleNodeStateChange(value);
+                  }}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[140px] h-9 text-xs bg-muted/50 border-input">
+                      <SelectValue placeholder="All States" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="max-h-[300px] w-[200px]">
+                    <SelectItem value="allState" className="text-xs">All States</SelectItem>
+                    <SelectItem value="idleState" className="text-xs">Idle Nodes</SelectItem>
+                    <SelectItem value="mixedState" className="text-xs">Mixed Nodes</SelectItem>
+                    <SelectItem value="allocState" className="text-xs">Allocated Nodes</SelectItem>
+                    <SelectItem value="downState" className="text-xs">Down Nodes</SelectItem>
+                    <SelectItem value="drainState" className="text-xs">Draining Nodes</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}
           />
-          <FormItem className="pr-2">
+
+          <FormItem className="space-y-0">
             <FeatureSelector
               features={features}
               selectedFeatures={selectedFeatures}
               onFeaturesChange={handleNodeFeatureChange}
               logicType={featureLogicType}
             />
-            <FormMessage />
           </FormItem>
         </form>
       </Form>
-      <div className="flex items-center h-full mr-4">
+      
+        <div className="h-4 w-px bg-border mx-2" />
+        
         <ColorSchemaSelector
           value={colorSchema}
           onChange={handleColorSchemaChange}
         />
-        <ThemeToggle />
-        <HeaderMenu />
+        <HeaderMenu username={username} />
       </div>
     </div>
   );
 };
 
-export default NodeHeader;
+export default memo(NodeHeader);

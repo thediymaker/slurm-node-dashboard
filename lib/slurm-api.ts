@@ -14,7 +14,7 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
     ? { type: options } 
     : options;
 
-  const { type = 'slurm', revalidate = 30, method = 'GET', body } = finalOptions;
+  const { type = 'slurm', method = 'GET', body } = finalOptions;
   
   const protocol = env.SLURM_PROTOCOL || 'http';
   const port = env.SLURM_SERVER_PORT || '6820';
@@ -27,9 +27,7 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
       "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
-    next: {
-      revalidate,
-    },
+    cache: 'no-store', // Disable caching to always get fresh data from Slurm
   };
 
   if (body) {
@@ -47,6 +45,26 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
     return { data };
   } catch (error) {
     console.error(`Error fetching ${endpoint}:`, error);
+    
+    // Check if it's a connection error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCause = error instanceof Error ? (error as any).cause : null;
+    
+    if (errorCause?.code === 'ECONNREFUSED' || errorCause?.syscall === 'connect') {
+      return { 
+        error: "Unable to contact Slurm controller. The service may be down or unreachable.", 
+        status: 503,
+        details: `Connection refused to ${errorCause?.address || 'server'}:${errorCause?.port || 'unknown'}`
+      };
+    }
+    
+    if (errorMessage.includes('fetch failed')) {
+      return { 
+        error: "Unable to contact Slurm controller. Please check your network connection.", 
+        status: 503 
+      };
+    }
+    
     return { error: "Internal Server Error", status: 500 };
   }
 }

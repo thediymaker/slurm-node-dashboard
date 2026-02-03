@@ -19,60 +19,111 @@ import NodeCount from "./node-counts";
 import ChatIcon from "../llm/chat-icon";
 import { openaiPluginMetadata } from "@/actions/plugins";
 import { LogicType } from "@/components/feature-selector";
+import NodeGameWrapper from "./node-game-wrapper";
 
 const nodeURL = "/api/slurm/nodes";
 const nodeFetcher = async () => {
-  const res = await fetch(nodeURL, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    next: { revalidate: 15 },
-  });
-  if (!res.ok) {
-    throw new Error("Network response was not ok");
+  try {
+    const res = await fetch(nodeURL, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: 'no-store', // Prevent caching to always get fresh data
+    });
+    
+    // Handle auth-related redirects or errors
+    if (res.status === 401 || res.status === 403) {
+      const error = new Error("Session expired. Please refresh the page to re-authenticate.");
+      (error as any).isAuthError = true;
+      throw error;
+    }
+    
+    // Handle redirects (CAS may redirect on timeout)
+    if (res.redirected || res.type === 'opaqueredirect') {
+      const error = new Error("Session expired. Please refresh the page to re-authenticate.");
+      (error as any).isAuthError = true;
+      throw error;
+    }
+    
+    if (!res.ok) {
+      // Try to extract error message from response
+      let errorMessage = "Network response was not ok";
+      try {
+        const errorData = await res.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Use default message
+      }
+      throw new Error(errorMessage);
+    }
+    return res.json();
+  } catch (err: any) {
+    // Handle network failures gracefully (including auth redirects that fail)
+    if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+      const error = new Error("Connection failed. Please refresh the page.");
+      (error as any).isConnectionError = true;
+      throw error;
+    }
+    // Re-throw other errors (including our custom ones)
+    throw err;
   }
-  return res.json();
 };
 
-const Nodes = () => {
+const Nodes = ({ username }: { username?: string }) => {
+  // Track connection errors that occur during revalidation
+  const [lastFetchError, setLastFetchError] = useState<Error | null>(null);
+
   const {
     data: nodeData,
     error: nodeError,
     isLoading: nodeIsLoading,
-    mutate,
   } = useSWR(nodeURL, nodeFetcher, {
     refreshInterval: 15000,
+    onSuccess: () => {
+      // Clear error on success
+      setLastFetchError(null);
+    },
+    onError: (err) => {
+      // Track errors even when we have cached data
+      setLastFetchError(err);
+    },
   });
 
-  const getInitialCardSize = () => {
+  // Determine if we have a connection issue (either initial error or revalidation error)
+  const hasConnectionError = !!(nodeError || (lastFetchError && nodeData));
+
+  // Use lazy initializers - function is only called once on mount
+  const [cardSize, setCardSize] = useState<number>(() => {
     if (typeof window !== "undefined") {
       return parseInt(localStorage.getItem("cardSize") || "100", 10);
     }
     return 100;
-  };
+  });
 
-  const getInitialShowStats = () => {
+  const [showStats, setShowStats] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("showStats") === "true";
     }
     return false;
-  };
+  });
 
-  const getInitialColorSchema = () => {
+  const [colorSchema, setColorSchema] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("colorSchema") || "default";
     }
     return "default";
-  };
+  });
 
-  const getInitialViewMode = () => {
+  const [isGroupedView, setIsGroupedView] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("isGroupedView") === "true";
     }
     return false;
-  };
+  });
 
-  const getInitialSelectedFeatures = () => {
+  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
       const storedFeatures = localStorage.getItem("selectedNodeFeatures");
       if (storedFeatures) {
@@ -84,32 +135,22 @@ const Nodes = () => {
       }
     }
     return [];
-  };
+  });
 
-  const getInitialFeatureLogicType = () => {
+  const [featureLogicType, setFeatureLogicType] = useState<LogicType>(() => {
     if (typeof window !== "undefined") {
       const logicType = localStorage.getItem("featureLogicType") as LogicType;
       return logicType === "OR" ? "OR" : "AND";
     }
     return "AND";
-  };
+  });
 
   const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
   const [selectedNodeState, setSelectedNodeState] =
     useState<string>("allState");
   const [selectedNodePartitions, setSelectedNodePartitions] =
     useState<string>("allPartitions");
-  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(
-    getInitialSelectedFeatures
-  );
-  const [featureLogicType, setFeatureLogicType] = useState<LogicType>(
-    getInitialFeatureLogicType
-  );
-  const [cardSize, setCardSize] = useState<number>(getInitialCardSize);
-  const [showStats, setShowStats] = useState<boolean>(getInitialShowStats);
-  const [colorSchema, setColorSchema] = useState<string>(getInitialColorSchema);
-  const [isGroupedView, setIsGroupedView] =
-    useState<boolean>(getInitialViewMode);
+  const [showGame, setShowGame] = useState(false);
 
   const systems: Node[] = nodeData?.nodes || [];
 
@@ -140,14 +181,7 @@ const Nodes = () => {
     localStorage.setItem("featureLogicType", featureLogicType);
   }, [featureLogicType]);
 
-  // Set up polling for data updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      mutate();
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [mutate]);
+  // SWR handles polling via refreshInterval - no manual interval needed
 
   const uniquePartitions = useMemo(() => {
     const partitions = new Set<string>();
@@ -259,14 +293,31 @@ const Nodes = () => {
     setColorSchema(value);
   };
 
-  if (nodeError) {
+  // Check if we have an error (using either nodeError or lastFetchError)
+  const activeError = nodeError || lastFetchError;
+  const isAuthError = (activeError as any)?.isAuthError === true;
+  const isConnectionError = (activeError as any)?.isConnectionError === true ||
+                            activeError?.message?.includes("Unable to contact Slurm controller") ||
+                            activeError?.message?.includes("service may be down") ||
+                            activeError?.message?.includes("Network response was not ok") ||
+                            activeError?.message?.includes("Connection failed") ||
+                            activeError?.message?.includes("fetch");
+
+  // Only show full error state if we have NO data
+  if (nodeError && !nodeData) {
+    let errorMessage = "An error occurred loading node data. Please try refreshing the page.";
+    
+    if (isAuthError) {
+      errorMessage = "Your session has expired. Please refresh the page to re-authenticate.";
+    } else if (isConnectionError) {
+      errorMessage = "Unable to connect. The service may be down or unreachable. Please try refreshing the page.";
+    }
+    
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          {nodeError.message === "Network response was not ok"
-            ? "Failed to load, please check your network connection."
-            : "Session expired, please reload the page."}
+          {errorMessage}
         </AlertDescription>
       </Alert>
     );
@@ -286,6 +337,7 @@ const Nodes = () => {
           partitions={[]}
           features={[]}
           colorSchema={colorSchema}
+          username={username}
         />
         <div className="flex justify-between">
           <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -327,6 +379,7 @@ const Nodes = () => {
         colorSchema={colorSchema}
         selectedFeatures={selectedNodeFeatures}
         featureLogicType={featureLogicType}
+        username={username}
       />
       <div className="flex justify-between">
         <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
@@ -366,27 +419,37 @@ const Nodes = () => {
           colorSchema={colorSchema}
         />
       ) : (
-        <div className="flex flex-wrap p-3 uppercase mb-20">
-          {filteredNodes.map((node: any) => (
-            <NodeCard
-              size={cardSize}
-              key={node.hostname}
-              name={node.name}
-              load={node.cpu_load?.number}
-              partitions={node.partitions}
-              features={node.features}
-              coresTotal={node.cpus}
-              coresUsed={node.alloc_cpus}
-              memoryTotal={node.real_memory}
-              memoryUsed={node.alloc_memory}
-              status={node.state}
-              nodeData={node}
-              colorSchema={colorSchema}
-            />
-          ))}
-        </div>
+        <NodeGameWrapper
+          nodes={filteredNodes}
+          isGameActive={showGame}
+          onGameEnd={() => setShowGame(false)}
+        >
+          <div className="flex flex-wrap p-3 uppercase mb-20">
+            {filteredNodes.map((node: any) => (
+              <NodeCard
+                size={cardSize}
+                key={node.hostname}
+                name={node.name}
+                load={node.cpu_load?.number}
+                partitions={node.partitions}
+                features={node.features}
+                coresTotal={node.cpus}
+                coresUsed={node.alloc_cpus}
+                memoryTotal={node.real_memory}
+                memoryUsed={node.alloc_memory}
+                status={node.state}
+                nodeData={node}
+                colorSchema={colorSchema}
+              />
+            ))}
+          </div>
+        </NodeGameWrapper>
       )}
-      <LastUpdated data={nodeData?.last_update?.number} />
+      <LastUpdated 
+        data={nodeData?.last_update?.number} 
+        onEasterEgg={() => !isGroupedView && setShowGame(true)}
+        hasConnectionError={hasConnectionError}
+      />
       {openaiPluginMetadata.isEnabled && <ChatIcon />}
     </div>
   );

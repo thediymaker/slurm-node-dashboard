@@ -1,7 +1,101 @@
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 
-const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
+interface Reservation {
+  name?: string;
+  reservation_name?: string;
+  title?: string;
+  description?: string;
+  reason?: string;
+  comment?: string;
+  start_time?: { number: number };
+  end_time?: { number: number };
+  id?: string | number;
+  node_list?: string;
+  nodelist?: string;
+  nodes?: string;
+  partition?: string;
+  partitions?: string;
+  account?: string;
+  accounts?: string;
+  [key: string]: unknown;
+}
+
+interface MaintenanceData {
+  reservations?: Reservation[];
+  meta?: {
+    slurm?: {
+      cluster?: string;
+    };
+  };
+}
+
+interface MaintModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  maintenanceData: MaintenanceData;
+}
+
+// Utility functions moved outside component
+const convertUnixToHumanReadable = (unixTimestamp: number): string => {
+  const date = new Date(unixTimestamp * 1000);
+  return date.toLocaleString();
+};
+
+const formatDuration = (ms: number): string => {
+  if (ms <= 0 || Number.isNaN(ms)) return "0s";
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+  const parts: string[] = [];
+  if (days) parts.push(`${days}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (minutes) parts.push(`${minutes}m`);
+  if (!days && !hours && !minutes) parts.push(`${seconds}s`);
+  return parts.join(" ");
+};
+
+const resolveReservationTitle = (r: Reservation, idx: number): string => {
+  const candidate =
+    r?.name ||
+    r?.reservation_name ||
+    r?.title ||
+    r?.description ||
+    r?.reason ||
+    r?.comment;
+  if (typeof candidate === "string" && candidate.trim().length > 0) {
+    return candidate.trim();
+  }
+  return "Maintenance Window";
+};
+
+const getRelativeText = (
+  isActive: boolean,
+  isUpcoming: boolean,
+  startMs: number,
+  endMs: number
+): string => {
+  const nowMs = Date.now();
+  if (isActive) return `Ends in ${formatDuration(endMs - nowMs)}`;
+  if (isUpcoming) return `Starts in ${formatDuration(startMs - nowMs)}`;
+  return `Ended ${formatDuration(nowMs - endMs)} ago`;
+};
+
+const getFirstAvailableValue = (
+  obj: Reservation,
+  keys: string[]
+): string | undefined => {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value === undefined || value === null) continue;
+    const str = typeof value === "string" ? value : String(value);
+    if (str.trim().length > 0) return str.trim();
+  }
+  return undefined;
+};
+
+const MaintModal: React.FC<MaintModalProps> = ({ open, setOpen, maintenanceData }) => {
   const [countdown, setCountdown] = useState("");
   const reservations = maintenanceData?.reservations ?? [];
 
@@ -74,11 +168,12 @@ const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
     const nextUpcoming = sorted.find(
       (r: any) => r?.start_time?.number * 1000 > now
     );
-    const startTime = (nextUpcoming ?? sorted[0])?.start_time?.number * 1000;
-    if (isNaN(startTime)) {
+    const startTimeSeconds = (nextUpcoming ?? sorted[0])?.start_time?.number;
+    if (!startTimeSeconds || isNaN(startTimeSeconds)) {
       setCountdown("Invalid start time.");
       return;
     }
+    const startTime = startTimeSeconds * 1000;
 
     const interval = setInterval(() => {
       const now = new Date().getTime();
@@ -101,6 +196,8 @@ const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
     return () => clearInterval(interval);
   }, [maintenanceData]);
 
+  const clusterName = maintenanceData?.meta?.slurm?.cluster ?? "this cluster";
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
@@ -116,9 +213,7 @@ const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
               <>
                 <h1 className="text-xl mb-2 font-extralight">
                   A regular maintenance of{" "}
-                  <span className="font-bold">
-                    {maintenanceData.meta.slurm.cluster}
-                  </span>{" "}
+                  <span className="font-bold">{clusterName}</span>{" "}
                   will begin on{" "}
                   <span className="font-bold">
                     {convertUnixToHumanReadable(
@@ -147,9 +242,7 @@ const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
               <>
                 <h1 className="text-xl mb-4 font-extralight">
                   There are multiple scheduled maintenance windows for{" "}
-                  <span className="font-bold">
-                    {maintenanceData.meta.slurm.cluster}
-                  </span>
+                  <span className="font-bold">{clusterName}</span>
                   . Review the details below.
                   {" "}
                   <span className="text-red-500">
@@ -268,4 +361,4 @@ const MaintModal = ({ open, setOpen, maintenanceData }: any) => {
   );
 };
 
-export default MaintModal;
+export default memo(MaintModal);

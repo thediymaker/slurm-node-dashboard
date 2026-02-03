@@ -1,268 +1,224 @@
 "use client";
-import React, { useState } from "react";
+import React, { memo, useMemo, useCallback } from "react";
 import { CardTitle, CardContent, Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { convertUnixToHumanReadable } from "@/utils/nodes";
 import {
   Clock,
-  User,
-  Server,
-  HardDrive,
-  Terminal,
   RefreshCw,
-  Cpu,
-  FolderOutput,
-  Group,
-  Timer,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Hourglass,
+  Zap,
 } from "lucide-react";
-
-interface JobResourcesNode {
-  nodename: string;
-}
-
-interface JobInfo {
-  job_id: string;
-  name: string;
-  nodes: string;
-  command: string;
-  job_state: string[];
-  start_time: { number: number };
-  end_time: { number: number };
-  cpus_per_task: { number: number };
-  memory_per_node: { number: number };
-  gres_detail: string[];
-  standard_output: string;
-  user_name: string;
-  group_name: string;
-  partition: string;
-  job_resources: {
-    allocated_cores: number;
-    allocated_nodes: JobResourcesNode[];
-  };
-  standard_error: string;
-  standard_input: string;
-  time_limit: { number: number };
-}
+import {
+  StateBadge,
+  CopyButton,
+  EmptyState,
+  formatRelativeTime,
+  formatDuration,
+  formatMemory,
+} from "./llm-shared-utils";
 
 interface SlurmJobDetailsProps {
   job: {
-    jobs: JobInfo[];
+    jobs: any[];
+    jobStatus?: 'active' | 'completed';
   };
 }
 
-const getStateColor = (state: string) => {
-  const stateMap: Record<string, string> = {
-    RUNNING: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-    COMPLETED: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    PENDING: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    FAILED: "bg-red-500/20 text-red-400 border-red-500/30",
-    CANCELLED: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  };
-  return stateMap[state] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
+const getStatusIcon = (state: string) => {
+  switch (state) {
+    case 'RUNNING': return <Zap className="w-4 h-4 text-emerald-400" />;
+    case 'COMPLETED': return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+    case 'FAILED': case 'NODE_FAIL': case 'OUT_OF_MEMORY': return <XCircle className="w-4 h-4 text-red-400" />;
+    case 'PENDING': return <Hourglass className="w-4 h-4 text-amber-400" />;
+    case 'CANCELLED': return <AlertCircle className="w-4 h-4 text-gray-400" />;
+    default: return <Clock className="w-4 h-4 text-muted-foreground" />;
+  }
 };
 
-export function SlurmJobDetails({ job }: SlurmJobDetailsProps) {
+function SlurmJobDetailsComponent({ job }: SlurmJobDetailsProps) {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  if (job.jobs && !job.jobs.length) {
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 1000);
+  }, []);
+
+  const normalizedJob = useMemo(() => {
+    if (!job?.jobs?.length) return null;
+    
+    const j = job.jobs[0];
+    const isHistorical = job.jobStatus === 'completed';
+    const jobState = j.job_state || j.state?.current || [];
+    const primaryState = jobState[0] || 'UNKNOWN';
+    
+    return {
+      jobId: j.job_id,
+      name: j.name || 'Unnamed Job',
+      isHistorical,
+      jobState,
+      primaryState,
+      userName: j.user_name || j.user || 'N/A',
+      groupName: j.group_name || j.group || 'N/A',
+      partition: j.partition || 'N/A',
+      nodes: j.nodes || 'N/A',
+      startTime: j.start_time?.number || j.time?.start,
+      endTime: j.end_time?.number || j.time?.end,
+      timeLimit: j.time_limit?.number || j.time?.limit?.number,
+      memoryPerNode: j.memory_per_node?.number || j.required?.memory_per_node?.number,
+      allocatedCores: j.job_resources?.allocated_cores || j.required?.CPUs || j.cpus?.number || 0,
+      command: j.command || j.submit_line || '',
+      elapsedTime: j.time?.elapsed,
+      exitCode: j.exit_code?.return_code?.number,
+      stateReason: j.state?.reason,
+    };
+  }, [job]);
+
+  if (!normalizedJob) {
     return (
-      <div className="text-center p-4 text-red-400">
-        Sorry, I couldn't find any job details for the job ID you provided.
-        Please try again with a valid job ID.
-      </div>
+      <EmptyState 
+        message="Sorry, I couldn't find any job details for the job ID you provided."
+        icon={<AlertCircle className="w-8 h-8 mx-auto" />}
+      />
     );
   }
 
-  const jobInfo = job.jobs[0];
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 1000);
-    // Here you would typically call your refresh function
-  };
-
-  const cpuProgress =
-    (jobInfo.job_resources?.allocated_cores / jobInfo.cpus_per_task.number) *
-    100;
+  const { 
+    jobId, name, isHistorical, jobState, primaryState, userName, 
+    partition, nodes, startTime, endTime, timeLimit, memoryPerNode, 
+    allocatedCores, command, elapsedTime, exitCode, stateReason
+  } = normalizedJob;
 
   return (
     <Card className="w-full mx-auto bg-card border rounded-xl shadow-sm relative overflow-hidden">
-      <div className="flex items-center justify-between p-6">
-        <div className="flex items-center gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            {getStatusIcon(primaryState)}
+          </div>
           <div>
-            <CardTitle className="text-2xl font-semibold">
-              Job:{" "}
-              <span className="text-primary font-mono">
-                {jobInfo.job_id}
-              </span>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <span className="text-muted-foreground">Job</span>
+              <span className="text-primary font-mono">{jobId}</span>
+              <CopyButton text={String(jobId)} />
             </CardTitle>
+            <div className="text-xs text-muted-foreground">{name}</div>
           </div>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={handleRefresh}
-          className="p-2 hover:bg-muted rounded-full transition-colors"
-        >
-          <RefreshCw
-            className={`w-5 h-5 text-muted-foreground ${isRefreshing ? "animate-spin" : ""
-              }`}
-          />
-        </motion.button>
+        <div className="flex items-center gap-2">
+          {jobState.map((state: string, index: number) => (
+            <StateBadge key={index} state={state} type="job" animated={state === 'RUNNING'} />
+          ))}
+          {isHistorical && (
+            <Badge variant="outline" className="text-xs">Historical</Badge>
+          )}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            className="p-1.5 hover:bg-muted rounded-full transition-colors ml-1"
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-muted-foreground ${isRefreshing ? "animate-spin" : ""}`} />
+          </motion.button>
+        </div>
       </div>
 
       <Separator />
 
-      <CardContent className="p-4 grid gap-4">
-        {/* Job Status Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
-        >
-          <div className="p-4 rounded-xl border bg-muted">
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">
-                  CPU Allocation
-                </span>
-              </div>
-              <span className="text-sm font-medium text-primary">
-                {jobInfo.job_resources?.allocated_cores || 0} cores
+      <CardContent className="p-4 space-y-3">
+        {/* Resources Row */}
+        <div className="grid grid-cols-4 gap-3 text-center">
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">Partition</div>
+            <div className="font-medium text-sm">{partition}</div>
+          </div>
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">Nodes</div>
+            <div className="font-medium text-sm font-mono">{nodes}</div>
+          </div>
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">CPUs</div>
+            <div className="font-semibold text-primary">{allocatedCores}</div>
+          </div>
+          <div className="p-2 rounded-lg border bg-muted/30">
+            <div className="text-xs text-muted-foreground">Memory</div>
+            <div className="font-medium text-sm">{memoryPerNode ? formatMemory(memoryPerNode) : 'N/A'}</div>
+          </div>
+        </div>
+
+        {/* State Reason - only if present */}
+        {stateReason && stateReason !== 'None' && (
+          <div className="flex items-center gap-2 py-2 px-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-sm">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <span className="text-muted-foreground">{stateReason}</span>
+          </div>
+        )}
+
+        {/* Time Info Row */}
+        <div className="flex items-center gap-4 text-xs py-2 px-3 bg-muted/30 rounded-lg flex-wrap">
+          <span>
+            <span className="text-muted-foreground">User:</span>{' '}
+            <span className="font-medium">{userName}</span>
+          </span>
+          <span className="text-muted-foreground">|</span>
+          <span>
+            <span className="text-muted-foreground">Time Limit:</span>{' '}
+            <span className="font-medium">{timeLimit ? formatDuration(timeLimit) : '∞'}</span>
+          </span>
+          {startTime && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span>
+                <span className="text-muted-foreground">Started:</span>{' '}
+                <span className="font-medium">{formatRelativeTime(startTime)}</span>
               </span>
-            </div>
-            <Progress value={cpuProgress} className="h-2" />
-            <div className="mt-4 flex gap-2 flex-wrap">
-              {jobInfo.job_state.map((state, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className={`${getStateColor(
-                    state
-                  )} transition-all duration-300`}
-                >
-                  {state}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Job Information Grid */}
-        <div className="grid sm:grid-cols-2 gap-4">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex items-center gap-3 p-4 rounded-xl border bg-muted transition-all group"
-          >
-            <Terminal className="w-4 h-4 text-primary group-hover:text-primary/80" />
-            <div>
-              <div className="text-sm text-muted-foreground">Command</div>
-              <div className="font-medium truncate max-w-xs font-mono text-sm">
-                {jobInfo.command}
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex items-center gap-3 p-4 rounded-xl border bg-muted transition-all group"
-          >
-            <HardDrive className="w-4 h-4 text-primary group-hover:text-primary/80" />
-            <div>
-              <div className="text-sm text-muted-foreground">Memory per Node</div>
-              <div className="font-medium">
-                {jobInfo.memory_per_node?.number
-                  ? `${(jobInfo.memory_per_node.number / 1024).toFixed(2)} GB`
-                  : "N/A"}
-              </div>
-            </div>
-          </motion.div>
+            </>
+          )}
+          {isHistorical && exitCode !== undefined && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span className={exitCode === 0 ? 'text-emerald-400' : 'text-red-400'}>
+                Exit: {exitCode}
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Time Information */}
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-2 p-4 rounded-xl border bg-muted">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-primary" />
-              <div className="text-sm text-muted-foreground">Start Time</div>
+        {/* Command - only if present */}
+        {command && (
+          <div className="py-2 px-3 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Command</span>
+              <CopyButton text={command} />
             </div>
-            <div className="font-medium">
-              {jobInfo.start_time?.number
-                ? convertUnixToHumanReadable(jobInfo.start_time.number)
-                : "N/A"}
-            </div>
+            <code className="text-xs font-mono text-muted-foreground break-all block">
+              {command.length > 150 ? `${command.slice(0, 150)}...` : command}
+            </code>
           </div>
+        )}
 
-          <div className="space-y-2 p-4 rounded-xl border bg-muted">
-            <div className="flex items-center gap-2 mb-2">
-              <Timer className="w-4 h-4 text-primary" />
-              <div className="text-sm text-muted-foreground">Time Limit</div>
-            </div>
-            <div className="font-medium">
-              {jobInfo.time_limit?.number
-                ? `${jobInfo.time_limit.number} minutes`
-                : "N/A"}
-            </div>
-          </div>
-        </div>
-
-        {/* User Information */}
-        <div className="grid sm:grid-cols-2 gap-4">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="p-4 rounded-xl border bg-muted transition-all"
-          >
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-primary" />
-              <div className="text-sm text-muted-foreground">User</div>
-            </div>
-            <div className="font-medium mt-1">
-              {jobInfo.user_name}
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="p-4 rounded-xl border bg-muted transition-all"
-          >
-            <div className="flex items-center gap-2">
-              <Group className="w-4 h-4 text-primary" />
-              <div className="text-sm text-muted-foreground">Group</div>
-            </div>
-            <div className="font-medium mt-1">
-              {jobInfo.group_name}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* File Paths */}
-        <div className="space-y-4">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="p-4 rounded-xl border bg-muted transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <FolderOutput className="w-4 h-4 text-primary" />
-              <div className="text-sm text-muted-foreground">Output Paths</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-xs text-muted-foreground">Standard Output</div>
-              <div className="font-medium text-sm break-all font-mono">
-                {jobInfo.standard_output}
-              </div>
-              <div className="text-xs text-muted-foreground mt-2">Standard Error</div>
-              <div className="font-medium text-sm break-all font-mono">
-                {jobInfo.standard_error}
-              </div>
-            </div>
-          </motion.div>
+        {/* Timestamps - compact */}
+        <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+          {startTime && (
+            <span>Start: {convertUnixToHumanReadable(startTime)}</span>
+          )}
+          {isHistorical && endTime && (
+            <span>End: {convertUnixToHumanReadable(endTime)}</span>
+          )}
+          {!isHistorical && elapsedTime && (
+            <span>Elapsed: {formatDuration(elapsedTime / 60)}</span>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
+export const SlurmJobDetails = memo(SlurmJobDetailsComponent);
 export default SlurmJobDetails;

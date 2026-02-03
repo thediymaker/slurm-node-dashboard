@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowUp, Trash2, X } from "lucide-react";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback, memo } from "react";
 import { EmptyState } from "@/components/llm/empty-state";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChat } from "@ai-sdk/react";
 
+// Schema defined outside component - created once
 const chatSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
 });
@@ -24,7 +25,7 @@ interface ChatModalProps {
   setShowChat: (show: boolean) => void;
 }
 
-export default function ChatModal({ showChat, setShowChat }: ChatModalProps) {
+function ChatModal({ showChat, setShowChat }: ChatModalProps) {
   const { messages, sendMessage, status, setMessages } = useChat({
     onError: (error) => {
       console.error('Chat error:', error);
@@ -42,20 +43,23 @@ export default function ChatModal({ showChat, setShowChat }: ChatModalProps) {
   const { formRef, onKeyDown } = useEnterSubmit();
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const onSubmit: SubmitHandler<ChatInput> = async (data) => {
-    const value = data.message.trim();
-    if (!value) return;
-    
-    form.setValue("message", "");
-    
-    await sendMessage({
-      text: value,
-    });
-  };
+  const onSubmit: SubmitHandler<ChatInput> = useCallback(
+    async (data) => {
+      const value = data.message.trim();
+      if (!value) return;
 
-  const clearChatHistory = () => {
+      form.setValue("message", "");
+
+      await sendMessage({
+        text: value,
+      });
+    },
+    [form, sendMessage]
+  );
+
+  const clearChatHistory = useCallback(() => {
     setMessages([]);
-  };
+  }, [setMessages]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -64,11 +68,21 @@ export default function ChatModal({ showChat, setShowChat }: ChatModalProps) {
     }
   }, [messages]);
 
-  const handleFollowUp = (question: string) => {
+  const handleFollowUp = useCallback(
+    (question: string) => {
       sendMessage({
-          text: question
+        text: question,
       });
-  };
+    },
+    [sendMessage]
+  );
+
+  const handleSetInput = useCallback(
+    (val: string) => {
+      form.setValue("message", val);
+    },
+    [form]
+  );
 
   return (
     <Dialog open={showChat} onOpenChange={setShowChat}>
@@ -108,9 +122,7 @@ export default function ChatModal({ showChat, setShowChat }: ChatModalProps) {
 
         <div className="flex-1 overflow-hidden relative flex flex-col">
           {messages.length === 0 ? (
-            <EmptyState setInput={(val) => {
-                form.setValue("message", val);
-            }} />
+            <EmptyState setInput={handleSetInput} />
           ) : (
             <div
               ref={chatContainerRef}
@@ -162,3 +174,5 @@ export default function ChatModal({ showChat, setShowChat }: ChatModalProps) {
     </Dialog>
   );
 }
+
+export default memo(ChatModal);

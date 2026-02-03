@@ -80,6 +80,19 @@ const config = {
             height: "var(--radix-accordion-content-height)",
           },
         },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
+        "borderBeamMove": {
+          "0%": {
+            "background-position": "200% 0",
+          },
+          "100%": {
+            "background-position": "-200% 0",
+          },
+        },
         gauge_fadeIn: {
           from: {
             opacity: "0",
@@ -105,12 +118,26 @@ const config = {
             height: "0",
           },
         },
+        shine: {
+          "0%": {
+            "background-position": "0% 0%",
+          },
+          "50%": {
+            "background-position": "100% 100%",
+          },
+          "100%": {
+            "background-position": "0% 0%",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
+        "borderBeamMove": "borderBeamMove 3s linear infinite",
         gauge_fadeIn: "gauge_fadeIn 1s ease forwards",
         gauge_fill: "gauge_fill 1s ease forwards",
+        shine: "shine var(--duration) infinite linear",
       },
     },
   },

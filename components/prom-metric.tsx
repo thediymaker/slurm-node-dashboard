@@ -11,30 +11,47 @@ import {
 } from "@/components/ui/select";
 import { PromComboBoxProps } from "@/types/types";
 
-const metricArray = [
+const metricGroups = [
   {
-    value: "node_load5",
-    label: "5 minute load average",
+    label: "CPU & Load",
+    metrics: [
+      { value: "node_load5", label: "5 min load average" },
+      { value: "node_load15", label: "15 min load average" },
+      { value: "node_procs_running", label: "Running processes" },
+      { value: "node_procs_blocked", label: "Blocked processes (I/O)" },
+    ],
   },
   {
-    value: "node_load15",
-    label: "15 minute load average",
+    label: "Memory",
+    metrics: [
+      { value: "node_memory_Active_bytes", label: "Active memory (GB)" },
+      { value: "node_memory_MemAvailable_bytes", label: "Available memory (GB)" },
+      { value: "node_memory_SwapFree_bytes", label: "Swap free (GB)" },
+      { value: "node_vmstat_oom_kill", label: "OOM kills" },
+    ],
   },
   {
-    value: "node_vmstat_oom_kill",
-    label: "OOM kills",
+    label: "Network",
+    metrics: [
+      { value: "node_network_receive_bytes_total", label: "Network RX (MB/s)" },
+      { value: "node_network_transmit_bytes_total", label: "Network TX (MB/s)" },
+    ],
   },
   {
-    value: "node_memory_Active_bytes",
-    label: "Memory usage GB",
+    label: "Temperature",
+    metrics: [
+      { value: "node_hwmon_temp_celsius", label: "CPU package temp (°F)" },
+      { value: "DCGM_FI_DEV_GPU_TEMP", label: "GPU temp (°F)" },
+    ],
   },
   {
-    value: "node_memory_SwapFree_bytes",
-    label: "Swap memory free GB",
-  },
-  {
-    value: "node_network_transmit_drop_total",
-    label: "Network transmit drops",
+    label: "GPU (DCGM)",
+    metrics: [
+      { value: "DCGM_FI_DEV_GPU_UTIL", label: "GPU utilization %" },
+      { value: "DCGM_FI_DEV_MEM_COPY_UTIL", label: "GPU memory util %" },
+      { value: "DCGM_FI_DEV_FB_USED", label: "GPU memory used (GB)" },
+      { value: "DCGM_FI_DEV_POWER_USAGE", label: "GPU power (W)" },
+    ],
   },
 ];
 
@@ -80,14 +97,19 @@ export default function PromComboBox({
           <SelectTrigger className="w-[220px] h-9">
             <SelectValue placeholder="Select a metric" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {metricArray.map((metric) => (
-                <SelectItem key={metric.value} value={metric.value}>
-                  {metric.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
+          <SelectContent className="max-h-[400px]">
+            {metricGroups.map((group) => (
+              <SelectGroup key={group.label}>
+                <SelectLabel className="text-xs text-muted-foreground font-semibold">
+                  {group.label}
+                </SelectLabel>
+                {group.metrics.map((metric) => (
+                  <SelectItem key={metric.value} value={metric.value}>
+                    {metric.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
           </SelectContent>
         </Select>
       </div>

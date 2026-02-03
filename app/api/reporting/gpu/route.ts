@@ -1,19 +1,11 @@
 // app/api/reporting/gpu/route.ts
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
-import { PrometheusDriver } from "prometheus-query";
-import { env } from "process";
+import { prom } from "@/lib/prometheus";
 import { fetchSlurmData } from "@/lib/slurm-api";
 
-const PROMETHEUS_URL = env.PROMETHEUS_URL;
 const STALE_JOB_THRESHOLD_SECONDS = 30; // Consider a job stale if no metrics in the last 30 seconds
-
-let prom: PrometheusDriver | null = null;
-if (PROMETHEUS_URL) {
-  prom = new PrometheusDriver({
-    endpoint: PROMETHEUS_URL,
-    baseURL: "/api/v1",
-  });
-}
 
 // Helper to extract a value from prometheus result
 const extractValue = (result: any): number | null => {
@@ -106,7 +98,6 @@ const checkJobFreshness = async (jobId: string): Promise<boolean> => {
 
     // Check if we have results
     const isFresh = result && result.result && result.result.length > 0;
-    console.log(`Job ${jobId} freshness check: ${isFresh ? "FRESH" : "STALE"}`);
 
     return isFresh;
   } catch (error) {
@@ -120,29 +111,26 @@ const checkJobFreshness = async (jobId: string): Promise<boolean> => {
 // Get the actual running jobs from Slurm
 const getRunningJobsFromSlurm = async (): Promise<Set<string>> => {
   try {
-    // Fetch job information directly from Slurm API
     const { data, error } = await fetchSlurmData('/jobs');
 
-    if (error) {
-      console.error(`Failed to fetch jobs from Slurm: ${error}`);
+    if (error || !data?.jobs || !Array.isArray(data.jobs)) {
+      console.warn("Failed to fetch jobs from Slurm API");
       return new Set<string>();
     }
 
     const runningJobs = new Set<string>();
-
-    if (data && data.jobs && Array.isArray(data.jobs)) {
-      data.jobs.forEach((job: any) => {
-        // Only include jobs in RUNNING state
-        if (job.state === "RUNNING" && job.job_id) {
-          runningJobs.add(job.job_id.toString());
-        }
-      });
-    }
+    data.jobs.forEach((job: any) => {
+      // Only include jobs in RUNNING state
+      const state = Array.isArray(job.job_state) ? job.job_state[0] : job.job_state;
+      if (state?.toUpperCase() === "RUNNING" && job.job_id) {
+        runningJobs.add(job.job_id.toString());
+      }
+    });
 
     console.log(`Fetched ${runningJobs.size} running jobs from Slurm API`);
     return runningJobs;
-  } catch (error) {
-    console.error("Error fetching running jobs from Slurm:", error);
+  } catch (err) {
+    console.error("Error fetching running jobs from Slurm:", err);
     return new Set<string>();
   }
 };
@@ -159,7 +147,7 @@ const checkRecordingRulesAvailable = async (): Promise<boolean> => {
     // Check if we got valid results
     return result && Array.isArray(result.result) && result.result.length > 0;
   } catch (error) {
-    console.log("Recording rules not available:", error);
+    // Recording rules not available, will fall back to direct queries
     return false;
   }
 };
@@ -224,11 +212,6 @@ const queryWithDirectMetrics = async (timeRange: string, jobId?: string) => {
 
   // Get active jobs from Slurm
   const runningJobs = await getRunningJobsFromSlurm();
-  console.log(
-    `Found ${runningJobs.size} running jobs from Slurm API: ${Array.from(
-      runningJobs
-    ).join(", ")}`
-  );
 
   // Base DCGM query
   const baseQuery = jobId
@@ -274,26 +257,6 @@ const queryWithDirectMetrics = async (timeRange: string, jobId?: string) => {
     }
   }
 
-  console.log(
-    `Found ${jobIds.size} jobs in metrics, ${freshJobs.size} are fresh/running`
-  );
-
-  // For debugging - log all found jobs
-  const allFoundJobIds = new Set<string>();
-  gpuSeries.forEach((gpu) => {
-    if (
-      gpu.jobId &&
-      gpu.jobId !== "unknown" &&
-      gpu.jobId !== "0" &&
-      gpu.jobId !== ""
-    ) {
-      allFoundJobIds.add(gpu.jobId);
-    }
-  });
-  console.log(
-    `All job IDs found in metrics: ${Array.from(allFoundJobIds).join(", ")}`
-  );
-
   // Process results by job (include jobs that are either fresh OR in the Slurm running list)
   const jobMap = new Map();
   let totalUtilization = 0;
@@ -301,11 +264,6 @@ const queryWithDirectMetrics = async (timeRange: string, jobId?: string) => {
 
   // If we have zero jobs from both Slurm and freshness checks, include all jobs as a fallback
   const useAllJobs = freshJobs.size === 0 && runningJobs.size === 0;
-  if (useAllJobs) {
-    console.log(
-      "WARNING: No jobs confirmed from Slurm or freshness checks. Including all found jobs as fallback."
-    );
-  }
 
   for (const gpu of gpuSeries) {
     try {
@@ -323,9 +281,6 @@ const queryWithDirectMetrics = async (timeRange: string, jobId?: string) => {
         !runningJobs.has(gpu.jobId) &&
         !useAllJobs
       ) {
-        console.log(
-          `Skipping job ${gpu.jobId} - not fresh and not in Slurm running jobs`
-        );
         continue;
       }
 
@@ -424,7 +379,6 @@ export async function GET(req: Request) {
   try {
     // Check if recording rules are available
     const recordingRulesAvailable = await checkRecordingRulesAvailable();
-    console.log(`Recording rules available: ${recordingRulesAvailable}`);
 
     if (recordingRulesAvailable) {
       // Use recording rules
@@ -475,23 +429,8 @@ export async function GET(req: Request) {
           });
         }
 
-        // For debug purposes - log all job IDs before filtering
-        console.log(
-          `All job IDs before filtering: ${allJobs
-            .map((j: any) => j.jobId)
-            .join(", ")}`
-        );
-        console.log(
-          `Running jobs from Slurm: ${Array.from(runningJobs).join(", ")}`
-        );
-
         // If we have zero running jobs from Slurm, include all jobs as a fallback
         const useAllJobs = runningJobs.size === 0;
-        if (useAllJobs) {
-          console.log(
-            "WARNING: No jobs confirmed from Slurm. Including all found jobs as fallback."
-          );
-        }
 
         // Filter and format jobs - include jobs that are in the running set OR using fallback
         const jobs = allJobs
@@ -534,7 +473,6 @@ export async function GET(req: Request) {
       }
     } else {
       // Fall back to direct metrics - this already includes the job freshness checks
-      console.log("Falling back to direct DCGM metrics");
       const directResults = await queryWithDirectMetrics(timeRange, jobId);
 
       if (jobId) {
@@ -587,7 +525,6 @@ export async function GET(req: Request) {
 
     // Try to fall back to direct metrics if something went wrong
     try {
-      console.log("Attempting fallback to direct DCGM metrics after error");
       const directResults = await queryWithDirectMetrics(timeRange, jobId);
 
       return NextResponse.json({
