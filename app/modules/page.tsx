@@ -4,7 +4,6 @@ import UnifiedHeader from "@/components/unified-header";
 import { redirect } from "next/navigation";
 
 import Modules from "@/components/modules/modules";
-import { env } from "process";
 
 export default function ModulesPage() {
   // Plugin Feature Flag Check
