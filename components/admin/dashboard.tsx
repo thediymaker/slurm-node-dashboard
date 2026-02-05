@@ -17,8 +17,10 @@ import { PartitionsPanel } from "./partitions-panel";
 import { ReservationsPanel } from "./reservations-panel";
 import { QoSPanel } from "./qos-panel";
 import { SystemInfoPanel } from "./system-info-panel";
+import { GPUAnalysisPanel } from "./gpu-analysis-panel";
 import { HierarchyManager } from "@/components/admin/hierarchy/hierarchy-manager";
 import { Organization, Account } from "@/actions/hierarchy";
+import { gpuUtilizationPluginMetadata, jobMetricsPluginMetadata } from "@/actions/plugins";
 
 interface AdminDashboardProps {
   initialOrgs?: Organization[];
@@ -52,6 +54,7 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
     { id: "partitions", label: "Partitions" },
     { id: "reservations", label: "Reservations" },
     { id: "qos", label: "QoS" },
+    ...(gpuUtilizationPluginMetadata.isEnabled && jobMetricsPluginMetadata.isEnabled ? [{ id: "gpu", label: "GPU Analysis" }] : []),
     { id: "plugins", label: "Plugins" },
     { id: "hierarchy", label: "Hierarchy" },
     { id: "settings", label: "Settings" },
@@ -151,6 +154,13 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
           <TabsContent value="qos" className="space-y-6 mt-6">
             <QoSPanel />
           </TabsContent>
+
+          {/* GPU Analysis Tab */}
+          {gpuUtilizationPluginMetadata.isEnabled && jobMetricsPluginMetadata.isEnabled && (
+            <TabsContent value="gpu" className="space-y-6 mt-6">
+              <GPUAnalysisPanel />
+            </TabsContent>
+          )}
 
           {/* Plugins Tab */}
           <TabsContent value="plugins" className="space-y-6 mt-6">

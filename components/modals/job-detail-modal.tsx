@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RunningJob, JobDetailModalProps } from "@/types/types";
 import { CopyButton, formatDuration, formatMemory } from "@/components/llm/llm-shared-utils";
+import { JobGPUStats } from "@/components/job-gpu-stats";
 
 // Utility function moved outside component
 const convertUnixToHumanReadable = (unixTimestamp: number): string => {
@@ -145,6 +146,11 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
             <div className="font-medium text-sm">{memory ? formatMemory(memory) : "N/A"}</div>
           </div>
         </div>
+
+        {/* GPU Utilization (only for running jobs with GPUs) */}
+        {isRunning && job.tres_req_str?.includes("gpu") && (
+          <JobGPUStats jobId={searchID} variant="full" />
+        )}
 
         {/* Pending Reason */}
         {isPending && job.state_reason && job.state_reason !== "None" && (

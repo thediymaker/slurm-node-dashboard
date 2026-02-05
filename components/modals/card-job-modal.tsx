@@ -11,6 +11,7 @@ import { Job, JobDetails, NodeCardModalProps } from "@/types/types";
 import { NodeMetricsPanel } from "../nodeCard/node-metrics-panel";
 import PromComboBox from "../prom-metric";
 import NodeUtilization from "../node-utilization";
+import { JobGPUStats } from "@/components/job-gpu-stats";
 
 // Utility function moved outside component - created once
 const convertUnixToHumanReadable = (unixTimestamp: number): string => {
@@ -177,6 +178,13 @@ const JobRow = memo(({
                   <div className="text-sm py-2 px-3 bg-muted/30 rounded-lg">
                     <span className="text-muted-foreground">GRES:</span>{" "}
                     <span className="font-mono">{jobDetails.jobs[0].gres_detail.join(", ")}</span>
+                  </div>
+                )}
+
+                {/* GPU Utilization */}
+                {jobDetails.jobs[0].gres_detail?.some(g => g.toLowerCase().includes("gpu")) && (
+                  <div className="py-2">
+                    <JobGPUStats jobId={job.job_id} variant="full" />
                   </div>
                 )}
 

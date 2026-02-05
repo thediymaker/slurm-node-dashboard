@@ -108,30 +108,41 @@ const checkJobFreshness = async (jobId: string): Promise<boolean> => {
   }
 };
 
-// Get the actual running jobs from Slurm
-const getRunningJobsFromSlurm = async (): Promise<Set<string>> => {
+interface SlurmJobInfo {
+  userName: string;
+  account: string;
+}
+
+// Get the actual running jobs from Slurm with user info
+const getRunningJobsFromSlurm = async (): Promise<{ jobIds: Set<string>; jobInfo: Map<string, SlurmJobInfo> }> => {
   try {
     const { data, error } = await fetchSlurmData('/jobs');
 
     if (error || !data?.jobs || !Array.isArray(data.jobs)) {
       console.warn("Failed to fetch jobs from Slurm API");
-      return new Set<string>();
+      return { jobIds: new Set<string>(), jobInfo: new Map() };
     }
 
-    const runningJobs = new Set<string>();
+    const jobIds = new Set<string>();
+    const jobInfo = new Map<string, SlurmJobInfo>();
+
     data.jobs.forEach((job: any) => {
-      // Only include jobs in RUNNING state
       const state = Array.isArray(job.job_state) ? job.job_state[0] : job.job_state;
       if (state?.toUpperCase() === "RUNNING" && job.job_id) {
-        runningJobs.add(job.job_id.toString());
+        const jobIdStr = job.job_id.toString();
+        jobIds.add(jobIdStr);
+        jobInfo.set(jobIdStr, {
+          userName: job.user_name || job.user || "",
+          account: job.account || "",
+        });
       }
     });
 
-    console.log(`Fetched ${runningJobs.size} running jobs from Slurm API`);
-    return runningJobs;
+    console.log(`Fetched ${jobIds.size} running jobs from Slurm API`);
+    return { jobIds, jobInfo };
   } catch (err) {
     console.error("Error fetching running jobs from Slurm:", err);
-    return new Set<string>();
+    return { jobIds: new Set<string>(), jobInfo: new Map() };
   }
 };
 
@@ -211,7 +222,7 @@ const queryWithDirectMetrics = async (timeRange: string, jobId?: string) => {
   if (!prom) throw new Error("Prometheus not configured");
 
   // Get active jobs from Slurm
-  const runningJobs = await getRunningJobsFromSlurm();
+  const { jobIds: runningJobs, jobInfo: slurmJobInfo } = await getRunningJobsFromSlurm();
 
   // Base DCGM query
   const baseQuery = jobId
@@ -292,8 +303,11 @@ const queryWithDirectMetrics = async (timeRange: string, jobId?: string) => {
       }
 
       if (!jobMap.has(gpu.jobId)) {
+        const userInfo = slurmJobInfo.get(gpu.jobId);
         jobMap.set(gpu.jobId, {
           jobId: gpu.jobId,
+          userName: userInfo?.userName || "",
+          account: userInfo?.account || "",
           avgUtilization: utilValue,
           gpuCount: 1,
           isUnderutilized: utilValue < 30,
@@ -384,8 +398,8 @@ export async function GET(req: Request) {
       // Use recording rules
       const ruleResults = await queryWithRecordingRules(timeRange, jobId);
 
-      // Get active jobs for filtering
-      const runningJobs = await getRunningJobsFromSlurm();
+      // Get active jobs for filtering and user info
+      const { jobIds: runningJobs, jobInfo: slurmJobInfo } = await getRunningJobsFromSlurm();
 
       if (jobId) {
         // Check if this specific job is running
@@ -442,11 +456,16 @@ export async function GET(req: Request) {
             // Include if it's a valid job AND (it's running in Slurm OR we're using fallback)
             return isValidJob && (isRunningInSlurm || useAllJobs);
           })
-          .map((job: any) => ({
-            jobId: job.jobId,
-            avgUtilization: job.value,
-            isUnderutilized: underutilizedJobIds.has(job.jobId),
-          }));
+          .map((job: any) => {
+            const userInfo = slurmJobInfo.get(job.jobId);
+            return {
+              jobId: job.jobId,
+              userName: userInfo?.userName || "",
+              account: userInfo?.account || "",
+              avgUtilization: job.value,
+              isUnderutilized: underutilizedJobIds.has(job.jobId),
+            };
+          });
 
         // Recalculate average utilization based on filtered jobs
         let totalUtilization = 0;
@@ -510,6 +529,8 @@ export async function GET(req: Request) {
             },
             jobs: directResults.jobs.map((job: any) => ({
               jobId: job.jobId,
+              userName: job.userName,
+              account: job.account,
               avgUtilization: job.avgUtilization,
               gpuCount: job.gpuCount,
               isUnderutilized: job.isUnderutilized,

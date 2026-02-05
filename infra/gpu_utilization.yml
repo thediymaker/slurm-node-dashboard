@@ -1,0 +1,138 @@
+# gpu-job-rules.yml
+#
+# GPU job-level and cluster-level recording rules built from DCGM metrics.
+#
+# Update cadence:
+# - These rules are evaluated every 1 minute (`interval: 1m`).
+# - Effective “freshness” in the UI ≈ scrape_interval + 1m rule interval
+#   + dashboard polling (30–60s), so expect up to ~2 minutes of lag vs `nvidia-smi`.
+#
+# Label conventions:
+# - `hpc_job` is treated as the job identifier.
+# - We ignore `hpc_job="0"` (system / background) and empty jobs.
+
+groups:
+  - name: dcgm_job_metrics
+    interval: 1m
+
+    rules:
+      # -------------------------------------------------------------------
+      # Per‑job instantaneous GPU utilization & memory
+      # -------------------------------------------------------------------
+
+      # Average GPU utilization per job (current point-in-time, averaged over GPUs)
+      - record: job:gpu_utilization:current_avg
+        expr: |
+          avg by (hpc_job) (
+            DCGM_FI_DEV_GPU_UTIL{hpc_job!="0", hpc_job!=""}
+          )
+
+      # 95th percentile GPU utilization per job across GPUs (instantaneous, not over time)
+      - record: job:gpu_utilization:current_p95
+        expr: |
+          quantile(0.95,
+            DCGM_FI_DEV_GPU_UTIL{hpc_job!="0", hpc_job!=""}
+          )
+
+      # Max memory utilization per job (percentage of total, across all GPUs)
+      - record: job:gpu_memory:current_max_pct
+        expr: |
+          max by (hpc_job) (
+            DCGM_FI_DEV_FB_USED{hpc_job!="0", hpc_job!=""}
+            /
+            (DCGM_FI_DEV_FB_USED{hpc_job!="0", hpc_job!=""}
+             + DCGM_FI_DEV_FB_FREE{hpc_job!="0", hpc_job!=""}) * 100
+          )
+
+      # Average memory utilization per job (percentage of total, across all GPUs)
+      - record: job:gpu_memory:current_avg_pct
+        expr: |
+          avg by (hpc_job) (
+            DCGM_FI_DEV_FB_USED{hpc_job!="0", hpc_job!=""}
+            /
+            (DCGM_FI_DEV_FB_USED{hpc_job!="0", hpc_job!=""}
+             + DCGM_FI_DEV_FB_FREE{hpc_job!="0", hpc_job!=""}) * 100
+          )
+
+      # Potentially underutilized jobs (avg GPU util < 30% at this point in time)
+      # NOTE: This is a point-in-time signal; if you want a “sustained low” signal,
+      #       consider wrapping this in avg_over_time([...]) instead.
+      - record: job:gpu_underutilized:bool
+        expr: |
+          avg by (hpc_job) (
+            DCGM_FI_DEV_GPU_UTIL{hpc_job!="0", hpc_job!=""}
+          ) < 30
+
+      # Count of GPUs currently attached to each job
+      - record: job:gpu_count:current
+        expr: |
+          count by (hpc_job) (
+            DCGM_FI_DEV_GPU_UTIL{hpc_job!="0", hpc_job!=""}
+          )
+
+      # Memory stats per job (absolute values, bytes)
+      - record: job:gpu_memory:current_used_bytes
+        expr: |
+          sum by (hpc_job) (
+            DCGM_FI_DEV_FB_USED{hpc_job!="0", hpc_job!=""}
+          )
+
+      - record: job:gpu_memory:current_total_bytes
+        expr: |
+          sum by (hpc_job) (
+            DCGM_FI_DEV_FB_USED{hpc_job!="0", hpc_job!=""}
+            + DCGM_FI_DEV_FB_FREE{hpc_job!="0", hpc_job!=""}
+          )
+
+      # -------------------------------------------------------------------
+      # Time-windowed utilization per job (for historical / trend views)
+      # NOTE: windows here are intentionally long; they are for *reports*,
+      #       not live dashboards. Shorten if you want more reactive trends.
+      # -------------------------------------------------------------------
+
+      - record: job:gpu_utilization:1d_avg
+        expr: |
+          avg_over_time(
+            job:gpu_utilization:current_avg[1d]
+          )
+
+      - record: job:gpu_utilization:7d_avg
+        expr: |
+          avg_over_time(
+            job:gpu_utilization:current_avg[7d]
+          )
+
+      - record: job:gpu_utilization:30d_avg
+        expr: |
+          avg_over_time(
+            job:gpu_utilization:current_avg[30d]
+          )
+
+      # -------------------------------------------------------------------
+      # Cluster‑level rollups derived from job‑level metrics
+      # -------------------------------------------------------------------
+
+      # Cluster-wide average GPU utilization (across all jobs & GPUs)
+      - record: cluster:gpu_utilization:current_avg
+        expr: |
+          avg(job:gpu_utilization:current_avg)
+
+      # Total number of underutilized jobs (boolean series from rule above)
+      - record: cluster:underutilized_jobs:count
+        expr: |
+          count(job:gpu_underutilized:bool == 1)
+
+      # Total active GPU count across all jobs
+      - record: cluster:gpu_count:total
+        expr: |
+          sum(job:gpu_count:current)
+
+      # Cluster-wide P95 utilization across jobs
+      - record: cluster:gpu_utilization:current_p95
+        expr: |
+          quantile(0.95, job:gpu_utilization:current_avg)
+
+      # Cluster-wide average memory utilization (percentage)
+      - record: cluster:gpu_memory:current_avg_pct
+        expr: |
+          avg(job:gpu_memory:current_avg_pct)

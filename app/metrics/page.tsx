@@ -20,12 +20,15 @@ import {
 } from "@/actions/metrics";
 import { MetricsFilter } from "@/components/metrics/metrics-filter";
 import { KPICards } from "@/components/metrics/kpi-cards";
+import { GPUUtilizationCards } from "@/components/metrics/gpu-utilization-cards";
 import { MetricsDashboard } from "@/components/metrics/metrics-dashboard";
 import UnifiedHeader from "@/components/unified-header";
 import Footer from "@/components/footer/footer";
 import { redirect } from "next/navigation";
 import { addDays } from "date-fns";
 import { env } from "process";
+
+const gpuUtilizationEnabled = process.env.NEXT_PUBLIC_ENABLE_GPU_UTILIZATION === "true";
 
 export const dynamic = 'force-dynamic';
 
@@ -126,6 +129,8 @@ export default async function MetricsPage({ searchParams }: PageProps) {
         />
 
         <KPICards stats={stats} />
+
+        {gpuUtilizationEnabled && <GPUUtilizationCards />}
 
         <MetricsDashboard
           timeSeriesData={timeSeriesData}

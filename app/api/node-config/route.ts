@@ -6,6 +6,10 @@ import path from "path";
 let configCache: { data: any; timestamp: number } | null = null;
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 
+// Allow the node configuration path to be overridden via environment variable.
+// Defaults to "infra/node.cfg" relative to the app root.
+const NODEVIEW_CONFIG_PATH = process.env.NODEVIEW_CONFIG_PATH || "infra/node.cfg";
+
 export async function GET() {
   try {
     const now = Date.now();
@@ -15,8 +19,17 @@ export async function GET() {
       return NextResponse.json(configCache.data);
     }
 
-    const configPath = path.join(process.cwd(), "node.cfg");
-    const configContent = await fs.readFile(configPath, "utf-8");
+    const configPath = path.isAbsolute(NODEVIEW_CONFIG_PATH)
+      ? NODEVIEW_CONFIG_PATH
+      : path.join(process.cwd(), NODEVIEW_CONFIG_PATH);
+    const rawContent = await fs.readFile(configPath, "utf-8");
+
+    // Allow simple `//` comments in node.cfg by stripping commented lines
+    const configContent = rawContent
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+
     const config = JSON.parse(configContent);
 
     // Update cache
