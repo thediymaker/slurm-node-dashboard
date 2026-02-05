@@ -62,16 +62,6 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 - **Issues**: [GitHub Issues](https://github.com/thediymaker/slurm-node-dashboard/issues)
 - **Contact**: Johnathan Lee - [john.lee@thediymaker.com](mailto:john.lee@thediymaker.com)
 
-## Gallery
-
-|                 Feature Overview                 |                     Job Details                      |
-| :----------------------------------------------: | :--------------------------------------------------: |
-| ![Features](/images/new_features_screenshot.png) | ![Job Detail](/images/new_job_detail_screenshot.png) |
-
-|                      Running Job                       |                       Completed Job                        |
-| :----------------------------------------------------: | :--------------------------------------------------------: |
-| ![Running Job](/images/new_running_job_screenshot.png) | ![Completed Job](/images/new_completed_job_screenshot.png) |
-
 ---
 
 <p align="center">
