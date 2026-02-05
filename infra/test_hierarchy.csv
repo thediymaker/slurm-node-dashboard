@@ -1,0 +1,10 @@
+code,name,parent_code
+"test_org","Test Organization",""
+"dept_science","Science Department","test_org"
+"dept_engineering","Engineering Department","test_org"
+"dept_arts","Arts Department","test_org"
+"lab_alpha","Alpha Lab","dept_science"
+"lab_beta","Beta Lab","dept_science"
+"lab_gamma","Gamma Lab","dept_engineering"
+"lab_delta","Delta Lab","dept_engineering"
+"studio_x","Studio X","dept_arts"
