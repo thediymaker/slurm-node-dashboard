@@ -48,12 +48,12 @@ export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
 
   if (isLoading) {
     if (variant === "badge") {
-      return <Skeleton className="h-5 w-16 inline-block" />;
+      return <Skeleton className="h-6 w-20 inline-block rounded-full" />;
     }
     return (
-      <div className="p-3 rounded-lg border bg-muted/30">
-        <Skeleton className="h-4 w-20 mb-2" />
-        <Skeleton className="h-6 w-16" />
+      <div className="p-4 rounded-xl border bg-card">
+        <Skeleton className="h-4 w-24 mb-3" />
+        <Skeleton className="h-8 w-20" />
       </div>
     );
   }
@@ -64,40 +64,41 @@ export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
 
   const stats = data.data;
   const isLow = stats.avgUtilization < 30;
+  const isHigh = stats.avgUtilization >= 70;
+  const isMedium = !isLow && !isHigh;
 
   if (variant === "badge") {
     return (
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
-          isLow
-            ? "bg-amber-500/15 text-amber-400"
-            : stats.avgUtilization >= 70
-            ? "bg-emerald-500/15 text-emerald-400"
-            : "bg-blue-500/15 text-blue-400"
-        }`}
-      >
-        <Gauge className="h-3 w-3" />
-        GPU {stats.avgUtilization.toFixed(0)}%
-        {isLow && <AlertTriangle className="h-3 w-3" />}
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground transition-colors hover:bg-muted/80">
+        <Gauge className="h-3.5 w-3.5 shrink-0" />
+        <span className="font-mono tabular-nums">{stats.avgUtilization.toFixed(0)}%</span>
       </span>
     );
   }
 
   if (variant === "compact") {
     return (
-      <div className="p-3 rounded-lg border bg-muted/30 text-center">
-        <div className="text-xs text-muted-foreground mb-1">GPU Util</div>
-        <div
-          className={`font-semibold ${
-            isLow ? "text-amber-400" : stats.avgUtilization >= 70 ? "text-emerald-400" : "text-primary"
-          }`}
-        >
-          {stats.avgUtilization.toFixed(0)}%
+      <div className="p-4 rounded-xl border bg-card transition-colors hover:bg-muted/30">
+        <div className="mb-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            GPU Utilization
+          </span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-bold tabular-nums text-foreground">
+            {stats.avgUtilization.toFixed(0)}
+          </span>
+          <span className="text-lg text-muted-foreground">%</span>
         </div>
         {isLow && (
-          <div className="text-[10px] text-amber-400 flex items-center justify-center gap-0.5 mt-1">
-            <AlertTriangle className="h-2.5 w-2.5" />
-            Low
+          <div className="flex items-center gap-1.5 mt-3 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Underutilized</span>
+          </div>
+        )}
+        {isHigh && (
+          <div className="flex items-center gap-1.5 mt-3 px-2.5 py-1.5 rounded-lg bg-muted/60 border border-border">
+            <span className="text-xs font-medium text-muted-foreground">Optimized</span>
           </div>
         )}
       </div>
@@ -107,35 +108,71 @@ export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
   const isHistorical = stats.source === "database" || stats.isComplete;
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-3 text-center">
-        <div className="p-3 rounded-lg border bg-muted/30">
-          <div className="text-xs text-muted-foreground mb-1">GPU Util (Avg)</div>
-          <div
-            className={`font-semibold text-lg ${
-              isLow ? "text-amber-400" : stats.avgUtilization >= 70 ? "text-emerald-400" : "text-primary"
-            }`}
-          >
-            {stats.avgUtilization.toFixed(0)}%
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl border bg-card transition-colors hover:bg-muted/30">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Avg Utilization
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold tabular-nums text-foreground">
+              {stats.avgUtilization.toFixed(0)}
+            </span>
+            <span className="text-sm text-muted-foreground">%</span>
           </div>
         </div>
-        <div className="p-3 rounded-lg border bg-muted/30">
-          <div className="text-xs text-muted-foreground mb-1">GPU Util ({isHistorical ? "Max" : "P95"})</div>
-          <div className="font-semibold text-lg">{stats.p95Utilization.toFixed(0)}%</div>
+
+        <div className="p-4 rounded-xl border bg-card transition-colors hover:bg-muted/30">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              {isHistorical ? "Max" : "P95"}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold tabular-nums text-foreground">
+              {stats.p95Utilization.toFixed(0)}
+            </span>
+            <span className="text-sm text-muted-foreground">%</span>
+          </div>
         </div>
-        <div className="p-3 rounded-lg border bg-muted/30">
-          <div className="text-xs text-muted-foreground mb-1">GPU Memory</div>
-          <div className="font-semibold text-lg">{stats.memoryPct.toFixed(0)}%</div>
+
+        <div className="p-4 rounded-xl border bg-card transition-colors hover:bg-muted/30">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Memory
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold tabular-nums text-foreground">
+              {stats.memoryPct.toFixed(0)}
+            </span>
+            <span className="text-sm text-muted-foreground">%</span>
+          </div>
         </div>
-        <div className="p-3 rounded-lg border bg-muted/30">
-          <div className="text-xs text-muted-foreground mb-1">GPU Count</div>
-          <div className="font-semibold text-lg">{stats.gpuCount}</div>
+
+        <div className="p-4 rounded-xl border bg-card transition-colors hover:bg-muted/30">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              GPU Count
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold tabular-nums text-foreground">
+              {stats.gpuCount}
+            </span>
+            <span className="text-sm text-muted-foreground">GPU{stats.gpuCount !== 1 ? 's' : ''}</span>
+          </div>
         </div>
       </div>
+
       {isLow && (
-        <div className="text-xs text-amber-400 flex items-center justify-center gap-1 py-1 bg-amber-500/10 rounded-md">
-          <AlertTriangle className="h-3 w-3" />
-          This job {isHistorical ? "underutilized" : "appears to be underutilizing"} its allocated GPUs
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-amber-500/25 bg-amber-500/10">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+            This job {isHistorical ? "underutilized" : "appears to be underutilizing"} its allocated GPUs
+          </span>
         </div>
       )}
     </div>
@@ -146,12 +183,12 @@ interface GPUEfficiencyBadgeProps {
   jobId: string;
 }
 
-const rubric: { [key: string]: { threshold: number; color: string } } = {
-  A: { threshold: 90, color: "text-foreground" },
-  B: { threshold: 80, color: "text-foreground" },
-  C: { threshold: 70, color: "text-muted-foreground" },
-  D: { threshold: 60, color: "text-muted-foreground" },
-  E: { threshold: 0, color: "text-muted-foreground" },
+const rubric: { [key: string]: { threshold: number; color: string; barClass: string } } = {
+  A: { threshold: 90, color: "text-foreground", barClass: "bg-primary" },
+  B: { threshold: 80, color: "text-foreground", barClass: "bg-primary/80" },
+  C: { threshold: 70, color: "text-muted-foreground", barClass: "bg-muted-foreground/70" },
+  D: { threshold: 60, color: "text-muted-foreground", barClass: "bg-muted-foreground/50" },
+  E: { threshold: 0, color: "text-muted-foreground", barClass: "bg-muted-foreground/40" },
 };
 
 const getLetterGrade = (score: number): keyof typeof rubric => {
@@ -172,9 +209,9 @@ export function GPUEfficiencyBadge({ jobId }: GPUEfficiencyBadgeProps) {
 
   if (isLoading) {
     return (
-      <div className="p-3 rounded-md border bg-muted/30">
-        <Skeleton className="h-3 w-20 mb-2" />
-        <Skeleton className="h-5 w-12" />
+      <div className="p-4 rounded-xl border bg-card">
+        <Skeleton className="h-3 w-24 mb-3" />
+        <Skeleton className="h-6 w-16" />
       </div>
     );
   }
@@ -188,12 +225,28 @@ export function GPUEfficiencyBadge({ jobId }: GPUEfficiencyBadgeProps) {
   const gradeInfo = rubric[grade];
 
   return (
-    <div className="p-3 rounded-md border bg-muted/30">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-muted-foreground">GPU Efficiency</span>
-        <span className={`text-sm font-semibold ${gradeInfo.color}`}>{grade}</span>
+    <div className="p-4 rounded-xl border border-border bg-card transition-colors hover:bg-muted/30">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
+          Efficiency
+        </span>
+        <span className={`text-2xl font-bold ${gradeInfo.color}`}>
+          {grade}
+        </span>
       </div>
-      <div className="text-base font-medium">{value.toFixed(1)}%</div>
+      <div className="flex items-baseline gap-1">
+        <span className={`text-xl font-bold tabular-nums ${gradeInfo.color}`}>
+          {value.toFixed(1)}
+        </span>
+        <span className="text-sm text-muted-foreground">%</span>
+      </div>
+      <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${gradeInfo.barClass}`}
+          style={{ width: `${Math.min(value, 100)}%` }}
+        />
+      </div>
     </div>
   );
 }

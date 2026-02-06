@@ -99,9 +99,8 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
       return localSelectedFeatures[0].toUpperCase();
     }
 
-    return `${localSelectedFeatures.length} features ${
-      localLogicType === "AND" ? "(AND)" : "(OR)"
-    }`;
+    return `${localSelectedFeatures.length} features ${localLogicType === "AND" ? "(AND)" : "(OR)"
+      }`;
   };
 
   // Filter features based on search query
@@ -118,7 +117,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-[200px] justify-between whitespace-nowrap overflow-hidden"
+            className="w-[150px] justify-between whitespace-nowrap overflow-hidden"
           >
             <span className="truncate">{getFeatureDisplayValue()}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

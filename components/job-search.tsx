@@ -11,7 +11,7 @@ import UserJobModal from "./modals/user-job-modal";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MaintModal from "./modals/maint-modal";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const searchSchema = z.object({
@@ -86,13 +86,13 @@ const JobSearch = () => {
             const completedJobData = completedJobResult.value;
             if (completedJobData?.jobs && Array.isArray(completedJobData.jobs) && completedJobData.jobs.length > 0) {
               const jobState = completedJobData.jobs[0].state?.current?.[0];
-              
+
               // If job is pending in completed DB, still show active modal
               if (jobState === "PENDING") {
                 setJobOpen(true);
                 return;
               }
-              
+
               // Open historical modal for completed/cancelled/failed jobs
               setHistoricalJobOpen(true);
               return;
@@ -136,7 +136,7 @@ const JobSearch = () => {
 
       const data = await response.json();
       const maintReservations = (data?.reservations ?? []).filter(
-        (r: { flags?: string[] | string; [key: string]: unknown }) => {
+        (r: { flags?: string[] | string;[key: string]: unknown }) => {
           const flags = r?.flags;
           if (Array.isArray(flags)) return flags.includes("MAINT");
           if (typeof flags === "string") return flags.includes("MAINT");
@@ -185,15 +185,14 @@ const JobSearch = () => {
             name="searchID"
             render={({ field }) => (
               <FormItem>
-                <div className="flex pr-2 w-[250px]">
+                <div className="flex pr-2 w-[180px]">
                   <Input
                     type="text"
                     placeholder="Search by username or job ID"
                     {...field}
                     value={field.value ?? ""}
-                    className={`w-full px-2 py-1 text-sm ${
-                      errors.searchID ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-2 py-1 text-sm ${errors.searchID ? "border-red-500" : ""
+                      }`}
                     disabled={searchLoading}
                   />
                 </div>
@@ -201,16 +200,16 @@ const JobSearch = () => {
             )}
           />
           <Button
-            className="w-[100px] relative"
+            className="h-9 w-9 p-0 relative"
             variant="outline"
             type="submit"
             disabled={searchLoading}
+            title="Search"
           >
-            <span className={searchLoading ? "opacity-0" : "opacity-100"}>
-              Search
-            </span>
-            {searchLoading && (
-              <Loader2 className="absolute h-4 w-4 animate-spin" />
+            {searchLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
             )}
           </Button>
         </form>
