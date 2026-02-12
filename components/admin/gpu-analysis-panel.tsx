@@ -71,7 +71,7 @@ export function GPUAnalysisPanel() {
   }
 
   const { data, error, isLoading, mutate } = useSWR<GPUReportResponse>(
-    "/api/reporting/gpu?timeRange=24h",
+    "/api/gpu/report?timeRange=24h",
     fetcher,
     { refreshInterval: 60000 }
   );

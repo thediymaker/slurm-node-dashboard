@@ -34,7 +34,7 @@ const GPUResourcesDisplay: React.FC<GPUResourcesDisplayProps> = ({
     const fetchUtilization = async () => {
       try {
         const response = await fetch(
-          `/api/prometheus/dcgm?node=${encodeURIComponent(hostname)}`
+          `/api/gpu/node?name=${encodeURIComponent(hostname)}`
         );
         const result = await response.json();
         if (result.status === 200 && result.data?.length > 0) {

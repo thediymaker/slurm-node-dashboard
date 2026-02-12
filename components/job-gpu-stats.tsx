@@ -8,7 +8,6 @@ import { gpuUtilizationPluginMetadata } from "@/actions/plugins";
 interface GPUJobData {
   jobId: string;
   avgUtilization: number;
-  p95Utilization: number;
   memoryPct: number;
   gpuCount: number;
   isUnderutilized: boolean;
@@ -31,7 +30,7 @@ interface JobGPUStatsProps {
 
 export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
   const { data, isLoading } = useSWR<GPUJobResponse>(
-    gpuUtilizationPluginMetadata.isEnabled ? `/api/prometheus/gpu-job?job_id=${jobId}` : null,
+    gpuUtilizationPluginMetadata.isEnabled ? `/api/gpu?job_id=${jobId}` : null,
     fetcher,
     { 
       refreshInterval: (latestData) => {
@@ -109,7 +108,7 @@ export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="p-4 rounded-xl border bg-card transition-colors hover:bg-muted/30">
           <div className="mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -119,20 +118,6 @@ export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold tabular-nums text-foreground">
               {stats.avgUtilization.toFixed(0)}
-            </span>
-            <span className="text-sm text-muted-foreground">%</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl border bg-card transition-colors hover:bg-muted/30">
-          <div className="mb-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {isHistorical ? "Max" : "P95"}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold tabular-nums text-foreground">
-              {stats.p95Utilization.toFixed(0)}
             </span>
             <span className="text-sm text-muted-foreground">%</span>
           </div>
@@ -200,7 +185,7 @@ const getLetterGrade = (score: number): keyof typeof rubric => {
 
 export function GPUEfficiencyBadge({ jobId }: GPUEfficiencyBadgeProps) {
   const { data, isLoading } = useSWR<GPUJobResponse>(
-    gpuUtilizationPluginMetadata.isEnabled ? `/api/prometheus/gpu-job?job_id=${jobId}` : null,
+    gpuUtilizationPluginMetadata.isEnabled ? `/api/gpu?job_id=${jobId}` : null,
     fetcher,
     { revalidateOnFocus: false }
   );

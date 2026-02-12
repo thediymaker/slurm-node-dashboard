@@ -160,7 +160,7 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   
   // Check if GPU data is available (for historical jobs, need metrics plugin too)
   const gpuDataURL = useMemo(() => 
-    gpuUtilizationPluginMetadata.isEnabled ? `/api/prometheus/gpu-job?job_id=${searchID}` : null,
+    gpuUtilizationPluginMetadata.isEnabled ? `/api/gpu?job_id=${searchID}` : null,
     [searchID]
   );
   

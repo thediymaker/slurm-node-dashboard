@@ -20,7 +20,7 @@ import {
 } from "@/actions/metrics";
 import { MetricsFilter } from "@/components/metrics/metrics-filter";
 import { KPICards } from "@/components/metrics/kpi-cards";
-import { GPUUtilizationCards } from "@/components/metrics/gpu-utilization-cards";
+import { GPUKPICards } from "@/components/metrics/gpu-kpi-cards";
 import { MetricsDashboard } from "@/components/metrics/metrics-dashboard";
 import UnifiedHeader from "@/components/unified-header";
 import Footer from "@/components/footer/footer";
@@ -128,9 +128,10 @@ export default async function MetricsPage({ searchParams }: PageProps) {
           departmentOptions={filterOptions.departments}
         />
 
-        <KPICards stats={stats} />
-
-        {gpuUtilizationEnabled && <GPUUtilizationCards />}
+        <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-3 ${gpuUtilizationEnabled ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} mb-6`}>
+          <KPICards stats={stats} />
+          {gpuUtilizationEnabled && <GPUKPICards />}
+        </div>
 
         <MetricsDashboard
           timeSeriesData={timeSeriesData}
