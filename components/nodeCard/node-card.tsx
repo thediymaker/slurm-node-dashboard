@@ -1,4 +1,5 @@
 import { useState, memo, useMemo } from "react";
+import { useInView } from "react-intersection-observer";
 import {
   HoverCard,
   HoverCardContent,
@@ -202,6 +203,9 @@ export const NodeCard = memo(({
   ...props
 }: NodeCardProps & { colorSchema?: string }) => {
   const [open, setOpen] = useState(false);
+  const { ref, inView } = useInView({
+    rootMargin: "200px", // pre-render 200px before entering viewport
+  });
   
   // Memoize expensive calculations
   const { bgColor, textColor } = useMemo(
@@ -244,22 +248,34 @@ export const NodeCard = memo(({
     [props.size]
   );
 
+  // Off-screen: render lightweight placeholder with same dimensions and color
+  // Avoids mounting HoverCard, Modal, gradients, shadows for invisible cards
+  if (!inView) {
+    return (
+      <div
+        ref={ref}
+        className={`m-0.5 rounded-lg ${bgColor} ${sizeClasses} border border-white/10`}
+      />
+    );
+  }
+
   const isOverloaded = cpuLoad > 1.25;
 
   return (
-    <HoverCard>
+    <HoverCard openDelay={300}>
       <HoverCardTrigger asChild>
         <div
+          ref={ref}
           data-node-id={props.nodeData.hostname || props.name}
           className={`
             relative overflow-hidden cursor-pointer m-0.5 rounded-lg
             ${bgColor} ${textColor} ${sizeClasses}
-            shadow-lg hover:shadow-xl
+            shadow-md hover:shadow-lg
             border border-white/10
-            backdrop-blur-sm
             transition-all duration-200 ease-out
             hover:scale-[1.02] hover:brightness-110
           `}
+          style={{ contain: 'layout style paint' }}
           onClick={props.historical ? undefined : openModal}
         >
           {/* Subtle gradient overlay */}
@@ -284,7 +300,7 @@ export const NodeCard = memo(({
           statusDef={statusDef}
         />
       </HoverCardContent>
-      <NodeCardModal open={open} setOpen={setOpen} nodename={props.name} />
+      {open && <NodeCardModal open={open} setOpen={setOpen} nodename={props.name} />}
     </HoverCard>
   );
 });
