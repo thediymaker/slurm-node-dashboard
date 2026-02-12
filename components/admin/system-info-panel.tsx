@@ -9,6 +9,7 @@ import { useAdminDiag } from "./admin-utils";
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import packageJson from "@/package.json";
+import { JWTInfoCard } from "./jwt-info-card";
 
 interface UpdateInfo {
     hasUpdate: boolean;
@@ -93,7 +94,8 @@ export function SystemInfoPanel() {
                 </CardContent>
             </Card>
 
-            {/* Slurm Connection */}
+            {/* API Token Info */}
+            <JWTInfoCard />
             <Card>
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">

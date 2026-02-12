@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 import { CopyButton } from "@/components/llm/llm-shared-utils";
+import { GPUEfficiencyBadge } from "@/components/job-gpu-stats";
+import { gpuUtilizationPluginMetadata } from "@/actions/plugins";
 
 // Rubric for efficiency grading
 const rubric: { [key: string]: { threshold: number; color: string } } = {
@@ -155,6 +157,25 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   const [expandedSteps, setExpandedSteps] = React.useState<Set<number>>(new Set());
   
   const jobURL = useMemo(() => `/api/slurm/job/completed/${searchID}`, [searchID]);
+  
+  // Check if GPU data is available (for historical jobs, need metrics plugin too)
+  const gpuDataURL = useMemo(() => 
+    gpuUtilizationPluginMetadata.isEnabled ? `/api/gpu?job_id=${searchID}` : null,
+    [searchID]
+  );
+  
+  const { data: gpuData, isLoading: gpuDataLoading } = useSWR<{ status: number; data?: any }>(
+    open && gpuDataURL ? gpuDataURL : null,
+    jsonFetcher,
+    { revalidateOnFocus: false }
+  );
+  
+  // Determine if GPU badge will actually render
+  const gpuBadgeWillRender = React.useMemo(() => {
+    if (!gpuUtilizationPluginMetadata.isEnabled) return false;
+    if (gpuDataLoading) return true; // Show skeleton, so use 3 columns
+    return gpuData?.status === 200 && gpuData?.data !== undefined;
+  }, [gpuData, gpuDataLoading]);
 
   const {
     data: jobData,
@@ -240,10 +261,19 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
         </div>
 
         {/* Efficiency Grades */}
-        <div className="grid grid-cols-2 gap-3">
-          <EfficiencyBadge value={cpuEfficiency} label="CPU Efficiency" />
-          <EfficiencyBadge value={memEfficiency} label="Memory Efficiency" />
-        </div>
+        {(() => {
+          const hasGpu = job.tres.allocated.some((t) => t.type === "gres" && t.name?.includes("gpu"));
+          const showGpu = hasGpu && gpuBadgeWillRender;
+          const gridCols = showGpu ? "grid-cols-3" : "grid-cols-2";
+          
+          return (
+            <div className={`grid gap-3 ${gridCols}`}>
+              <EfficiencyBadge value={cpuEfficiency} label="CPU Efficiency" />
+              <EfficiencyBadge value={memEfficiency} label="Memory Efficiency" />
+              {showGpu && <GPUEfficiencyBadge jobId={searchID} />}
+            </div>
+          );
+        })()}
 
         {/* Exit Status */}
         {job.exit_code && (

@@ -2,15 +2,15 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { prom } from "@/lib/prometheus";
+import { extractNumericValue } from "@/lib/gpu-metrics";
 
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const node = url.searchParams.get("node");
+  const node = new URL(req.url).searchParams.get("name");
 
   if (!node) {
     return NextResponse.json({
       status: 400,
-      message: "Missing required 'node' parameter",
+      message: "Missing required 'name' parameter",
     });
   }
 
@@ -34,18 +34,14 @@ export async function GET(req: Request) {
     }
 
     const gpuData = gpuRes.result.map((series: any) => {
-      const value = Array.isArray(series.value)
-        ? series.value[1]
-        : typeof series.value === "object"
-        ? series.value.value
-        : series.value;
+      const value = extractNumericValue(series.value);
 
       return {
         gpu: series.metric?.labels?.gpu || "unknown",
         modelName: series.metric?.labels?.modelName || "unknown",
         hpcJob: series.metric?.labels?.hpc_job || "unknown",
         utilization: parseFloat(
-          parseFloat(value?.toString() || "0").toFixed(2)
+          (isNaN(value) ? 0 : value).toFixed(2)
         ),
       };
     });

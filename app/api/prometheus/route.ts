@@ -47,8 +47,10 @@ export async function GET(req: Request) {
     let prometheusQuery: string;
     
     if (query.startsWith("DCGM_")) {
-      // DCGM exporter uses Hostname label (capital H) matching the node name
-      prometheusQuery = `${query}{Hostname="${node}"}`;
+      // DCGM metrics have volatile labels (hpc_job, UUID, etc.) that change per job,
+      // creating multiple time series over a range. Aggregate with max to merge them
+      // into one series per GPU, so we don't pick up a stale/idle series.
+      prometheusQuery = `max by (Hostname, gpu) (${query}{Hostname="${node}"})`;
     } else if (query === "node_hwmon_temp_celsius") {
       // Get CPU package temperature (sensor temp1 on coretemp)
       prometheusQuery = `${query}{instance="${instance}", chip=~".*coretemp.*", sensor="temp1"}`;
@@ -126,7 +128,7 @@ export async function GET(req: Request) {
       return value;
     };
 
-    // For network metrics, aggregate all interfaces
+    // Aggregate multi-series results based on metric type
     let dataPoints;
     if (bytesToMBPerSecMetrics.includes(query) && series.length > 1) {
       // Sum across all network interfaces per timestamp
@@ -143,8 +145,26 @@ export async function GET(req: Request) {
           time: new Date(time),
           value: transformValue(value),
         }));
+    } else if (query.startsWith("DCGM_") && series.length > 1) {
+      // Multiple GPUs on node — average across GPUs per timestamp for node-level view
+      const timeMap = new Map<number, number[]>();
+      series.forEach((serie) => {
+        serie.values.forEach(({ time, value }) => {
+          const t = time.getTime();
+          if (!timeMap.has(t)) timeMap.set(t, []);
+          timeMap.get(t)!.push(value);
+        });
+      });
+      dataPoints = Array.from(timeMap.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([time, values]) => ({
+          time: new Date(time),
+          value: transformValue(
+            values.reduce((a, b) => a + b, 0) / values.length
+          ),
+        }));
     } else {
-      // Use first series for single-value metrics
+      // Single series metric
       dataPoints = series[0].values.map(({ time, value }) => ({
         time,
         value: transformValue(value),

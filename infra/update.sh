@@ -13,6 +13,11 @@
 
 set -e
 
+# Resolve paths so the script works from any CWD
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${PROJECT_ROOT}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -88,27 +93,25 @@ echo ""
 # Step 3: Handle .env files
 log_info "Checking environment files..."
 
-if [ -f ".env" ]; then
-    log_success ".env file exists"
-    
-    # If .env.production also exists, move it out of the way
-    if [ -f ".env.production" ]; then
-        # Create timestamped backup name
-        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-        BACKUP_NAME=".env.production.backup_${TIMESTAMP}"
-        mv .env.production "$BACKUP_NAME"
-        log_warn "Moved .env.production to $BACKUP_NAME (to prevent conflicts)"
+ENV_FILE="${PROJECT_ROOT}/.env"
+ENV_TEMPLATE="${SCRIPT_DIR}/.env.production"
+
+if [ -f "${ENV_FILE}" ]; then
+    log_success ".env file exists at project root (${ENV_FILE})"
+
+    if [ -f "${ENV_TEMPLATE}" ]; then
+        log_info "Template env file found at ${ENV_TEMPLATE} (no action needed)"
     fi
 else
-    log_warn ".env file not found"
-    
-    if [ -f ".env.production" ]; then
-        log_info "Creating .env from .env.production..."
-        mv .env.production .env
-        log_success "Created .env from .env.production"
+    log_warn ".env file not found at project root"
+
+    if [ -f "${ENV_TEMPLATE}" ]; then
+        log_info "Creating .env from infra/.env.production template..."
+        cp "${ENV_TEMPLATE}" "${ENV_FILE}"
+        log_success "Created .env from infra/.env.production"
         log_warn "⚠️  Please edit .env and configure your environment variables!"
     else
-        log_error "No .env or .env.production file found!"
+        log_error "No .env file at project root and no infra/.env.production template found!"
         log_error "Please create a .env file with your configuration."
         exit 1
     fi

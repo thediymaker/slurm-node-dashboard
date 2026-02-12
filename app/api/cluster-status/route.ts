@@ -2,8 +2,9 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { fetchSlurmData } from "@/lib/slurm-api";
+import { loadDashboardConfig, getExcludedNodeSet } from "@/lib/node-config";
 
-function calculateNodeStates(nodes: any[]): any  {
+function calculateNodeStates(nodes: any[]): any {
   const nodeStates: any = {
     idle: 0,
     mixed: 0,
@@ -23,7 +24,7 @@ function calculateNodeStates(nodes: any[]): any  {
     else if (primaryState === "ALLOCATED") nodeStates.allocated++;
     else if (primaryState === "DOWN") nodeStates.down++;
     else if (primaryState === "UNKNOWN" || secondaryState === "NOT_RESPONDING") nodeStates.unknown++;
-    
+
     if (secondaryState === "DRAIN") nodeStates.drain++;
   });
 
@@ -37,11 +38,11 @@ function calculateUtilization(totalCpus: number, allocatedCpus: number): number 
 
 function groupNodesByCluster(nodes: any[]): { [key: string]: any[] } {
   const clusters: { [key: string]: any[] } = {};
-  
+
   nodes.forEach((node) => {
     // Determine cluster based on node hostname or partitions
     let clusterName = "Unknown";
-    
+
     if (node.hostname) {
       if (node.hostname.includes("sol") || node.hostname.includes("gpu")) {
         clusterName = "Sol";
@@ -49,7 +50,7 @@ function groupNodesByCluster(nodes: any[]): { [key: string]: any[] } {
         clusterName = "Phoenix";
       }
     }
-    
+
     // Fallback to partitions if hostname doesn't indicate cluster
     if (clusterName === "Unknown" && node.partitions) {
       const partitions = Array.isArray(node.partitions) ? node.partitions : [node.partitions];
@@ -59,40 +60,41 @@ function groupNodesByCluster(nodes: any[]): { [key: string]: any[] } {
         clusterName = "Phoenix";
       }
     }
-    
+
     if (!clusters[clusterName]) {
       clusters[clusterName] = [];
     }
     clusters[clusterName].push(node);
   });
-  
+
   return clusters;
 }
 
 function categorizeJobs(jobs: any[]): { running: number; pending: number } {
   let running = 0;
   let pending = 0;
-  
+
   jobs.forEach((job) => {
     const state = Array.isArray(job.job_state) ? job.job_state[0] : job.job_state;
     const stateUpper = state?.toUpperCase();
-    
+
     if (stateUpper === "RUNNING") {
       running++;
     } else if (stateUpper === "PENDING") {
       pending++;
     }
   });
-  
+
   return { running, pending };
 }
 
 export async function GET() {
   try {
-    // Fetch data from existing SLURM endpoints
-    const [nodesRes, jobsRes] = await Promise.all([
+    // Fetch data from existing SLURM endpoints and load config in parallel
+    const [nodesRes, jobsRes, config] = await Promise.all([
       fetchSlurmData("/nodes"),
-      fetchSlurmData("/jobs")
+      fetchSlurmData("/jobs"),
+      loadDashboardConfig()
     ]);
 
     if (nodesRes.error) {
@@ -102,29 +104,35 @@ export async function GET() {
       throw new Error(`Failed to fetch jobs: ${jobsRes.error}`);
     }
 
-    const nodes = nodesRes.data?.nodes || [];
+    const allNodes = nodesRes.data?.nodes || [];
     const jobs = jobsRes.data?.jobs || [];
-    
+
+    // Filter out excluded nodes
+    const excludedNodes = getExcludedNodeSet(config);
+    const nodes = excludedNodes.size > 0
+      ? allNodes.filter((node: any) => !excludedNodes.has(node.hostname))
+      : allNodes;
+
     // Group nodes by cluster
     const nodesClusters = groupNodesByCluster(nodes);
-    
+
     // Calculate job statistics
     const jobStats = categorizeJobs(jobs);
-    
+
     const clusters: any[] = [];
     let totalNodes = 0;
     let totalUtilization = 0;
-    
+
     Object.entries(nodesClusters).forEach(([clusterName, clusterNodes]) => {
       const nodeStates = calculateNodeStates(clusterNodes);
-      
+
       const totalCpus = clusterNodes.reduce((sum, node) => sum + (node.cpus || 0), 0);
       const allocatedCpus = clusterNodes.reduce((sum, node) => sum + (node.alloc_cpus || 0), 0);
       const totalMemory = clusterNodes.reduce((sum, node) => sum + (node.real_memory || 0), 0);
       const allocatedMemory = clusterNodes.reduce((sum, node) => sum + (node.alloc_memory || 0), 0);
-      
+
       const utilization = calculateUtilization(totalCpus, allocatedCpus);
-      
+
       clusters.push({
         name: clusterName,
         totalNodes: clusterNodes.length,
@@ -142,11 +150,11 @@ export async function GET() {
           allocatedMemory
         }
       });
-      
+
       totalNodes += clusterNodes.length;
       totalUtilization += utilization;
     });
-    
+
     const averageUtilization = clusters.length > 0 ? Math.round(totalUtilization / clusters.length) : 0;
 
     const response: any = {
@@ -168,10 +176,10 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching cluster status:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Failed to fetch cluster status",
         timestamp: new Date().toISOString()
-      }, 
+      },
       { status: 500 }
     );
   }

@@ -6,6 +6,7 @@ import {
   openaiPluginMetadata,
   prometheusPluginMetadata,
   influxDBPluginMetadata,
+  gpuUtilizationPluginMetadata,
   modulesPluginMetadata,
   historyPluginMetadata,
   jobMetricsPluginMetadata,
@@ -40,7 +41,7 @@ const PluginItem = ({ name, description, isEnabled, envVar }: PluginItemProps) =
 
 const AdminPlugins = () => {
   const pagePlugins = [modulesPluginMetadata, historyPluginMetadata, jobMetricsPluginMetadata];
-  const integrationPlugins = [openaiPluginMetadata, prometheusPluginMetadata, influxDBPluginMetadata];
+  const integrationPlugins = [openaiPluginMetadata, prometheusPluginMetadata, gpuUtilizationPluginMetadata, influxDBPluginMetadata];
   const featureFlags = [maintenanceNotificationsMetadata];
   
   const totalEnabled = [...pagePlugins, ...integrationPlugins, ...featureFlags].filter(p => p.isEnabled).length;
@@ -104,6 +105,12 @@ const AdminPlugins = () => {
             description="Metrics collection and monitoring"
             isEnabled={prometheusPluginMetadata.isEnabled}
             envVar="NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN"
+          />
+          <PluginItem
+            name="GPU Utilization"
+            description="GPU metrics from Prometheus DCGM recording rules"
+            isEnabled={gpuUtilizationPluginMetadata.isEnabled}
+            envVar="NEXT_PUBLIC_ENABLE_GPU_UTILIZATION"
           />
           <PluginItem
             name="InfluxDB"

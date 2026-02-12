@@ -1,28 +1,13 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-
-// Cache the config to avoid reading file on every request
-let configCache: { data: any; timestamp: number } | null = null;
-const CACHE_TTL = 60 * 1000; // 1 minute cache
+import { loadDashboardConfig } from "@/lib/node-config";
 
 export async function GET() {
   try {
-    const now = Date.now();
-    
-    // Return cached config if still valid
-    if (configCache && now - configCache.timestamp < CACHE_TTL) {
-      return NextResponse.json(configCache.data);
-    }
+    const config = await loadDashboardConfig();
 
-    const configPath = path.join(process.cwd(), "node.cfg");
-    const configContent = await fs.readFile(configPath, "utf-8");
-    const config = JSON.parse(configContent);
-
-    // Update cache
-    configCache = { data: config, timestamp: now };
-
-    return NextResponse.json(config);
+    // Return just the rackLayout for backward compatibility with grouped-nodes.tsx
+    // The frontend currently expects the flat rack layout object
+    return NextResponse.json(config.rackLayout);
   } catch (error) {
     return NextResponse.json(
       {

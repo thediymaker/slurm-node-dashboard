@@ -10,6 +10,12 @@ export interface Node {
   features?: string[];
 }
 
+export interface HistoricalNode extends Node {
+  hostname: string;
+  state: string[];
+  cpu_load: number;
+}
+
 export interface NodeConfig {
   [group: string]: {
     nodes: string[];

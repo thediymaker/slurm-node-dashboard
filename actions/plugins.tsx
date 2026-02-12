@@ -48,6 +48,12 @@ export const influxDBPluginMetadata = {
   isEnabled: process.env.NEXT_PUBLIC_ENABLE_INFLUXDB_PLUGIN === "true",
 };
 
+export const gpuUtilizationPluginMetadata = {
+  name: "GPU Utilization Plugin",
+  description: "GPU utilization metrics from Prometheus DCGM recording rules.",
+  isEnabled: process.env.NEXT_PUBLIC_ENABLE_GPU_UTILIZATION === "true",
+};
+
 // -----------------------------------------------------------------------------
 // FEATURE FLAGS
 // -----------------------------------------------------------------------------
