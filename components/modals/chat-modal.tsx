@@ -5,7 +5,7 @@ import { useEnterSubmit } from "@/lib/use-enter-submit";
 import TextareaAutosize from "react-textarea-autosize";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Trash2, X } from "lucide-react";
+import { ArrowUp, Trash2, X, Bot } from "lucide-react";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { useEffect, useRef, useCallback, memo } from "react";
@@ -86,10 +86,16 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
 
   return (
     <Dialog open={showChat} onOpenChange={setShowChat}>
-      <DialogContent className="sm:max-w-[1200px] w-[90vw] p-0 gap-0 overflow-hidden border-none shadow-2xl h-[80vh] flex flex-col bg-background [&>button]:hidden">
-        <DialogHeader className="px-4 py-3 border-b flex flex-row items-center justify-between space-y-0 bg-muted">
-          <DialogTitle className="text-sm font-medium flex items-center gap-2">
-            Slurm AI Assistant
+      <DialogContent className="sm:max-w-[1200px] w-[90vw] p-0 gap-0 overflow-hidden border shadow-xl h-[80vh] flex flex-col bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 [&>button]:hidden">
+        <DialogHeader className="px-4 py-3 border-b flex flex-row items-center justify-between space-y-0 bg-background/50 backdrop-blur-sm">
+          <DialogTitle className="text-sm font-medium flex items-center gap-3">
+            <div className="flex items-center justify-center p-2 rounded-md bg-primary/10 border border-primary/20 shadow-sm">
+              <Bot className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-semibold tracking-tight">Slurm Assistant</span>
+              <span className="text-[10px] text-muted-foreground font-normal">AI-powered cluster insights</span>
+            </div>
           </DialogTitle>
           <div className="flex items-center gap-1">
             <TooltipProvider>
@@ -138,11 +144,11 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
           )}
         </div>
 
-        <div className="p-4 bg-background border-t">
+        <div className="p-4 bg-background/50 border-t backdrop-blur-sm">
           <form
             ref={formRef}
             onSubmit={form.handleSubmit(onSubmit)}
-            className="relative flex items-end gap-2 p-2 border rounded-xl bg-muted focus-within:bg-background focus-within:ring-1 focus-within:ring-ring transition-all"
+            className="relative flex items-end gap-2 p-2 border rounded-lg bg-muted/40 focus-within:bg-background/80 focus-within:ring-1 focus-within:ring-ring focus-within:border-primary/30 transition-all shadow-sm"
           >
             <TextareaAutosize
               tabIndex={0}

@@ -17,12 +17,22 @@ export async function POST(req: Request) {
   const config = await loadLLMConfig();
   const { tools, systemPrompt } = buildToolsAndPrompt(config);
 
+  const toolNames = Object.keys(tools);
+
   const result = await streamText({
     model: openai.chat(env.OPENAI_API_MODEL || "gpt-3.5-turbo"),
     messages: await convertToModelMessages(messages),
     system: systemPrompt,
     tools,
     stopWhen: stepCountIs(5),
+    prepareStep: ({ stepNumber }) => {
+      // On the first step, force tool calls only — no text generation.
+      // This prevents the model from hallucinating data before tools return.
+      if (stepNumber === 0 && toolNames.length > 0) {
+        return { toolChoice: "required" as const, activeTools: toolNames };
+      }
+      return { toolChoice: "auto" as const };
+    },
   });
 
   return result.toUIMessageStreamResponse();
