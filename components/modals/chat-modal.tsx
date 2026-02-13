@@ -46,15 +46,19 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
   const onSubmit: SubmitHandler<ChatInput> = useCallback(
     async (data) => {
       const value = data.message.trim();
-      if (!value) return;
+      if (!value || isLoading) return;
 
       form.setValue("message", "");
 
-      await sendMessage({
-        text: value,
-      });
+      try {
+        await sendMessage({
+          text: value,
+        });
+      } catch (error) {
+        console.error('Failed to send message:', error);
+      }
     },
-    [form, sendMessage]
+    [form, sendMessage, isLoading]
   );
 
   const clearChatHistory = useCallback(() => {
@@ -70,11 +74,14 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
 
   const handleFollowUp = useCallback(
     (question: string) => {
+      if (isLoading) return;
       sendMessage({
         text: question,
+      }).catch((error) => {
+        console.error('Failed to send follow-up:', error);
       });
     },
-    [sendMessage]
+    [sendMessage, isLoading]
   );
 
   const handleSetInput = useCallback(

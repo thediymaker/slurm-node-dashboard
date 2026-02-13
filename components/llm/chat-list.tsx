@@ -87,18 +87,21 @@ export function ChatList({
       {messages.map((message, index) => {
         const isLast = index === messages.length - 1;
         const previousMessage = index > 0 ? messages[index - 1] : null;
+        // Composite key prevents React duplicate-key errors when useChat
+        // temporarily produces two messages with the same id mid-stream.
+        const key = `${message.id}-${index}`;
         
         // Find the last user message for follow-up context
         const lastUserMessage = [...messages].slice(0, index + 1).reverse().find(m => m.role === "user");
 
         if (message.role === "user") {
           const content = getTextFromParts(message.parts);
-          return <UserMessage key={message.id}>{content}</UserMessage>;
+          return <UserMessage key={key}>{content}</UserMessage>;
         }
 
         // Assistant message
         return (
-          <div key={message.id} className="pb-4">
+          <div key={key} className="pb-4">
             {message.parts.map((part, partIndex) => {
               if (part.type === "text") {
                 // Only render if there is actual text content
