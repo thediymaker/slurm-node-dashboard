@@ -1,6 +1,6 @@
 "use server";
 
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createOpenAI } from "@ai-sdk/openai";
 import { env } from "process";
@@ -15,14 +15,16 @@ export async function generateFollowUpQuestions(
   assistantMessage: string
 ) {
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: openai.chat(
         env.OPENAI_API_MODEL_SUGGESTION ||
           env.OPENAI_API_MODEL ||
           "gpt-3.5-turbo"
       ),
-      schema: z.object({
-        questions: z.array(z.string()).length(3),
+      output: Output.object({
+        schema: z.object({
+          questions: z.array(z.string()).length(3),
+        }),
       }),
       prompt: `
         Based on the following conversation, generate 3 short, relevant follow-up questions that the user might want to ask next.
@@ -34,7 +36,7 @@ export async function generateFollowUpQuestions(
       `,
     });
 
-    return object.questions;
+    return output!.questions;
   } catch (error) {
     console.error("Error generating follow-up questions:", error);
     return [];

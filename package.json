@@ -12,8 +12,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.0",
-    "@ai-sdk/react": "^2.0.97",
+    "@ai-sdk/openai": "^3.0.0",
+    "@ai-sdk/react": "^3.0.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -44,7 +44,7 @@
     "@tailwindcss/typography": "^0.5.13",
     "@types/fs-extra": "^11.0.4",
     "@xyflow/react": "^12.9.3",
-    "ai": "^5.0.97",
+    "ai": "^6.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "cmdk": "^1.0.0",
@@ -55,6 +55,7 @@
     "eslint-config-next": "^16.0.8",
     "framer-motion": "^12.4.7",
     "fs-extra": "^11.2.0",
+    "js-yaml": "^4.1.1",
     "loglevel": "^1.9.1",
     "lucide-react": "^0.469.0",
     "next": "^16.0.8",
@@ -82,6 +83,7 @@
   "devDependencies": {
     "@types/d3": "^7.4.3",
     "@types/dagre": "^0.7.53",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "@types/pg": "^8.15.6",
     "@types/react": "^18",

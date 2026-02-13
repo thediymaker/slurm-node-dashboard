@@ -28,6 +28,17 @@ function getTextFromParts(parts: Message["parts"]) {
   }, "");
 }
 
+/**
+ * Strip markdown tables from LLM output.
+ * Tool cards already display all data, so tables are redundant noise.
+ * Matches lines starting with | and header separators like |---|---|
+ */
+function stripMarkdownTables(text: string): string {
+  return text
+    .replace(/^(\|.*\|)\s*$/gm, "") // rows: | ... |
+    .replace(/\n{3,}/g, "\n\n");     // collapse leftover blank lines
+}
+
 function getContextFromMessage(message: Message): string {
   const textContent = getTextFromParts(message.parts);
   
@@ -120,7 +131,7 @@ export function ChatList({
                         },
                       }}
                     >
-                      {part.text}
+                      {stripMarkdownTables(part.text)}
                     </ReactMarkdown>
                   </BotMessage>
                 );

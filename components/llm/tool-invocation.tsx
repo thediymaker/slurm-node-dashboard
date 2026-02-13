@@ -149,6 +149,77 @@ export const ToolInvocationRenderer = memo(function ToolInvocationRenderer({ too
             </div>
           </BotCard>
         );
+      // ── Workflow tools return combined data ──
+      case "troubleshoot_job":
+        return (
+          <BotCard>
+            <div className="p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Job Troubleshooting</h3>
+              {result.error ? (
+                <div className="text-red-400 text-sm">{result.error}</div>
+              ) : (
+                <>
+                  {result.job?.jobs?.[0] && (
+                    <SlurmJobDetails job={result.job} />
+                  )}
+                  {result.node?.nodes?.[0] && (
+                    <div className="pt-2 border-t border-border/40">
+                      <SlurmNodeDetails node={result.node} />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </BotCard>
+        );
+      case "sbatch_helper":
+        return (
+          <BotCard>
+            <div className="p-4 space-y-2">
+              <h3 className="font-semibold text-sm">Cluster Configuration</h3>
+              <div className="flex flex-wrap gap-2">
+                {result.partitions?.partitions?.map((p: any) => (
+                  <span key={p.name} className="bg-muted px-2 py-1 rounded text-xs">
+                    {p.name}
+                  </span>
+                ))}
+              </div>
+              {result.qos?.qos && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {result.qos.qos.map((q: any) => (
+                    <span key={q.name} className="bg-muted px-2 py-1 rounded text-xs">
+                      {q.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </BotCard>
+        );
+      case "node_health_check":
+        return (
+          <BotCard>
+            <div className="p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Node Health Check</h3>
+              {result.error ? (
+                <div className="text-red-400 text-sm">
+                  {result.error}
+                  {result.availableNodes && (
+                    <span className="block mt-1 text-muted-foreground">
+                      Available: {result.availableNodes}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {result.node?.nodes?.[0] && (
+                    <SlurmNodeDetails node={result.node} />
+                  )}
+                </>
+              )}
+            </div>
+          </BotCard>
+        );
       default:
         return (
           <BotCard>

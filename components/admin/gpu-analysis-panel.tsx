@@ -147,9 +147,9 @@ export function GPUAnalysisPanel() {
   };
 
   const getUtilizationColor = (util: number) => {
-    if (util >= 70) return "text-emerald-500";
-    if (util >= 40) return "text-amber-500";
-    return "text-red-500";
+    if (util >= 70) return "text-emerald-900";
+    if (util >= 40) return "text-amber-900";
+    return "text-red-900";
   };
 
   if (isLoading) {
@@ -240,10 +240,10 @@ export function GPUAnalysisPanel() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Underutilized Jobs</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertTriangle className="h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${metrics.underutilizedJobCount > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+            <div className={`text-2xl font-bold ${metrics.underutilizedJobCount > 0 ? "text-amber-900" : "text-emerald-900"}`}>
               {metrics.underutilizedJobCount}
             </div>
             <p className="text-xs text-muted-foreground">Jobs below 30% utilization</p>

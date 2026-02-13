@@ -19,6 +19,7 @@ import { QoSPanel } from "./qos-panel";
 import { SystemInfoPanel } from "./system-info-panel";
 import { GPUAnalysisPanel } from "./gpu-analysis-panel";
 import { HierarchyManager } from "@/components/admin/hierarchy/hierarchy-manager";
+import { LLMConfigPanel } from "./llm-config-panel";
 import { Organization, Account } from "@/actions/hierarchy";
 import { gpuUtilizationPluginMetadata, jobMetricsPluginMetadata } from "@/actions/plugins";
 
@@ -57,6 +58,7 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
     ...(gpuUtilizationPluginMetadata.isEnabled && jobMetricsPluginMetadata.isEnabled ? [{ id: "gpu", label: "GPU Analysis" }] : []),
     { id: "plugins", label: "Plugins" },
     { id: "hierarchy", label: "Hierarchy" },
+    { id: "llm", label: "LLM Config" },
     { id: "settings", label: "Settings" },
   ];
 
@@ -170,6 +172,11 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
           {/* Hierarchy Tab */}
           <TabsContent value="hierarchy" className="space-y-6 mt-6">
             <HierarchyManager initialOrgs={initialOrgs} accounts={accounts} />
+          </TabsContent>
+
+          {/* LLM Config Tab */}
+          <TabsContent value="llm" className="space-y-6 mt-6">
+            <LLMConfigPanel />
           </TabsContent>
 
           {/* Settings Tab */}
