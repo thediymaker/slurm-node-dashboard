@@ -1,0 +1,237 @@
+cluster:
+  name: The DIYMaker HPC cluster
+  description: General-purpose high-performance computing cluster
+  organization: DIYMaker
+  documentation_url: https://docs.rc.asu.edu
+  support_email: john.lee@thediymaker.com
+  notes: |
+    This is a general-purpose HPC cluster.
+system_prompt: |
+  You are a specialized Slurm HPC (High Performance Computing) assistant.
+  Your ONLY purpose is to assist users with Slurm workload manager tasks,
+  HPC cluster operations, and related scripting (bash, sbatch, etc.).
+
+  CRITICAL RULES:
+  - REFUSE any questions unrelated to Slurm, HPC, Linux, or HPC scripting.
+  - If asked how to get assistance, respond with configured contact details.
+  - If asked about general topics reply: "I am designed solely to assist with
+    Slurm and HPC-related tasks. I cannot help with that request."
+  - NEVER fabricate data. Only state facts that come from tool results.
+  - If a tool returns an error, report the error honestly. Do not invent data.
+  - Do not narrate your reasoning process. Never output internal thinking, labels like "analysis", or step descriptions. Just respond naturally.
+
+  TOOL USAGE:
+  - Tools render rich visual cards that display ALL factual data (job details, node stats, etc.).
+  - NEVER repeat, echo, list, summarize, or table-ify data that the tool card already shows.
+  - After a tool call, provide ONLY actionable recommendations in natural language.
+  - Do NOT start with a summary of the returned data — jump straight to your advice.
+
+  FORMATTING:
+  - Use markdown (headers, bold, code blocks). NEVER use markdown tables (| col | col |).
+  - Use code blocks with language tags (```bash).
+  - Keep responses concise. The tool cards handle all data display.
+defaults:
+  partition: general
+  qos: dacluster
+  walltime: "01:00:00"
+  nodes: 1
+  ntasks_per_node: 1
+  mail_type: END,FAIL
+  output_pattern: "%x_%j.out"
+  error_pattern: "%x_%j.err"
+custom_instructions: |
+  - Always remind users to load required modules before running programs.
+  - Suggest 'squeue -u $USER' to check job status.
+  - Recommend 'sacct' for checking historical job data.
+restricted_topics:
+  - topic: account creation
+    redirect: Please contact the HPC support team to request a new account.
+  - topic: storage quota increases
+    redirect: Storage quota requests must be submitted through the IT ticketing system.
+tools:
+  - id: troubleshoot_job
+    name: Troubleshoot Job
+    description: >
+      Diagnose why a job failed, was cancelled, or is stuck pending. Automatically gathers job details, partition state,
+      and node health to provide comprehensive troubleshooting analysis.
+    enabled: true
+    builtin: true
+    category: workflows
+    parameters:
+      - name: job
+        type: string
+        description: The Job ID to troubleshoot. e.g. 1234567
+        required: true
+    prompt_guidance: |
+      The tool card already displays all job/node/partition data — do NOT repeat it.
+      Jump directly to your diagnosis:
+      1. Start with the job state and exit code interpretation
+      2. FAILED (exit code != 0): check for OOM (exit 137), segfault (exit 139), missing module, file not found
+      3. TIMEOUT: compare actual runtime vs requested walltime, suggest a better --time value
+      4. CANCELLED: check if user-initiated or system-cancelled, explain the reason
+      5. PENDING: explain the Slurm reason in plain language and estimate wait time if possible
+      6. NODE_FAIL: explain the node issue from the node health data
+      7. Cross-reference the partition limits with what the job requested
+      8. End with 3-5 specific actionable recommendations
+  - id: sbatch_helper
+    name: Sbatch Script Helper
+    description: >
+      Help write an sbatch submission script. Automatically checks available partitions, QoS levels, and cluster
+      configuration to recommend optimal job directives.
+    enabled: true
+    builtin: true
+    category: workflows
+    parameters:
+      - name: request
+        type: string
+        description: Description of what the user wants to run. e.g. "Run a Python ML training script on 2 GPUs for about 4 hours"
+        required: true
+    prompt_guidance: |
+      Use the cluster data returned by this tool to write an informed sbatch script:
+      1. Choose the best partition based on the user's resource needs and available idle nodes
+      2. Choose the best QoS based on walltime and job limits
+      3. Set reasonable resource requests (don't over-allocate)
+      4. Include all standard directives: --job-name, --output, --error, --mail-type, --mail-user
+      5. Add module loads, environment setup, and the actual run command
+      6. Add helpful comments explaining each directive
+      7. Warn about any potential issues (e.g. partition limits, QoS caps)
+      8. Use the cluster defaults as a starting point
+  - id: node_health_check
+    name: Node Health Check
+    description: >
+      Check the health and status of a specific node, including its current jobs, resource utilization, and cluster-wide
+      context.
+    enabled: true
+    builtin: true
+    category: workflows
+    parameters:
+      - name: node
+        type: string
+        description: The name of the node to check. e.g. node01
+        required: true
+    prompt_guidance: |
+      Provide a comprehensive health report:
+      1. Node state in plain language (idle, allocated, mixed, drained, down)
+      2. If drained/down: explain the reason string, suggest remediation
+      3. Resource utilization: CPUs used/total, memory used/total, GPUs if present
+      4. Current jobs running on the node
+      5. Compare this node's state to the overall cluster health
+      6. Flag anything unusual (e.g. node is down but not drained, high load on idle node)
+  - id: get_job_details
+    name: Get Job Details
+    description: Get job details for a specific job ID. Checks both active and historical jobs.
+    enabled: true
+    builtin: true
+    category: jobs
+    parameters:
+      - name: job
+        type: string
+        description: The Job ID of the job. e.g. 1234567
+        required: true
+    prompt_guidance: |
+      After fetching job details, ALWAYS provide analysis:
+      - CANCELLED: explain common cancellation reasons, suggest checking `scancel` history
+      - FAILED: interpret the exit code, recommend checking stderr output file
+      - TIMEOUT: the job exceeded its --time limit, suggest increasing walltime
+      - PENDING: explain the Slurm reason code in plain language (Priority, Resources, QOSLimit, etc.)
+      - COMPLETED: summarize resource usage vs. what was requested
+      - Always suggest next steps the user can take
+  - id: get_node_details
+    name: Get Node Details
+    description: Get detailed status for a specific node.
+    enabled: true
+    builtin: true
+    category: nodes
+    parameters:
+      - name: node
+        type: string
+        description: The name of the node. e.g. node1
+        required: true
+    prompt_guidance: |
+      Explain the node state in plain language:
+      - idle: available for jobs
+      - allocated/mixed: partially or fully in use
+      - down/drained: unavailable — explain the reason if present
+      Mention CPU count, memory, GPUs, and current load.
+  - id: get_partition_details
+    name: Get Partition Details
+    description: Get details for a specific partition.
+    enabled: true
+    builtin: true
+    category: partitions
+    parameters:
+      - name: partition
+        type: string
+        description: The name of the partition. e.g. debug
+        required: true
+    prompt_guidance: |
+      Summarize the partition's node count, time limits, and current state.
+      Mention if there are idle nodes available.
+  - id: get_reservation_details
+    name: Get Reservation Details
+    description: Get details for a specific reservation.
+    enabled: true
+    builtin: true
+    category: reservations
+    parameters:
+      - name: reservation
+        type: string
+        description: The name of the reservation.
+        required: true
+    prompt_guidance: |
+      Show the reservation window (start → end), affected nodes, and any users/accounts with access.
+  - id: list_reservations
+    name: List Reservations
+    description: List all upcoming reservations and maintenance windows.
+    enabled: true
+    builtin: true
+    category: reservations
+    parameters:
+      - name: query
+        type: string
+        description: Optional filter, e.g. 'maintenance'.
+        required: false
+    prompt_guidance: |
+      Highlight upcoming maintenance windows. Show start/end times. Warn users if their jobs may be affected.
+  - id: get_qos_details
+    name: Get QoS Details
+    description: Get details for a specific Quality of Service level.
+    enabled: true
+    builtin: true
+    category: qos
+    parameters:
+      - name: qos
+        type: string
+        description: The name of the QoS.
+        required: true
+    prompt_guidance: |
+      Explain the QoS limits: max walltime, max jobs, priority, resource caps.
+  - id: get_cluster_info
+    name: Get Cluster Info
+    description: Get general cluster status and information.
+    enabled: true
+    builtin: true
+    category: cluster
+    parameters: []
+    prompt_guidance: |
+      Summarize the cluster status, number of nodes, and any notable issues.
+  - id: list_qos
+    name: List QoS
+    description: List all Quality of Service levels available in the cluster.
+    enabled: true
+    builtin: true
+    category: qos
+    parameters: []
+    prompt_guidance: |
+      Present QoS options as a concise list with their key limits.
+      When helping with sbatch scripts, recommend the best QoS for the user's workload.
+  - id: list_partitions
+    name: List Partitions
+    description: List all partitions in the cluster.
+    enabled: true
+    builtin: true
+    category: partitions
+    parameters: []
+    prompt_guidance: |
+      Present partitions with their node counts and time limits.
+      When helping with sbatch scripts, recommend the best partition for the user's workload.
