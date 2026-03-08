@@ -89,14 +89,20 @@ const SystemActivityBanner: React.FC<SystemActivityBannerProps> = ({
                 key={stateKey}
                 className="bg-secondary/30 rounded-md px-3 py-2 flex flex-col"
               >
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium capitalize">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: schema.progressColors[stateKey] }}
+                  />
+                  <span className="text-xs font-medium uppercase text-muted-foreground">
                     {stateKey}
-                  </div>
-                  <div className="text-lg font-semibold">{count}</div>
+                  </span>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {percentage}% of nodes
+                <div className="flex items-end justify-between mt-1">
+                  <div className="text-2xl font-bold leading-tight">{count}</div>
+                  <div className="text-xs text-muted-foreground mb-0.5">
+                    {percentage}%
+                  </div>
                 </div>
               </div>
             );
@@ -104,7 +110,7 @@ const SystemActivityBanner: React.FC<SystemActivityBannerProps> = ({
         </div>
 
         {/* Color-coded progress bar */}
-        <div className="mt-3 h-1 w-full overflow-hidden flex mb-2">
+        <div className="mt-3 h-2 w-full rounded-full overflow-hidden flex mb-2">
           {progressSections.map((section) => (
             <div
               key={section.state}
