@@ -66,11 +66,11 @@ const SkeletonJobDetails = () => (
 // Job state badge with colors
 const JobStateBadge = ({ state }: { state: string }) => {
   const stateColors: Record<string, string> = {
-    RUNNING: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    COMPLETED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
-    CANCELLED: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+    RUNNING: "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/20",
+    PENDING: "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-500/20",
+    COMPLETED: "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/20",
+    FAILED: "bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/20",
+    CANCELLED: "bg-gray-100 dark:bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-300 dark:border-gray-500/20",
   };
   const colorClass = stateColors[state] || "bg-muted text-muted-foreground";
   return (

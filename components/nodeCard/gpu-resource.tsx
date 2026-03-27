@@ -133,10 +133,10 @@ const GPUResourcesDisplay: React.FC<GPUResourcesDisplayProps> = ({
                 >
                   <div className="flex items-baseline gap-1">
                     <div className="">
-                      <span className="text-xs font-medium text-gray-400">
+                      <span className="text-xs font-medium text-muted-foreground">
                         GPU
                       </span>
-                      <span className="text-xs font-medium text-gray-400">
+                      <span className="text-xs font-medium text-muted-foreground">
                         {index}
                       </span>
                     </div>
