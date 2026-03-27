@@ -254,7 +254,7 @@ export const NodeCard = memo(({
     return (
       <div
         ref={ref}
-        className={`m-0.5 rounded-lg ${bgColor} ${sizeClasses} border border-white/10`}
+        className={`m-0.5 rounded-lg ${bgColor} ${sizeClasses} border border-black/15 dark:border-white/10`}
       />
     );
   }
@@ -271,7 +271,7 @@ export const NodeCard = memo(({
             relative overflow-hidden cursor-pointer m-0.5 rounded-lg
             ${bgColor} ${textColor} ${sizeClasses}
             shadow-md hover:shadow-lg
-            border border-white/10
+            border border-black/15 dark:border-white/10
             transition-all duration-200 ease-out
             hover:scale-[1.02] hover:brightness-110
           `}

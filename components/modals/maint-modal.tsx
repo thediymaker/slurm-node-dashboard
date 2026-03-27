@@ -276,10 +276,10 @@ const MaintModal: React.FC<MaintModalProps> = ({ open, setOpen, maintenanceData 
                           ? "Upcoming"
                           : "Completed";
                       const statusClass = isActive
-                        ? "bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-400/30"
+                        ? "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-400/30"
                         : isUpcoming
-                          ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-inset ring-emerald-600/30"
-                          : "bg-zinc-600/10 text-zinc-400 ring-1 ring-inset ring-zinc-500/30";
+                          ? "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-600/30"
+                          : "bg-zinc-100 dark:bg-zinc-600/10 text-zinc-600 dark:text-zinc-400 ring-1 ring-inset ring-zinc-500/30";
                       const duration = formatDuration(endMs - startMs);
                       return (
                         <div

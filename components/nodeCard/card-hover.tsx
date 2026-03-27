@@ -88,15 +88,15 @@ const CardHover = memo(({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
       {/* Resource Stats - Inline */}
       <div className="flex gap-3 text-xs">
         <div>
-          <span className="text-white/50">CPU </span>
+          <span className="text-muted-foreground">CPU </span>
           <span className="font-medium">{nodeData.alloc_cpus}/{nodeData.cpus}</span>
         </div>
         <div>
-          <span className="text-white/50">Mem </span>
+          <span className="text-muted-foreground">Mem </span>
           <span className="font-medium">{memUsedGB}/{memTotalGB}G</span>
         </div>
         <div>
-          <span className="text-white/50">Load </span>
+          <span className="text-muted-foreground">Load </span>
           <span className="font-medium">{Math.round(cpuLoad * 100)}%</span>
         </div>
       </div>
@@ -105,12 +105,12 @@ const CardHover = memo(({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
       {nodeData.energy && nodeData.energy.current_watts.number > 0 && (
         <div className="text-xs flex gap-3">
           <div>
-            <span className="text-white/50">Power </span>
+            <span className="text-muted-foreground">Power </span>
             <span className="font-medium">{nodeData.energy.current_watts.number}W</span>
           </div>
           {nodeData.energy.average_watts > 0 && (
             <div>
-              <span className="text-white/50">Avg </span>
+              <span className="text-muted-foreground">Avg </span>
               <span className="font-medium">{nodeData.energy.average_watts}W</span>
             </div>
           )}
@@ -120,12 +120,12 @@ const CardHover = memo(({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
       {/* Features & Partitions - Combined row */}
       <div className="flex flex-wrap gap-1">
         {nodeData.features?.map((feature, index) => (
-          <span key={`f-${index}`} className="px-1.5 py-0.5 bg-zinc-800 rounded text-[10px]">
+          <span key={`f-${index}`} className="px-1.5 py-0.5 bg-muted dark:bg-zinc-800 text-muted-foreground dark:text-zinc-200 rounded text-[10px]">
             {feature}
           </span>
         ))}
         {nodeData.partitions?.map((partition, index) => (
-          <span key={`p-${index}`} className="px-1.5 py-0.5 bg-blue-900/50 rounded text-[10px]">
+          <span key={`p-${index}`} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded text-[10px]">
             {partition}
           </span>
         ))}
@@ -133,8 +133,8 @@ const CardHover = memo(({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
 
       {/* GPU Resources */}
       {nodeData.gres && (
-        <div className="border-t border-white/10 pt-2">
-          <div className="text-[10px] text-white/50 font-mono mb-1">
+        <div className="border-t border-border pt-2">
+          <div className="text-[10px] text-muted-foreground font-mono mb-1">
             <div>GRES: {nodeData.gres}</div>
             <div>GRES Used: {nodeData.gres_used}</div>
           </div>
@@ -147,12 +147,12 @@ const CardHover = memo(({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
       )}
 
       {/* Status */}
-      <div className="border-t border-white/10 pt-2">
-        <div className="px-2 py-1.5 bg-zinc-800 rounded text-xs">
+      <div className="border-t border-border pt-2">
+        <div className="px-2 py-1.5 bg-muted dark:bg-zinc-800 text-foreground rounded text-xs">
           {statusDef}
         </div>
         {nodeData.reason && (
-          <div className="mt-1 px-2 py-1 bg-yellow-900/50 rounded text-[10px] text-yellow-200">
+          <div className="mt-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/50 rounded text-[10px] text-yellow-800 dark:text-yellow-200">
             {nodeData.reason}
           </div>
         )}

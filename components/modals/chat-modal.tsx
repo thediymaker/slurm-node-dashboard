@@ -93,7 +93,7 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
 
   return (
     <Dialog open={showChat} onOpenChange={setShowChat}>
-      <DialogContent className="sm:max-w-[1200px] w-[90vw] p-0 gap-0 overflow-hidden border shadow-xl h-[80vh] flex flex-col bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 [&>button]:hidden">
+      <DialogContent className="sm:max-w-[1200px] w-[90vw] p-0 gap-0 overflow-hidden border shadow-xl h-[80vh] flex flex-col bg-background dark:bg-background/95 dark:backdrop-blur dark:supports-[backdrop-filter]:bg-background/60 [&>button]:hidden">
         <DialogHeader className="px-4 py-3 border-b flex flex-row items-center justify-between space-y-0 bg-background/50 backdrop-blur-sm">
           <DialogTitle className="text-sm font-medium flex items-center gap-3">
             <div className="flex items-center justify-center p-2 rounded-md bg-primary/10 border border-primary/20 shadow-sm">

@@ -13,13 +13,15 @@ const config = {
   safelist: [
     {
       pattern: /^bg-/,
-      variants: ["hover"],
+      variants: ["hover", "dark"],
     },
     {
       pattern: /^text-/,
+      variants: ["dark"],
     },
     {
       pattern: /^border-/,
+      variants: ["dark"],
     },
   ],
   theme: {
