@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -38,9 +38,13 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
     setIsLoading(true);
     setError(null);
     try {
-      await signOut({ redirect: false });
+      const { error } = await authClient.signOut();
+      if (error) {
+        throw error;
+      }
       router.push("/login");
-    } catch (err) {
+      router.refresh();
+    } catch {
       setError("Failed to sign out. Please try again.");
       setIsLoading(false);
     }

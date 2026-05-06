@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -45,17 +44,26 @@ export default function LoginPage() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const result = await signIn("credentials", {
-        username: values.username,
-        password: values.password,
-        redirect: false,
+      const response = await fetch("/api/auth/admin/sign-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: values.username,
+          password: values.password,
+          rememberMe: true,
+        }),
       });
+      const result = await response.json().catch(() => null);
 
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        router.push("/admin");
+      if (!response.ok) {
+        setError(result?.message || "Invalid credentials.");
+        return;
       }
+
+      router.push("/admin");
+      router.refresh();
     } catch (error) {
       console.error("An error occurred during sign in:", error);
       setError("An unexpected error occurred");

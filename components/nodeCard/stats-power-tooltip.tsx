@@ -28,13 +28,10 @@ const DataRow: React.FC<DataRowProps> = ({ label, value }) => (
   </div>
 );
 
-export const CustomTooltip: React.FC<TooltipProps<ValueType, NameType>> = ({
+export function CustomTooltip({
   active,
   payload,
-  label,
-  coordinate,
-  viewBox,
-}) => {
+}: TooltipProps<ValueType, NameType>): React.ReactNode {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -105,4 +102,4 @@ export const CustomTooltip: React.FC<TooltipProps<ValueType, NameType>> = ({
     </div>,
     document.body
   );
-};
+}

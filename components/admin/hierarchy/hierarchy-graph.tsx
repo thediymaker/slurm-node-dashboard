@@ -17,7 +17,6 @@ interface HierarchyGraphProps {
 
 export function HierarchyGraph({ data, onNodeClick }: HierarchyGraphProps) {
   const { theme } = useTheme();
-  const graphRef = useRef<any>();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const containerRef = useRef<HTMLDivElement>(null);

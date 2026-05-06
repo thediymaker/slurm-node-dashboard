@@ -15,9 +15,7 @@ export interface DashboardConfig {
 let configCache: { data: DashboardConfig; timestamp: number } | null = null;
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 
-// Allow the node configuration path to be overridden via environment variable.
-// Defaults to "infra/node.cfg" relative to the app root.
-const NODEVIEW_CONFIG_PATH = process.env.NODEVIEW_CONFIG_PATH || "infra/node.cfg";
+const NODEVIEW_CONFIG_PATH = path.join(process.cwd(), "infra", "node.cfg");
 
 /**
  * Expands a node range pattern like "sc001..056" into individual node names.
@@ -79,11 +77,7 @@ export async function loadDashboardConfig(): Promise<DashboardConfig> {
     };
 
     try {
-        const configPath = path.isAbsolute(NODEVIEW_CONFIG_PATH)
-            ? NODEVIEW_CONFIG_PATH
-            : path.join(process.cwd(), NODEVIEW_CONFIG_PATH);
-
-        const rawContent = await fs.readFile(configPath, "utf-8");
+        const rawContent = await fs.readFile(NODEVIEW_CONFIG_PATH, "utf-8");
 
         // Strip // comments before parsing
         const configContent = rawContent
@@ -114,7 +108,7 @@ export async function loadDashboardConfig(): Promise<DashboardConfig> {
         configCache = { data: config, timestamp: now };
 
         return config;
-    } catch (error) {
+    } catch {
         // Return default config on any error (missing file, parse error, etc.)
         return defaultConfig;
     }
