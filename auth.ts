@@ -6,7 +6,21 @@ import { APIError, createAuthEndpoint, formCsrfMiddleware } from "better-auth/ap
 import { setSessionCookie } from "better-auth/cookies";
 import { nextCookies } from "better-auth/next-js";
 
-const AUTH_URL = process.env.BETTER_AUTH_URL || "http://localhost:3020";
+const AUTH_URL =
+  process.env.BETTER_AUTH_URL ||
+  process.env.NEXTAUTH_URL ||
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  "http://localhost:3020";
+const TRUSTED_ORIGINS = Array.from(
+  new Set(
+    [
+      process.env.BETTER_AUTH_URL,
+      process.env.NEXTAUTH_URL,
+      process.env.NEXT_PUBLIC_BASE_URL,
+      AUTH_URL,
+    ].filter((origin): origin is string => Boolean(origin))
+  )
+);
 const AUTH_SECRET = process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "";
 const ADMIN_USER_ID = "admin";
 
@@ -120,7 +134,7 @@ export const auth = betterAuth({
   appName: "Slurm Node Dashboard",
   baseURL: AUTH_URL,
   secret: AUTH_SECRET,
-  trustedOrigins: [AUTH_URL],
+  trustedOrigins: TRUSTED_ORIGINS,
   session: {
     expiresIn: 60 * 60 * 8,
     updateAge: 60 * 30,
