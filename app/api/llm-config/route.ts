@@ -1,15 +1,16 @@
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import yaml from "js-yaml";
-import { loadLLMConfig, invalidateCache } from "@/lib/llm-config";
-
-const LLM_CONFIG_PATH =
-  process.env.LLM_CONFIG_PATH || "infra/llm-assistant.yaml";
+import {
+  LLM_CONFIG_PATH,
+  loadLLMConfig,
+  invalidateCache,
+} from "@/lib/llm-config";
 
 // GET — return the current config as JSON + raw YAML
 export async function GET() {
-  const session = await auth();
+  const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -26,7 +27,7 @@ export async function GET() {
 
 // PUT — save updated config (accepts raw YAML or structured config JSON)
 export async function PUT(req: Request) {
-  const session = await auth();
+  const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

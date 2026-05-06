@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import path from "path";
 import yaml from "js-yaml";
 import { z } from "zod";
 import { tool } from "ai";
@@ -76,8 +77,11 @@ export interface LLMAssistantConfig {
 let configCache: { data: LLMAssistantConfig; timestamp: number } | null = null;
 const CACHE_TTL = 60 * 1000;
 
-const LLM_CONFIG_PATH =
-  process.env.LLM_CONFIG_PATH || "infra/llm-assistant.yaml";
+export const LLM_CONFIG_PATH = path.join(
+  process.cwd(),
+  "infra",
+  "llm-assistant.yaml"
+);
 
 // =============================================================================
 // Defaults

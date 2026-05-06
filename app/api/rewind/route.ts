@@ -5,9 +5,13 @@ import fs from "fs/promises";
 import path from "path";
 import zlib from "zlib";
 import { promisify } from "util";
-import { env } from "process";
 
 const gunzip = promisify(zlib.gunzip);
+const HISTORICAL_DATA_DIR = path.join(process.cwd(), "data");
+
+function errorToString(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function parseFilename(filename: string): Date | null {
   try {
@@ -29,7 +33,7 @@ function parseFilename(filename: string): Date | null {
     );
 
     return isNaN(date.getTime()) ? null : date;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -47,8 +51,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const dataDir =
-      env.HISTORICAL_DATA_DIR || path.join(process.cwd(), "data");
+    const dataDir = HISTORICAL_DATA_DIR;
     const files = await fs.readdir(dataDir);
     const [hour] = time.split(":");
     const targetStartTime = new Date(`${date}T${hour}:00:00.000Z`);
@@ -100,11 +103,11 @@ export async function GET(request: Request) {
       try {
         const jsonContent = JSON.parse(fileContent);
         return NextResponse.json(jsonContent, { status: 200 });
-      } catch (jsonError: any) {
+      } catch (jsonError: unknown) {
         return NextResponse.json(
           {
             message: "Error parsing JSON content",
-            error: jsonError.toString(),
+            error: errorToString(jsonError),
           },
           { status: 500 }
         );
@@ -115,9 +118,9 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { message: "Internal Server Error", error: error.toString() },
+      { message: "Internal Server Error", error: errorToString(error) },
       { status: 500 }
     );
   }
