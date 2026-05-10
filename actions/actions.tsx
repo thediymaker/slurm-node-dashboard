@@ -3,7 +3,8 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createOpenAI } from "@ai-sdk/openai";
-import { env } from "process";
+
+const env = process.env;
 
 const openai = createOpenAI({
   baseURL: env.OPENAI_API_URL,

@@ -83,7 +83,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
   if (jobError) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent aria-describedby={undefined} className="border shadow-xl max-w-[600px]">
+        <DialogContent aria-describedby={undefined} className="border shadow-xl max-w-[1200px]">
           <div className="flex items-center gap-3 p-4">
             <div className="p-2 rounded-lg bg-red-500/10">
               <AlertCircle className="w-5 h-5 text-red-400" />
@@ -101,7 +101,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
   if (!jobData && !jobIsLoading) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent aria-describedby={undefined} className="border shadow-xl max-w-[600px]">
+        <DialogContent aria-describedby={undefined} className="border shadow-xl max-w-[1200px]">
           <div className="text-center p-6">
             <div className="p-3 rounded-full bg-muted/50 w-fit mx-auto mb-4">
               <AlertCircle className="w-8 h-8 text-muted-foreground" />
@@ -281,7 +281,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         aria-describedby={undefined}
-        className="border shadow-xl w-[800px] max-w-[95vw] max-h-[90vh] overflow-y-auto"
+        className="border shadow-xl w-[1200px] max-w-[95vw] max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center gap-3">

@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
-import { env } from "process";
+
+const env = process.env;
 
 interface JWTPayload {
   exp?: number;

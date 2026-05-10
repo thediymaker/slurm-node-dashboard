@@ -1,7 +1,8 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { loadLLMConfig, buildToolsAndPrompt } from "@/lib/llm-config";
-import { env } from "process";
+
+const env = process.env;
 
 export const maxDuration = 30;
 

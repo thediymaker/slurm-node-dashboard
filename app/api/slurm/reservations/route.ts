@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic';
-import { env } from "process";
 
 import { NextResponse } from "next/server";
 import { fetchSlurmData } from "@/lib/slurm-api";
+
+const env = process.env;
 
 export async function GET() {
   const isEnabled =
