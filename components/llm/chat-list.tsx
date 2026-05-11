@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useRef } from "react";
-import { UIMessage as Message, UIToolInvocation } from "ai";
+import { type ComponentPropsWithoutRef, useEffect, useRef } from "react";
+import { UIMessage as Message } from "ai";
 import { UserMessage, BotMessage } from "@/components/llm/message";
 import ReactMarkdown from "react-markdown";
 import { FollowUpGenerator } from "@/components/llm/follow-up-generator";
@@ -8,8 +8,6 @@ import { FollowUpLoading } from "@/components/llm/follow-up-loading";
 import { ToolInvocationRenderer } from "@/components/llm/tool-invocation";
 import { CodeBlock } from "@/components/llm/code-block";
 import { Thinking } from "@/components/llm/thinking";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
 import { MessageActions } from "@/components/llm/message-actions";
 
 interface MessagesProps {
@@ -18,6 +16,11 @@ interface MessagesProps {
   onSelectFollowUp?: (question: string) => void;
   reload?: () => void;
 }
+
+const RESERVATION_TOOL_NAMES = new Set([
+  "get_reservation_details",
+  "list_reservations",
+]);
 
 function getTextFromParts(parts: Message["parts"]) {
   return parts.reduce((text, part) => {
@@ -40,6 +43,10 @@ function stripMarkdownTables(text: string): string {
 }
 
 function getContextFromMessage(message: Message): string {
+  if (hasReservationToolInvocation(message)) {
+    return "Reservation details were shown in a tool card. Generate follow-up questions about affected nodes, maintenance impact, time windows, flags, verifying whether jobs are affected, and rescheduling. Do not suggest submitting jobs to the reservation or using --reservation for a maintenance window unless specifically asked about it.";
+  }
+
   const textContent = getTextFromParts(message.parts);
   
   // If there's text content, use it
@@ -48,16 +55,37 @@ function getContextFromMessage(message: Message): string {
   }
   
   // Otherwise, try to summarize tool calls for context
-  const toolParts = message.parts.filter(
-    (part) => part.type.startsWith("tool-") && 'toolName' in part
-  );
-  
-  if (toolParts.length > 0) {
-    const toolNames = toolParts.map((part: any) => part.toolName).join(", ");
+  const toolNames = message.parts.reduce<string[]>((names, part) => {
+    if (
+      part.type.startsWith("tool-") &&
+      "toolName" in part &&
+      typeof part.toolName === "string" &&
+      part.toolName.length > 0
+    ) {
+      names.push(part.toolName);
+    }
+
+    return names;
+  }, []);
+
+  if (toolNames.length > 0) {
     return `Used tools: ${toolNames}`;
   }
   
   return "";
+}
+
+function hasReservationToolInvocation(message: Message) {
+  return message.parts.some(
+    (part) =>
+      part.type.startsWith("tool-") &&
+      "toolName" in part &&
+      RESERVATION_TOOL_NAMES.has(part.toolName || "")
+  );
+}
+
+function hasToolInvocation(message: Message) {
+  return message.parts.some((part) => part.type.startsWith("tool-"));
 }
 
 export function ChatList({
@@ -90,6 +118,16 @@ export function ChatList({
         // Composite key prevents React duplicate-key errors when useChat
         // temporarily produces two messages with the same id mid-stream.
         const key = `${message.id}-${index}`;
+        const suppressTextForReservationTools = hasReservationToolInvocation(message);
+        const suppressReservationFollowUpText =
+          message.role === "assistant" &&
+          !hasToolInvocation(message) &&
+          previousMessage?.role === "assistant" &&
+          hasReservationToolInvocation(previousMessage);
+
+        if (suppressReservationFollowUpText) {
+          return null;
+        }
         
         // Find the last user message for follow-up context
         const lastUserMessage = [...messages].slice(0, index + 1).reverse().find(m => m.role === "user");
@@ -104,6 +142,7 @@ export function ChatList({
           <div key={key} className="pb-4">
             {message.parts.map((part, partIndex) => {
               if (part.type === "text") {
+                if (suppressTextForReservationTools) return null;
                 // Only render if there is actual text content
                 if (!part.text || part.text.trim() === "") return null;
                 return (
@@ -111,7 +150,7 @@ export function ChatList({
                     <ReactMarkdown
                       components={{
                         pre: ({ children }) => <>{children}</>,
-                        code: ({ node, inline, className, children, ...props }: any) => {
+                        code: ({ className, children, ...props }: ComponentPropsWithoutRef<"code"> & { inline?: boolean; node?: unknown }) => {
                           const match = /language-(\w+)/.exec(className || "");
                           if (match) {
                             return (

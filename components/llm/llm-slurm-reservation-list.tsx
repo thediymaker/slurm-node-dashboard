@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Server, CalendarClock, Users } from "lucide-react";
 import { motion } from "framer-motion";
-import { EmptyState, formatDuration } from "./llm-shared-utils";
+import { CopyButton, EmptyState, formatDuration } from "./llm-shared-utils";
 import {
   ReservationRecord,
   formatReservationRelativeTime,
@@ -59,7 +59,7 @@ function SlurmReservationListComponent({ reservations }: SlurmReservationListPro
         {sortedReservations.map((res, index) => {
           const durationMinutes = res.durationSeconds > 0 ? res.durationSeconds / 60 : 0;
           const accessLabel = res.users || res.accounts || "All";
-          const nodeLabel = res.nodeList || (res.nodeCount > 0 ? `${res.nodeCount} nodes` : "N/A");
+          const nodeLabel = res.nodeCount > 0 ? `${res.nodeCount} nodes` : "N/A";
           
           return (
             <motion.div
@@ -102,7 +102,7 @@ function SlurmReservationListComponent({ reservations }: SlurmReservationListPro
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Server className="w-3 h-3 shrink-0" />
-                      <span className="truncate font-mono text-xs">
+                      <span className="font-mono text-xs">
                         {nodeLabel}
                       </span>
                     </div>
@@ -122,6 +122,17 @@ function SlurmReservationListComponent({ reservations }: SlurmReservationListPro
                       </div>
                     )}
                   </div>
+                  {res.nodeList && (
+                    <div className="py-2 px-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center justify-between mb-1 gap-2">
+                        <span className="text-xs text-muted-foreground">Nodes</span>
+                        <CopyButton text={res.nodeList} />
+                      </div>
+                      <code className="text-xs font-mono text-muted-foreground break-all whitespace-pre-wrap block">
+                        {res.nodeList}
+                      </code>
+                    </div>
+                  )}
                   {res.partition && (
                     <div className="pt-1">
                       <Badge variant="outline" className="text-xs">

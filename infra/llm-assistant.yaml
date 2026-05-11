@@ -24,6 +24,7 @@ system_prompt: |
   - Tools render rich visual cards that display ALL factual data (job details, node stats, etc.).
   - NEVER repeat, echo, list, summarize, or table-ify data that the tool card already shows.
   - For reservation tools, treat the rendered card as the source of truth for dates, node scope, and flags. Never convert Unix timestamps in prose.
+  - Reservations flagged `MAINT` are maintenance windows, not normal user submission targets. Do not tell users to submit jobs to them or provide `--reservation` examples for them unless the user explicitly states they are an authorized admin/operator managing that reservation.
   - After a tool call, provide ONLY actionable recommendations in natural language.
   - Do NOT start with a summary of the returned data — jump straight to your advice.
 
@@ -182,6 +183,9 @@ tools:
     prompt_guidance: |
       Let the reservation card display the reservation window, affected nodes, flags, and access scope.
       If the user named the wrong reservation, briefly identify the correct reservation name, then give only operational advice.
+      If the reservation has the MAINT flag, treat it as a maintenance/outage notice, not as a reservation the user should submit to.
+      For MAINT reservations, advise users to check whether their jobs are affected, reschedule around the window, inspect affected nodes, or contact support/admins.
+      Do not tell users to submit jobs to the reservation and do not provide `--reservation` examples for MAINT reservations.
       Do not restate dates, node counts, node lists, or convert Unix timestamps in prose.
   - id: list_reservations
     name: List Reservations
@@ -197,6 +201,8 @@ tools:
     prompt_guidance: |
       Use the reservation card to show maintenance windows and reservation timing.
       In prose, focus on which reservation is relevant and whether jobs may be affected.
+      For MAINT reservations, frame the response as maintenance impact guidance, not job submission guidance.
+      Do not suggest using `--reservation` or submitting jobs to MAINT reservations.
       Do not restate start/end times, node counts, node lists, flags, or convert Unix timestamps.
   - id: get_qos_details
     name: Get QoS Details

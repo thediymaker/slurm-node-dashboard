@@ -143,8 +143,8 @@ function SlurmReservationDetailsComponent({ reservation }: SlurmReservationDetai
               <span className="text-xs text-muted-foreground">Nodes</span>
               <CopyButton text={nodeList} />
             </div>
-            <code className="text-xs font-mono text-muted-foreground break-all block">
-              {nodeList.length > 100 ? `${nodeList.slice(0, 100)}...` : nodeList}
+            <code className="text-xs font-mono text-muted-foreground break-all whitespace-pre-wrap block">
+              {nodeList}
             </code>
           </div>
         )}
