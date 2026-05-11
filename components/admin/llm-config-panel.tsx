@@ -134,6 +134,8 @@ const EMPTY_CUSTOM_TOOL: ToolConfig = {
   execution: { type: "slurm", endpoint: "", method: "GET" },
 };
 
+const LOCAL_OVERRIDE_TEMPLATE = `# Local overrides for infra/llm-assistant.yaml\n# Only include settings that should differ on this machine.\n`;
+
 // ═══════════════════════════════════════════════════════════════════════
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════
@@ -141,6 +143,8 @@ const EMPTY_CUSTOM_TOOL: ToolConfig = {
 export function LLMConfigPanel() {
   const [config, setConfig] = useState<LLMConfig | null>(null);
   const [raw, setRaw] = useState("");
+  const [baseConfigPath, setBaseConfigPath] = useState("infra/llm-assistant.yaml");
+  const [localConfigPath, setLocalConfigPath] = useState("infra/llm-assistant.local.yaml");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,7 +171,11 @@ export function LLMConfigPanel() {
       if (!res.ok) throw new Error("Failed to load configuration");
       const data = await res.json();
       setConfig(data.config || null);
-      setRaw(data.raw || "");
+      setRaw(data.localRaw || LOCAL_OVERRIDE_TEMPLATE);
+      setBaseConfigPath(data.baseConfigPath || "infra/llm-assistant.yaml");
+      setLocalConfigPath(
+        data.localConfigPath || "infra/llm-assistant.local.yaml"
+      );
       setDirty(false);
     } catch (err) {
       setError((err as Error).message);
@@ -196,8 +204,9 @@ export function LLMConfigPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
       setConfig(data.config);
+      setRaw(data.localRaw || LOCAL_OVERRIDE_TEMPLATE);
       setDirty(false);
-      setSuccess("Configuration saved successfully.");
+      setSuccess(data.message || "Local overrides saved successfully.");
       setTimeout(() => setSuccess(null), 4000);
     } catch (err) {
       setError((err as Error).message);
@@ -298,7 +307,7 @@ export function LLMConfigPanel() {
         <div>
           <h2 className="text-xl font-semibold tracking-tight">LLM Configuration</h2>
           <p className="text-sm text-muted-foreground">
-            Manage tools, prompts, and cluster context.
+            Manage tools, prompts, and cluster context. Changes save to {localConfigPath} so {baseConfigPath} can keep tracking Git updates.
           </p>
         </div>
         <div className="flex items-center gap-2">

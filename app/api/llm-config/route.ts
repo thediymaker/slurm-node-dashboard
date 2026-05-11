@@ -4,9 +4,30 @@ import fs from "fs/promises";
 import yaml from "js-yaml";
 import {
   LLM_CONFIG_PATH,
+  LLM_LOCAL_CONFIG_PATH,
+  buildLLMConfig,
+  buildLLMConfigOverride,
+  loadBaseLLMConfig,
   loadLLMConfig,
+  loadLLMConfigSources,
   invalidateCache,
 } from "@/lib/llm-config";
+
+const BASE_CONFIG_DISPLAY_PATH = "infra/llm-assistant.yaml";
+const LOCAL_CONFIG_DISPLAY_PATH = "infra/llm-assistant.local.yaml";
+
+function buildConfigResponse(config: Awaited<ReturnType<typeof loadLLMConfig>>, raw: string, baseRaw: string) {
+  return {
+    config,
+    raw,
+    localRaw: raw,
+    baseRaw,
+    baseConfigPath: BASE_CONFIG_DISPLAY_PATH,
+    localConfigPath: LOCAL_CONFIG_DISPLAY_PATH,
+    saveTarget: "local-overrides",
+    hasLocalOverride: raw.trim().length > 0,
+  };
+}
 
 // GET — return the current config as JSON + raw YAML
 export async function GET() {
@@ -16,16 +37,16 @@ export async function GET() {
   }
 
   try {
-    const raw = await fs.readFile(LLM_CONFIG_PATH, "utf-8");
+    const { base, local } = await loadLLMConfigSources();
     const config = await loadLLMConfig();
-    return NextResponse.json({ config, raw });
+    return NextResponse.json(buildConfigResponse(config, local.raw, base.raw));
   } catch {
     const config = await loadLLMConfig();
-    return NextResponse.json({ config, raw: "" });
+    return NextResponse.json(buildConfigResponse(config, "", ""));
   }
 }
 
-// PUT — save updated config (accepts raw YAML or structured config JSON)
+// PUT — save updated config to the ignored local override file.
 export async function PUT(req: Request) {
   const session = await getSession();
   if (!session) {
@@ -35,19 +56,24 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
 
-    let yamlContent: string;
+    const { base, local } = await loadLLMConfigSources();
+    let yamlContent = "";
 
     if (typeof body.raw === "string") {
-      // Direct YAML editing mode
       yamlContent = body.raw;
     } else if (body.config) {
-      // Structured config mode — convert to YAML
-      yamlContent = yaml.dump(body.config, {
-        lineWidth: 120,
-        noRefs: true,
-        quotingType: '"',
-        forceQuotes: false,
-      });
+      const baseConfig = buildLLMConfig(base.parsed);
+      const nextConfig = buildLLMConfig(body.config);
+      const overrideConfig = buildLLMConfigOverride(baseConfig, nextConfig);
+
+      if (Object.keys(overrideConfig).length > 0) {
+        yamlContent = yaml.dump(overrideConfig, {
+          lineWidth: 120,
+          noRefs: true,
+          quotingType: '"',
+          forceQuotes: false,
+        });
+      }
     } else {
       return NextResponse.json(
         { error: "Request must include 'raw' (YAML string) or 'config' (object)" },
@@ -55,23 +81,33 @@ export async function PUT(req: Request) {
       );
     }
 
-    // Validate YAML before saving
-    try {
-      yaml.load(yamlContent);
-    } catch (yamlErr) {
-      return NextResponse.json(
-        { error: `Invalid YAML: ${(yamlErr as Error).message}` },
-        { status: 400 }
-      );
+    if (yamlContent.trim()) {
+      try {
+        yaml.load(yamlContent);
+      } catch (yamlErr) {
+        return NextResponse.json(
+          { error: `Invalid YAML: ${(yamlErr as Error).message}` },
+          { status: 400 }
+        );
+      }
     }
 
-    await fs.writeFile(LLM_CONFIG_PATH, yamlContent, "utf-8");
+    if (yamlContent.trim()) {
+      await fs.writeFile(LLM_LOCAL_CONFIG_PATH, yamlContent, "utf-8");
+    } else if (local.exists) {
+      await fs.rm(LLM_LOCAL_CONFIG_PATH, { force: true });
+    }
 
-    // Bust the in-memory cache so next request picks up changes immediately
     invalidateCache();
 
     const config = await loadLLMConfig();
-    return NextResponse.json({ success: true, config });
+    const nextLocalRaw = yamlContent.trim() ? yamlContent : "";
+
+    return NextResponse.json({
+      success: true,
+      message: "Local overrides saved successfully.",
+      ...buildConfigResponse(config, nextLocalRaw, base.raw),
+    });
   } catch (err) {
     return NextResponse.json(
       { error: `Failed to save config: ${(err as Error).message}` },

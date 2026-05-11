@@ -36,6 +36,10 @@ export interface ToolConfig {
   execution?: ToolExecution;
 }
 
+export interface ToolConfigInput extends Omit<Partial<ToolConfig>, "execution"> {
+  execution?: Partial<ToolExecution>;
+}
+
 export interface ClusterInfo {
   name: string;
   description: string;
@@ -70,6 +74,13 @@ export interface LLMAssistantConfig {
   tools: ToolConfig[];
 }
 
+export interface LLMAssistantConfigInput
+  extends Omit<Partial<LLMAssistantConfig>, "cluster" | "defaults" | "tools"> {
+  cluster?: Partial<ClusterInfo>;
+  defaults?: Partial<Defaults>;
+  tools?: ToolConfigInput[];
+}
+
 // =============================================================================
 // Cache
 // =============================================================================
@@ -81,6 +92,12 @@ export const LLM_CONFIG_PATH = path.join(
   process.cwd(),
   "infra",
   "llm-assistant.yaml"
+);
+
+export const LLM_LOCAL_CONFIG_PATH = path.join(
+  process.cwd(),
+  "infra",
+  "llm-assistant.local.yaml"
 );
 
 // =============================================================================
@@ -120,6 +137,294 @@ export function invalidateCache() {
   configCache = null;
 }
 
+interface LLMConfigSource {
+  exists: boolean;
+  raw: string;
+  parsed: LLMAssistantConfigInput;
+}
+
+const EMPTY_CONFIG_SOURCE: LLMConfigSource = {
+  exists: false,
+  raw: "",
+  parsed: {},
+};
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeToolConfig(tool: ToolConfigInput): ToolConfig {
+  const execution: ToolExecution | undefined =
+    tool.execution?.type && tool.execution.endpoint
+      ? {
+          type: tool.execution.type,
+          endpoint: tool.execution.endpoint,
+          method: tool.execution.method,
+          headers: tool.execution.headers,
+          error_message: tool.execution.error_message,
+        }
+      : undefined;
+
+  return {
+    id: tool.id || "",
+    name: tool.name || "",
+    description: tool.description || "",
+    enabled: tool.enabled !== false,
+    builtin: tool.builtin !== false,
+    category: tool.category || "custom",
+    parameters: tool.parameters || [],
+    prompt_guidance: tool.prompt_guidance,
+    execution,
+  };
+}
+
+function mergeToolConfigs(
+  baseTools: ToolConfigInput[] = [],
+  overrideTools: ToolConfigInput[] = []
+): ToolConfig[] {
+  const mergedTools = new Map<string, ToolConfig>();
+
+  for (const tool of baseTools) {
+    const normalizedTool = normalizeToolConfig(tool);
+    mergedTools.set(normalizedTool.id, normalizedTool);
+  }
+
+  for (const tool of overrideTools) {
+    const existingTool = tool.id ? mergedTools.get(tool.id) : undefined;
+    const mergedTool = normalizeToolConfig({
+      ...existingTool,
+      ...tool,
+      parameters: tool.parameters ?? existingTool?.parameters ?? [],
+      execution:
+        isPlainObject(existingTool?.execution) || isPlainObject(tool.execution)
+          ? {
+              ...(existingTool?.execution || {}),
+              ...(tool.execution || {}),
+            }
+          : existingTool?.execution ?? tool.execution,
+    });
+
+    mergedTools.set(mergedTool.id, mergedTool);
+  }
+
+  return Array.from(mergedTools.values());
+}
+
+export function mergeLLMConfigPartials(
+  baseConfig: LLMAssistantConfigInput,
+  overrideConfig: LLMAssistantConfigInput
+): LLMAssistantConfigInput {
+  return {
+    ...baseConfig,
+    ...overrideConfig,
+    cluster: {
+      ...(baseConfig.cluster || {}),
+      ...(overrideConfig.cluster || {}),
+    },
+    defaults: {
+      ...(baseConfig.defaults || {}),
+      ...(overrideConfig.defaults || {}),
+    },
+    restricted_topics:
+      overrideConfig.restricted_topics ?? baseConfig.restricted_topics,
+    tools: overrideConfig.tools
+      ? mergeToolConfigs(baseConfig.tools || [], overrideConfig.tools)
+      : mergeToolConfigs(baseConfig.tools || []),
+  };
+}
+
+export function buildLLMConfig(
+  parsed: LLMAssistantConfigInput
+): LLMAssistantConfig {
+  const cluster: ClusterInfo = {
+    ...DEFAULT_CONFIG.cluster,
+    ...(parsed.cluster || {}),
+  };
+  const defaults: Defaults = {
+    ...DEFAULT_CONFIG.defaults,
+    ...(parsed.defaults || {}),
+  };
+
+  return {
+    ...DEFAULT_CONFIG,
+    ...parsed,
+    cluster,
+    defaults,
+    tools: mergeToolConfigs(parsed.tools || []),
+    restricted_topics: parsed.restricted_topics || [],
+    system_prompt: parsed.system_prompt || DEFAULT_CONFIG.system_prompt,
+    custom_instructions: parsed.custom_instructions || "",
+  };
+}
+
+function isEqualValue(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return (
+      left.length === right.length &&
+      left.every((item, index) => isEqualValue(item, right[index]))
+    );
+  }
+
+  if (isPlainObject(left) && isPlainObject(right)) {
+    const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+
+    for (const key of keys) {
+      if (!isEqualValue(left[key], right[key])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+function diffObject<T extends object>(
+  baseObject: T,
+  nextObject: T
+): Partial<T> | undefined {
+  const diff: Partial<T> = {};
+  const keys = new Set([...Object.keys(baseObject), ...Object.keys(nextObject)]);
+
+  for (const key of keys) {
+    const typedKey = key as keyof T;
+
+    if (isEqualValue(baseObject[typedKey], nextObject[typedKey])) continue;
+    diff[typedKey] = nextObject[typedKey];
+  }
+
+  return Object.keys(diff).length > 0 ? diff : undefined;
+}
+
+function diffToolConfigs(
+  baseTools: ToolConfig[],
+  nextTools: ToolConfig[]
+): ToolConfigInput[] | undefined {
+  const overrides: ToolConfigInput[] = [];
+  const baseToolsById = new Map(baseTools.map((tool) => [tool.id, tool]));
+  const nextToolIds = new Set(nextTools.map((tool) => tool.id));
+
+  for (const tool of nextTools) {
+    const baseTool = baseToolsById.get(tool.id);
+
+    if (!baseTool) {
+      overrides.push({
+        ...tool,
+        execution: tool.execution ? { ...tool.execution } : undefined,
+      });
+      continue;
+    }
+
+    const toolDiff = diffObject(baseTool, tool);
+    if (!toolDiff) continue;
+
+    overrides.push({
+      id: tool.id,
+      ...(toolDiff as ToolConfigInput),
+    });
+  }
+
+  for (const tool of baseTools) {
+    if (nextToolIds.has(tool.id) || tool.enabled === false) continue;
+    overrides.push({ id: tool.id, enabled: false });
+  }
+
+  return overrides.length > 0 ? overrides : undefined;
+}
+
+export function buildLLMConfigOverride(
+  baseConfig: LLMAssistantConfig,
+  nextConfig: LLMAssistantConfig
+): LLMAssistantConfigInput {
+  const override: LLMAssistantConfigInput = {};
+  const clusterOverride = diffObject(baseConfig.cluster, nextConfig.cluster);
+  const defaultsOverride = diffObject(baseConfig.defaults, nextConfig.defaults);
+  const toolOverrides = diffToolConfigs(baseConfig.tools, nextConfig.tools);
+
+  if (clusterOverride) {
+    override.cluster = clusterOverride as Partial<ClusterInfo>;
+  }
+
+  if (defaultsOverride) {
+    override.defaults = defaultsOverride as Partial<Defaults>;
+  }
+
+  if (!isEqualValue(baseConfig.system_prompt, nextConfig.system_prompt)) {
+    override.system_prompt = nextConfig.system_prompt;
+  }
+
+  if (
+    !isEqualValue(
+      baseConfig.custom_instructions,
+      nextConfig.custom_instructions
+    )
+  ) {
+    override.custom_instructions = nextConfig.custom_instructions;
+  }
+
+  if (
+    !isEqualValue(
+      baseConfig.restricted_topics,
+      nextConfig.restricted_topics
+    )
+  ) {
+    override.restricted_topics = nextConfig.restricted_topics;
+  }
+
+  if (toolOverrides) {
+    override.tools = toolOverrides;
+  }
+
+  return override;
+}
+
+async function readLLMConfigSource(
+  filePath: string,
+  optional = false
+): Promise<LLMConfigSource> {
+  try {
+    const raw = await fs.readFile(filePath, "utf-8");
+    const parsed = (yaml.load(raw) as LLMAssistantConfigInput | undefined) || {};
+    return {
+      exists: true,
+      raw,
+      parsed,
+    };
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException;
+
+    if (optional && error.code === "ENOENT") {
+      return EMPTY_CONFIG_SOURCE;
+    }
+
+    throw err;
+  }
+}
+
+export async function loadLLMConfigSources() {
+  const base = await readLLMConfigSource(LLM_CONFIG_PATH);
+
+  let local = EMPTY_CONFIG_SOURCE;
+  try {
+    local = await readLLMConfigSource(LLM_LOCAL_CONFIG_PATH, true);
+  } catch (err) {
+    console.warn(
+      `[llm-config] Could not load ${LLM_LOCAL_CONFIG_PATH}, ignoring local overrides:`,
+      (err as Error).message
+    );
+  }
+
+  return { base, local };
+}
+
+export async function loadBaseLLMConfig(): Promise<LLMAssistantConfig> {
+  const baseSource = await readLLMConfigSource(LLM_CONFIG_PATH);
+  return buildLLMConfig(baseSource.parsed);
+}
+
 export async function loadLLMConfig(): Promise<LLMAssistantConfig> {
   const now = Date.now();
   if (configCache && now - configCache.timestamp < CACHE_TTL) {
@@ -127,23 +432,9 @@ export async function loadLLMConfig(): Promise<LLMAssistantConfig> {
   }
 
   try {
-    const raw = await fs.readFile(LLM_CONFIG_PATH, "utf-8");
-    const parsed = yaml.load(raw) as Partial<LLMAssistantConfig>;
-    const config: LLMAssistantConfig = {
-      ...DEFAULT_CONFIG,
-      ...parsed,
-      cluster: { ...DEFAULT_CONFIG.cluster, ...(parsed.cluster || {}) },
-      defaults: { ...DEFAULT_CONFIG.defaults, ...(parsed.defaults || {}) },
-      tools: (parsed.tools || []).map((t) => ({
-        ...t,
-        parameters: t.parameters || [],
-        enabled: t.enabled !== false,
-        builtin: t.builtin !== false,
-      })),
-      restricted_topics: parsed.restricted_topics || [],
-      system_prompt: parsed.system_prompt || DEFAULT_CONFIG.system_prompt,
-      custom_instructions: parsed.custom_instructions || "",
-    };
+    const { base, local } = await loadLLMConfigSources();
+    const mergedConfig = mergeLLMConfigPartials(base.parsed, local.parsed);
+    const config = buildLLMConfig(mergedConfig);
     configCache = { data: config, timestamp: now };
     return config;
   } catch (err) {
