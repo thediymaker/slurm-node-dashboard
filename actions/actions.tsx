@@ -33,6 +33,8 @@ export async function generateFollowUpQuestions(
         prompt: `Based on the following conversation, generate exactly 3 short, relevant follow-up questions that the user might want to ask next.
 The questions should be specific to Slurm, HPC, or the context of the previous answer.
 Keep them concise (under 10 words each).
+If the answer involves a maintenance reservation or a reservation flagged MAINT, do NOT suggest questions about how to submit to that reservation, how to use --reservation, or how to run jobs inside the maintenance window unless the user explicitly asks about it.
+For maintenance reservations, prefer follow-up questions about job impact, affected nodes, maintenance timing, rescheduling, and how to verify whether the user's jobs are affected.
 You MUST respond with valid JSON matching this schema: { "questions": ["q1", "q2", "q3"] }
 
 User: ${userMessage}
