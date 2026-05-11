@@ -2,8 +2,10 @@ import fs from "fs/promises";
 import path from "path";
 import yaml from "js-yaml";
 import { z } from "zod";
-import { tool } from "ai";
+import { tool, type ToolSet } from "ai";
 import { fetchSlurmData } from "@/lib/slurm-api";
+import { buildBuiltinToolTurnUI } from "@/lib/builtin-tool-turn-ui";
+import { attachToolTurnUI, type ToolTurnUI } from "@/lib/tool-turn-ui";
 
 // =============================================================================
 // Types
@@ -454,8 +456,52 @@ export async function loadLLMConfig(): Promise<LLMAssistantConfig> {
 // in config. Custom tools use the generic executor below instead.
 // =============================================================================
 
-const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
-  get_job_details: async ({ job }: { job: string }) => {
+type ToolParams = Record<string, unknown>;
+type ToolExecutor = (params: ToolParams) => Promise<unknown>;
+
+function getParamString(params: ToolParams, name: string) {
+  const value = params[name];
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function getFirstValue(values: unknown[]) {
+  return values.length > 0 ? values[0] : undefined;
+}
+
+function getFirstRecord(value: unknown) {
+  return asRecord(getFirstValue(asArray(value)));
+}
+
+function getString(value: unknown) {
+  return typeof value === "string"
+    ? value
+    : typeof value === "number"
+      ? String(value)
+      : "";
+}
+
+function getNameList(values: unknown[]) {
+  return values
+    .map((value) => getString(asRecord(value)?.name))
+    .filter(Boolean)
+    .join(", ");
+}
+
+const BUILTIN_EXECUTORS: Record<string, ToolExecutor> = {
+  get_job_details: async (params) => {
+    const job = getParamString(params, "job");
     const { data: activeData, error: activeError } = await fetchSlurmData(
       `/job/${job}`
     );
@@ -482,20 +528,19 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     };
   },
 
-  get_node_details: async ({ node }: { node: string }) => {
+  get_node_details: async (params) => {
+    const node = getParamString(params, "node");
     const { data, error } = await fetchSlurmData(`/node/${node}`);
     if (error || !data?.nodes?.length || data?.errors?.length) {
       const { data: listData, error: listError } = await fetchSlurmData(
         `/nodes`
       );
       if (!listError && listData?.nodes) {
-        const nodes = listData.nodes
-          .slice(0, 10)
-          .map((n: any) => n.name)
-          .join(", ");
+        const nodeRecords = asArray(listData.nodes);
+        const nodes = getNameList(nodeRecords.slice(0, 10));
         return {
           error: `Node '${node}' not found.`,
-          availableNodes: `${nodes}${listData.nodes.length > 10 ? "..." : ""}`,
+          availableNodes: `${nodes}${nodeRecords.length > 10 ? "..." : ""}`,
         };
       }
       return {
@@ -505,16 +550,15 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     return data;
   },
 
-  get_partition_details: async ({ partition }: { partition: string }) => {
+  get_partition_details: async (params) => {
+    const partition = getParamString(params, "partition");
     const { data, error } = await fetchSlurmData(`/partition/${partition}`);
     if (error || !data?.partitions?.length || data?.errors?.length) {
       const { data: listData, error: listError } = await fetchSlurmData(
         `/partitions`
       );
       if (!listError && listData?.partitions) {
-        const partitions = listData.partitions
-          .map((p: any) => p.name)
-          .join(", ");
+        const partitions = getNameList(asArray(listData.partitions));
         return {
           error: `Partition '${partition}' not found.`,
           availablePartitions: partitions,
@@ -527,11 +571,8 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     return data;
   },
 
-  get_reservation_details: async ({
-    reservation,
-  }: {
-    reservation: string;
-  }) => {
+  get_reservation_details: async (params) => {
+    const reservation = getParamString(params, "reservation");
     const { data: resDetails, error } = await fetchSlurmData(
       `/reservation/${reservation}`
     );
@@ -558,7 +599,8 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     return data;
   },
 
-  get_qos_details: async ({ qos }: { qos: string }) => {
+  get_qos_details: async (params) => {
+    const qos = getParamString(params, "qos");
     const { data, error } = await fetchSlurmData(`/qos/${qos}`, {
       type: "slurmdb",
     });
@@ -571,7 +613,7 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
         { type: "slurmdb" }
       );
       if (!listError && listData?.qos) {
-        const qosList = listData.qos.map((q: any) => q.name).join(", ");
+        const qosList = getNameList(asArray(listData.qos));
         return {
           error: `QoS '${qos}' not found.`,
           availableQoS: qosList,
@@ -606,14 +648,13 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     return data;
   },
 
-  // ─── Workflow Tools ────────────────────────────────────────────────
-  // These orchestrate multiple API calls and return combined context.
-  // ───────────────────────────────────────────────────────────────────
+  // Workflow tools orchestrate multiple API calls and return combined context.
 
-  troubleshoot_job: async ({ job }: { job: string }) => {
-    const results: Record<string, any> = {};
+  troubleshoot_job: async (params) => {
+    const job = getParamString(params, "job");
+    const results: Record<string, unknown> = {};
 
-    // Step 1: Get job details (active → historical fallback)
+    // Step 1: Get job details, falling back from active to historical records.
     const { data: activeData, error: activeError } = await fetchSlurmData(
       `/job/${job}`
     );
@@ -642,11 +683,14 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     }
 
     // Step 2: Extract partition and node from job data, fetch their details
-    const jobInfo = results.job?.jobs?.[0];
+    const jobInfo = getFirstRecord(asRecord(results.job)?.jobs);
     if (jobInfo) {
-      const partition = jobInfo.partition;
+      const partition = getString(jobInfo.partition);
+      const jobResources = asRecord(jobInfo.job_resources);
+      const jobResourceNodes = asRecord(jobResources?.nodes);
+      const allocationNode = getFirstRecord(jobResourceNodes?.allocation);
       const nodeList =
-        jobInfo.nodes || jobInfo.job_resources?.nodes?.allocation?.[0]?.nodename;
+        getString(jobInfo.nodes) || getString(allocationNode?.nodename);
 
       if (partition) {
         const { data: partData } = await fetchSlurmData(
@@ -674,8 +718,9 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     return { _workflow: "troubleshoot_job", ...results };
   },
 
-  sbatch_helper: async ({ request }: { request: string }) => {
-    const results: Record<string, any> = { request };
+  sbatch_helper: async (params) => {
+    const request = getParamString(params, "request");
+    const results: Record<string, unknown> = { request };
 
     // Fetch partitions and QoS in parallel
     const [partRes, qosRes, clusterRes] = await Promise.all([
@@ -697,8 +742,9 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     return { _workflow: "sbatch_helper", ...results };
   },
 
-  node_health_check: async ({ node }: { node: string }) => {
-    const results: Record<string, any> = {};
+  node_health_check: async (params) => {
+    const node = getParamString(params, "node");
+    const results: Record<string, unknown> = {};
 
     // Fetch node details and cluster info in parallel
     const [nodeRes, clusterRes] = await Promise.all([
@@ -709,13 +755,11 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     if (nodeRes.error || !nodeRes.data?.nodes?.length) {
       const { data: listData } = await fetchSlurmData(`/nodes`);
       if (listData?.nodes) {
-        const names = listData.nodes
-          .slice(0, 10)
-          .map((n: any) => n.name)
-          .join(", ");
+        const nodeRecords = asArray(listData.nodes);
+        const names = getNameList(nodeRecords.slice(0, 10));
         return {
           error: `Node '${node}' not found.`,
-          availableNodes: `${names}${listData.nodes.length > 10 ? "..." : ""}`,
+          availableNodes: `${names}${nodeRecords.length > 10 ? "..." : ""}`,
         };
       }
       return { error: `Node '${node}' not found.` };
@@ -727,12 +771,14 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
     }
 
     // Also get the partition this node belongs to
-    const nodeInfo = nodeRes.data?.nodes?.[0];
-    if (nodeInfo?.partitions?.length) {
+    const nodeInfo = getFirstRecord(asRecord(nodeRes.data)?.nodes);
+    const partitions = asArray(nodeInfo?.partitions);
+    if (partitions.length > 0) {
+      const firstPartition = getFirstValue(partitions);
       const partName =
-        typeof nodeInfo.partitions[0] === "string"
-          ? nodeInfo.partitions[0]
-          : nodeInfo.partitions[0]?.name;
+        typeof firstPartition === "string"
+          ? firstPartition
+          : getString(asRecord(firstPartition)?.name);
       if (partName) {
         const { data: partData } = await fetchSlurmData(
           `/partition/${partName}`
@@ -752,7 +798,7 @@ const BUILTIN_EXECUTORS: Record<string, (params: any) => Promise<any>> = {
 // =============================================================================
 
 function createCustomExecutor(execution: ToolExecution) {
-  return async (params: Record<string, any>) => {
+  return async (params: ToolParams) => {
     // Interpolate {param} placeholders in the endpoint
     let endpoint = execution.endpoint;
     for (const [key, value] of Object.entries(params)) {
@@ -813,12 +859,40 @@ function buildZodSchema(parameters: ToolParameter[]) {
   return z.object(shape);
 }
 
+function buildGenericFollowUpContext(toolConfig: ToolConfig) {
+  const displayName = toolConfig.name || toolConfig.id;
+  const category = toolConfig.category || "custom";
+
+  return `A ${displayName} tool card was shown for the ${category} area. Generate short follow-up questions about the user's next useful Slurm action using the tool card and any configured tool guidance.`;
+}
+
+function buildConfiguredToolTurnUI(
+  toolConfig: ToolConfig,
+  result: unknown,
+  params: Record<string, unknown>
+): ToolTurnUI {
+  const builtinToolUi =
+    toolConfig.builtin && BUILTIN_EXECUTORS[toolConfig.id]
+      ? buildBuiltinToolTurnUI(toolConfig.id, result, params)
+      : undefined;
+  const promptGuidance = toolConfig.prompt_guidance?.trim() || undefined;
+
+  return {
+    toolId: toolConfig.id,
+    toolName: toolConfig.name,
+    category: toolConfig.category,
+    followUpContext:
+      builtinToolUi?.followUpContext || buildGenericFollowUpContext(toolConfig),
+    promptGuidance,
+  };
+}
+
 // =============================================================================
 // Dynamic Tool & Prompt Builder  (called from the chat route)
 // =============================================================================
 
 export function buildToolsAndPrompt(config: LLMAssistantConfig) {
-  const tools: Record<string, any> = {};
+  const tools: ToolSet = {};
   const guidanceSections: string[] = [];
 
   for (const tc of config.tools) {
@@ -828,11 +902,25 @@ export function buildToolsAndPrompt(config: LLMAssistantConfig) {
     const inputSchema = buildZodSchema(tc.parameters);
 
     // Resolve the execute function
-    let execute: ((params: any) => Promise<any>) | undefined;
+    let execute: ToolExecutor | undefined;
     if (tc.builtin && BUILTIN_EXECUTORS[tc.id]) {
-      execute = BUILTIN_EXECUTORS[tc.id];
+      const builtinExecute = BUILTIN_EXECUTORS[tc.id];
+      execute = async (params: Record<string, unknown>) => {
+        const result = await builtinExecute(params);
+        return attachToolTurnUI(
+          result,
+          buildConfiguredToolTurnUI(tc, result, params)
+        );
+      };
     } else if (!tc.builtin && tc.execution) {
-      execute = createCustomExecutor(tc.execution);
+      const customExecute = createCustomExecutor(tc.execution);
+      execute = async (params: Record<string, unknown>) => {
+        const result = await customExecute(params);
+        return attachToolTurnUI(
+          result,
+          buildConfiguredToolTurnUI(tc, result, params)
+        );
+      };
     }
 
     if (!execute) continue; // skip tools with no executor
@@ -851,7 +939,7 @@ export function buildToolsAndPrompt(config: LLMAssistantConfig) {
     }
   }
 
-  // ── Assemble the full system prompt ──
+  // Assemble the full system prompt.
   const promptParts: string[] = [];
 
   // Base system prompt
