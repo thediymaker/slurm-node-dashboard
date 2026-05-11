@@ -22,16 +22,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import {
   Save,
-  RefreshCw,
   AlertCircle,
   CheckCircle2,
   Plus,
@@ -41,18 +38,14 @@ import {
   Settings2,
   Workflow,
   HardDrive,
-  Zap,
   MessageSquare,
   Server,
   Search,
+  BookOpen,
   Download,
   Terminal,
-  Grid,
-  List as ListIcon,
-  MoreVertical,
   Pencil,
   Eye,
-  FileJson,
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────
@@ -109,6 +102,9 @@ interface LLMConfig {
   tools: ToolConfig[];
 }
 
+type ViewMode = "visual" | "yaml";
+type ActiveTab = "tools" | "settings" | "preview";
+
 // ─── Constants ─────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -119,6 +115,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   reservations: "Reservations",
   qos: "QoS",
   cluster: "Cluster",
+  docs: "Documentation",
   custom: "Custom",
 };
 
@@ -140,6 +137,14 @@ const LOCAL_OVERRIDE_TEMPLATE = `# Local overrides for infra/llm-assistant.yaml\
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════
 
+function isViewMode(value: string): value is ViewMode {
+  return value === "visual" || value === "yaml";
+}
+
+function isActiveTab(value: string): value is ActiveTab {
+  return value === "tools" || value === "settings" || value === "preview";
+}
+
 export function LLMConfigPanel() {
   const [config, setConfig] = useState<LLMConfig | null>(null);
   const [raw, setRaw] = useState("");
@@ -152,8 +157,8 @@ export function LLMConfigPanel() {
   const [dirty, setDirty] = useState(false);
   
   // Navigation State
-  const [viewMode, setViewMode] = useState<"visual" | "yaml">("visual");
-  const [activeTab, setActiveTab] = useState<"tools" | "settings" | "preview">("tools");
+  const [viewMode, setViewMode] = useState<ViewMode>("visual");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("tools");
   
   // Tool State
   const [toolQuery, setToolQuery] = useState("");
@@ -185,7 +190,11 @@ export function LLMConfigPanel() {
   }, []);
 
   useEffect(() => {
-    fetchConfig();
+    async function loadConfig() {
+      await fetchConfig();
+    }
+
+    void loadConfig();
   }, [fetchConfig]);
 
   // ── Save ──
@@ -344,7 +353,9 @@ export function LLMConfigPanel() {
       )}
 
       {/* ── Main Content ── */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
+      <Tabs value={viewMode} onValueChange={(value) => {
+        if (isViewMode(value)) setViewMode(value);
+      }}>
         <div className="flex items-center justify-between mb-2">
           <TabsList className="h-9">
             <TabsTrigger value="visual" className="text-xs">Visual Editor</TabsTrigger>
@@ -353,7 +364,9 @@ export function LLMConfigPanel() {
         </div>
 
         <TabsContent value="visual" className="m-0 space-y-4">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+          <Tabs value={activeTab} onValueChange={(value) => {
+            if (isActiveTab(value)) setActiveTab(value);
+          }}>
              <TabsList className="h-auto p-1 bg-muted/40">
               <TabsTrigger value="tools" className="gap-2 px-4 py-2">
                 <Wrench className="h-4 w-4" />
@@ -525,6 +538,7 @@ export function LLMConfigPanel() {
                             onChange={(e) => updateConfig(c => ({...c, cluster: {...c.cluster, support_email: e.target.value}}))}
                           />
                         </div>
+                        <p className="text-[10px] text-muted-foreground">The docs URL is used by the Search Documentation tool when that tool is enabled.</p>
                       </div>
 
                       <div className="space-y-1.5">
@@ -637,7 +651,7 @@ export function LLMConfigPanel() {
 // ═══════════════════════════════════════════════════════════════════════
 
 function ToolCard({ tool, onEdit, onToggle }: { tool: ToolConfig, onEdit: () => void, onToggle: () => void }) {
-  const Icon = tool.category === 'workflows' ? Workflow : tool.builtin ? HardDrive : Globe;
+  const Icon = tool.category === 'workflows' ? Workflow : tool.category === 'docs' ? BookOpen : tool.builtin ? HardDrive : Globe;
   return (
     <Card className={`flex flex-col h-full transition-all ${tool.enabled ? 'border-border' : 'border-dashed opacity-70'}`}>
       <CardHeader className="p-4 pb-2">
@@ -700,9 +714,9 @@ function PreviewPanel({ config }: { config: LLMConfig }) {
             
             <div className="text-zinc-500 mb-2 select-none"># Context injected from cluster settings:</div>
             <div className="space-y-1 text-blue-600 dark:text-blue-400">
-              <div><span className="text-purple-600 dark:text-purple-400">CLUSTER_NAME:</span> "{config.cluster.name}"</div>
-              <div><span className="text-purple-600 dark:text-purple-400">ORG:</span> "{config.cluster.organization}"</div>
-              <div><span className="text-purple-600 dark:text-purple-400">DOCS:</span> "{config.cluster.documentation_url}"</div>
+              <div><span className="text-purple-600 dark:text-purple-400">CLUSTER_NAME:</span> &quot;{config.cluster.name}&quot;</div>
+              <div><span className="text-purple-600 dark:text-purple-400">ORG:</span> &quot;{config.cluster.organization}&quot;</div>
+              <div><span className="text-purple-600 dark:text-purple-400">DOCS:</span> &quot;{config.cluster.documentation_url}&quot;</div>
             </div>
 
              <div className="text-zinc-500 mt-6 mb-2 select-none"># Available Tools Definition (Filtered):</div>
@@ -922,7 +936,7 @@ function ToolEditor({
                     value={data.execution?.type || 'slurm'}
                     onChange={(e) => setData({
                       ...data, 
-                      execution: { ...data.execution!, type: e.target.value as any }
+                      execution: { ...data.execution!, type: e.target.value as ToolExecution["type"] }
                     })}
                   >
                     <option value="slurm">Slurm API</option>

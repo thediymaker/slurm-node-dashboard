@@ -66,6 +66,7 @@ const TOOL_RESULT_RENDERERS: Record<string, ToolResultRenderer> = {
       records={getRecordArray(result.partitions)}
     />
   ),
+  search_documentation: renderDocumentationSearch,
   troubleshoot_job: renderTroubleshootJob,
   sbatch_helper: renderSbatchHelper,
   node_health_check: renderNodeHealthCheck,
@@ -170,6 +171,75 @@ function renderNodeHealthCheck(result: ToolResult) {
   );
 }
 
+function renderDocumentationSearch(result: ToolResult) {
+  const results = getRecordArray(result.results);
+  const source = getRecord(result.source);
+  const documentationUrl = getString(source?.documentationUrl);
+  const indexedPages = getString(source?.indexedPages);
+  const discoveredPages = getString(source?.discoveredPages);
+  const pageCount =
+    discoveredPages && discoveredPages !== indexedPages
+      ? `${indexedPages || "configured"} of ${discoveredPages}`
+      : indexedPages || "configured";
+
+  return (
+    <div className="p-4 space-y-3">
+      <div>
+        <h3 className="font-semibold text-sm">Documentation Search</h3>
+        {documentationUrl && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Indexed {pageCount} pages from{" "}
+            <a
+              href={documentationUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              {documentationUrl}
+            </a>
+          </p>
+        )}
+      </div>
+
+      {results.length > 0 ? (
+        <div className="space-y-2">
+          {results.map((record, index) => {
+            const title = getString(record.title, "Documentation result");
+            const url = getString(record.url);
+            const snippet = getString(record.snippet);
+
+            return (
+              <div key={`${url || title}-${index}`} className="rounded-md border bg-muted/20 p-3">
+                {url ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium underline underline-offset-2"
+                  >
+                    {title}
+                  </a>
+                ) : (
+                  <div className="text-sm font-medium">{title}</div>
+                )}
+                {snippet && (
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    {snippet}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No matching documentation pages were returned.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function GenericErrorResult({ result }: { result: ToolResult }) {
   const supplemental = getSupplementalResult(result);
 
@@ -239,6 +309,14 @@ function NameBadgeList({
 
 function sanitizeUnknownForDisplay(value: unknown): unknown {
   return isObjectRecord(value) ? sanitizeResultForDisplay(value) : value;
+}
+
+function getString(value: unknown, fallback = "") {
+  return typeof value === "string" && value.length > 0
+    ? value
+    : typeof value === "number"
+      ? String(value)
+      : fallback;
 }
 
 export const ToolInvocationRenderer = memo(function ToolInvocationRenderer({

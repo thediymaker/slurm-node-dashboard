@@ -18,6 +18,7 @@ interface MessagesProps {
   messages: Message[];
   isLoading?: boolean;
   onSelectFollowUp?: (question: string) => void;
+  onRequestFeedback?: (rating?: number) => void;
   reload?: () => void;
 }
 
@@ -123,6 +124,7 @@ export function ChatList({
   messages,
   isLoading,
   onSelectFollowUp,
+  onRequestFeedback,
   reload,
 }: MessagesProps) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -220,6 +222,7 @@ export function ChatList({
                   isLoading={!!isLoading} 
                   isLast={isLast} 
                   reload={reload} 
+                  onRequestFeedback={onRequestFeedback}
                 />
               </div>
             )}

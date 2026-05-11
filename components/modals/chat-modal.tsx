@@ -3,41 +3,54 @@ import { ChatList } from "@/components/llm/chat-list";
 import ChatScrollAnchor from "@/components/llm/chat-scroll-anchor";
 import { useEnterSubmit } from "@/lib/use-enter-submit";
 import TextareaAutosize from "react-textarea-autosize";
-import { type SubmitHandler, useForm } from "react-hook-form";
+import { type SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Trash2, X, Bot } from "lucide-react";
-import { z } from "zod";
+import { ArrowUp, Trash2, X, Bot, Square } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { useEffect, useRef, useCallback, memo } from "react";
+import { useEffect, useRef, useCallback, memo, useMemo, useState } from "react";
 import { EmptyState } from "@/components/llm/empty-state";
+import { ChatFeedback } from "@/components/llm/chat-feedback";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChat } from "@ai-sdk/react";
 
-// Schema defined outside component - created once
-const chatSchema = z.object({
-  message: z.string().min(1, "Message cannot be empty"),
-});
-
-export type ChatInput = z.infer<typeof chatSchema>;
+export interface ChatInput {
+  message: string;
+}
 
 interface ChatModalProps {
   showChat: boolean;
   setShowChat: (show: boolean) => void;
 }
 
+function createChatId() {
+  return `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function ChatModal({ showChat, setShowChat }: ChatModalProps) {
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const [chatId, setChatId] = useState(createChatId);
+  const { messages, sendMessage, status, setMessages, stop } = useChat({
+    id: chatId,
     onError: (error) => {
       console.error('Chat error:', error);
     }
   });
   
   const isLoading = status === 'submitted' || status === 'streaming';
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const chatFeedbackKey = useMemo(
+    () => messages.map((message) => message.id).join("|"),
+    [messages]
+  );
 
   const form = useForm<ChatInput>({
     defaultValues: {
       message: ""
     }
+  });
+  const currentMessage = useWatch({
+    control: form.control,
+    name: "message",
   });
   
   const { formRef, onKeyDown } = useEnterSubmit();
@@ -62,8 +75,12 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
   );
 
   const clearChatHistory = useCallback(() => {
+    void stop();
+    setFeedbackOpen(false);
+    setFeedbackRating(null);
     setMessages([]);
-  }, [setMessages]);
+    setChatId(createChatId());
+  }, [setMessages, stop]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -90,6 +107,22 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
     },
     [form]
   );
+
+  const handleRequestFeedback = useCallback((rating?: number) => {
+    setFeedbackRating(rating || null);
+    setFeedbackOpen(true);
+  }, []);
+
+  const handleStopGeneration = useCallback(() => {
+    void stop();
+  }, [stop]);
+
+  const handleFeedbackOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      setFeedbackRating(null);
+    }
+    setFeedbackOpen(open);
+  }, []);
 
   return (
     <Dialog open={showChat} onOpenChange={setShowChat}>
@@ -145,6 +178,7 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
                 messages={messages} 
                 isLoading={isLoading} 
                 onSelectFollowUp={handleFollowUp}
+                onRequestFeedback={handleRequestFeedback}
               />
               <ChatScrollAnchor />
             </div>
@@ -152,6 +186,15 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
         </div>
 
         <div className="p-4 bg-background/50 border-t backdrop-blur-sm">
+          <ChatFeedback
+            messages={messages}
+            chatKey={chatFeedbackKey}
+            open={feedbackOpen}
+            rating={feedbackRating}
+            disabled={isLoading}
+            onOpenChange={handleFeedbackOpenChange}
+            onRatingChange={setFeedbackRating}
+          />
           <form
             ref={formRef}
             onSubmit={form.handleSubmit(onSubmit)}
@@ -169,15 +212,28 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
               rows={1}
               {...form.register("message")}
             />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!form.watch("message") || isLoading}
-              className="h-8 w-8 shrink-0 rounded-lg"
-            >
-              <ArrowUp className="h-4 w-4" />
-              <span className="sr-only">Send</span>
-            </Button>
+            {isLoading ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="destructive"
+                onClick={handleStopGeneration}
+                className="h-8 w-8 shrink-0 rounded-lg"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+                <span className="sr-only">Stop generating</span>
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                size="icon"
+                disabled={!currentMessage}
+                className="h-8 w-8 shrink-0 rounded-lg"
+              >
+                <ArrowUp className="h-4 w-4" />
+                <span className="sr-only">Send</span>
+              </Button>
+            )}
           </form>
           <div className="text-[10px] text-center text-muted-foreground mt-2">
             AI can make mistakes. Check important info.
