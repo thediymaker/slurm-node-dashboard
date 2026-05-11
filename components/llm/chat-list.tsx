@@ -9,6 +9,10 @@ import { ToolInvocationRenderer } from "@/components/llm/tool-invocation";
 import { CodeBlock } from "@/components/llm/code-block";
 import { Thinking } from "@/components/llm/thinking";
 import { MessageActions } from "@/components/llm/message-actions";
+import { getToolTurnUI } from "@/lib/tool-turn-ui";
+import type { FollowUpContextInput } from "@/lib/follow-up-context";
+
+type ToolTurnUIHint = NonNullable<ReturnType<typeof getToolTurnUI>>;
 
 interface MessagesProps {
   messages: Message[];
@@ -16,11 +20,6 @@ interface MessagesProps {
   onSelectFollowUp?: (question: string) => void;
   reload?: () => void;
 }
-
-const RESERVATION_TOOL_NAMES = new Set([
-  "get_reservation_details",
-  "list_reservations",
-]);
 
 function getTextFromParts(parts: Message["parts"]) {
   return parts.reduce((text, part) => {
@@ -42,20 +41,12 @@ function stripMarkdownTables(text: string): string {
     .replace(/\n{3,}/g, "\n\n");     // collapse leftover blank lines
 }
 
-function getContextFromMessage(message: Message): string {
-  if (hasReservationToolInvocation(message)) {
-    return "Reservation details were shown in a tool card. Generate follow-up questions about affected nodes, maintenance impact, time windows, flags, verifying whether jobs are affected, and rescheduling. Do not suggest submitting jobs to the reservation or using --reservation for a maintenance window unless specifically asked about it.";
-  }
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
-  const textContent = getTextFromParts(message.parts);
-  
-  // If there's text content, use it
-  if (textContent.trim()) {
-    return textContent;
-  }
-  
-  // Otherwise, try to summarize tool calls for context
-  const toolNames = message.parts.reduce<string[]>((names, part) => {
+function getToolNamesFromMessage(message: Message) {
+  return message.parts.reduce<string[]>((names, part) => {
     if (
       part.type.startsWith("tool-") &&
       "toolName" in part &&
@@ -67,25 +58,65 @@ function getContextFromMessage(message: Message): string {
 
     return names;
   }, []);
-
-  if (toolNames.length > 0) {
-    return `Used tools: ${toolNames}`;
-  }
-  
-  return "";
 }
 
-function hasReservationToolInvocation(message: Message) {
-  return message.parts.some(
-    (part) =>
-      part.type.startsWith("tool-") &&
-      "toolName" in part &&
-      RESERVATION_TOOL_NAMES.has(part.toolName || "")
+function getToolTurnUIs(message: Message) {
+  return message.parts.reduce<ToolTurnUIHint[]>((hints, part) => {
+    if (
+      !part.type.startsWith("tool-") ||
+      !("output" in part) ||
+      !isObjectRecord(part.output)
+    ) {
+      return hints;
+    }
+
+    const toolUi = getToolTurnUI(part.output);
+    if (!toolUi) {
+      return hints;
+    }
+
+    hints.push(toolUi);
+
+    return hints;
+  }, []);
+}
+
+function joinText(values: Array<string | undefined>) {
+  const uniqueValues = Array.from(
+    new Set(values.filter((value): value is string => Boolean(value?.trim())))
   );
+
+  return uniqueValues.length > 0 ? uniqueValues.join("\n\n") : undefined;
 }
 
-function hasToolInvocation(message: Message) {
-  return message.parts.some((part) => part.type.startsWith("tool-"));
+function buildFollowUpContext(
+  userMessage: Message,
+  assistantMessage: Message
+): FollowUpContextInput {
+  const toolTurnUIs = getToolTurnUIs(assistantMessage);
+  const toolNames = Array.from(
+    new Set([
+      ...getToolNamesFromMessage(assistantMessage),
+      ...toolTurnUIs
+        .map((hint) => hint.toolId || hint.toolName)
+        .filter((name): name is string => Boolean(name)),
+    ])
+  );
+  const toolContext = joinText(
+    toolTurnUIs.map((hint) => hint.followUpContext)
+  );
+  const toolGuidance = joinText(
+    toolTurnUIs.map((hint) => hint.promptGuidance)
+  );
+
+  return {
+    userMessage: getTextFromParts(userMessage.parts),
+    assistantText: stripMarkdownTables(getTextFromParts(assistantMessage.parts)).trim(),
+    toolContext,
+    toolGuidance,
+    toolNames,
+    hasToolOutput: toolTurnUIs.length > 0 || toolNames.length > 0,
+  };
 }
 
 export function ChatList({
@@ -114,20 +145,9 @@ export function ChatList({
     >
       {messages.map((message, index) => {
         const isLast = index === messages.length - 1;
-        const previousMessage = index > 0 ? messages[index - 1] : null;
         // Composite key prevents React duplicate-key errors when useChat
         // temporarily produces two messages with the same id mid-stream.
         const key = `${message.id}-${index}`;
-        const suppressTextForReservationTools = hasReservationToolInvocation(message);
-        const suppressReservationFollowUpText =
-          message.role === "assistant" &&
-          !hasToolInvocation(message) &&
-          previousMessage?.role === "assistant" &&
-          hasReservationToolInvocation(previousMessage);
-
-        if (suppressReservationFollowUpText) {
-          return null;
-        }
         
         // Find the last user message for follow-up context
         const lastUserMessage = [...messages].slice(0, index + 1).reverse().find(m => m.role === "user");
@@ -138,11 +158,15 @@ export function ChatList({
         }
 
         // Assistant message
+        const followUpContext =
+          lastUserMessage && message.role === "assistant"
+            ? buildFollowUpContext(lastUserMessage, message)
+            : null;
+
         return (
           <div key={key} className="pb-4">
             {message.parts.map((part, partIndex) => {
               if (part.type === "text") {
-                if (suppressTextForReservationTools) return null;
                 // Only render if there is actual text content
                 if (!part.text || part.text.trim() === "") return null;
                 return (
@@ -203,8 +227,7 @@ export function ChatList({
             {isLast && !isLoading && lastUserMessage && (
               <div className="mt-2 ml-10">
                 <FollowUpGenerator
-                  userMessage={getTextFromParts(lastUserMessage.parts)}
-                  assistantMessage={getContextFromMessage(message)}
+                  context={followUpContext}
                   onSelect={onSelectFollowUp}
                 />
               </div>

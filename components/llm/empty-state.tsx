@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Bot, MessageSquare } from "lucide-react";
+import { Bot } from "lucide-react";
 
 interface EmptyStateProps {
     setInput: (value: string) => void;
@@ -21,7 +21,7 @@ export function EmptyState({ setInput }: EmptyStateProps) {
         },
         {
             heading: "Reservation Info",
-            message: 'Show me details for the "maintenance" reservation',
+            message: "List current reservations",
         },
         {
             heading: "QoS Info",

@@ -1,7 +1,6 @@
 "use client";
 
-import { memo } from "react";
-import { UIToolInvocation } from "ai";
+import { memo, type ComponentProps, type ReactNode } from "react";
 import { BotCard, BotMessage } from "@/components/llm/message";
 import { SlurmJobDetails } from "@/components/llm/llm-slurm-job-details";
 import { SlurmNodeDetails } from "@/components/llm/llm-slurm-node-details";
@@ -11,245 +10,270 @@ import { SlurmReservationList } from "@/components/llm/llm-slurm-reservation-lis
 import { SlurmQosDetails } from "@/components/llm/llm-slurm-qos-details";
 import { Loader2 } from "lucide-react";
 
-interface ToolInvocationRendererProps {
-  toolInvocation: any;
+type ToolResult = Record<string, unknown>;
+type ToolResultRenderer = (result: ToolResult) => ReactNode;
+
+interface ToolInvocationLike {
+  toolName?: string;
+  type?: string;
+  state: string;
+  output?: unknown;
+  errorText?: string;
 }
 
-export const ToolInvocationRenderer = memo(function ToolInvocationRenderer({ toolInvocation }: ToolInvocationRendererProps) {
-  const toolCallId = toolInvocation.toolCallId;
-  const toolName = toolInvocation.toolName || (toolInvocation.type?.startsWith("tool-") ? toolInvocation.type.substring(5) : undefined);
+interface ToolInvocationRendererProps {
+  toolInvocation: ToolInvocationLike;
+}
+
+const TOOL_RESULT_RENDERERS: Record<string, ToolResultRenderer> = {
+  get_job_details: (result) => (
+    <SlurmJobDetails job={result as ComponentProps<typeof SlurmJobDetails>["job"]} />
+  ),
+  get_node_details: (result) => (
+    <SlurmNodeDetails node={result as ComponentProps<typeof SlurmNodeDetails>["node"]} />
+  ),
+  get_partition_details: (result) => (
+    <SlurmPartitionDetails
+      partition={result as ComponentProps<typeof SlurmPartitionDetails>["partition"]}
+    />
+  ),
+  get_reservation_details: (result) => (
+    <SlurmReservationDetails
+      reservation={result as ComponentProps<typeof SlurmReservationDetails>["reservation"]}
+    />
+  ),
+  list_reservations: (result) => (
+    <SlurmReservationList
+      reservations={
+        getRecordArray(result.reservations) as ComponentProps<
+          typeof SlurmReservationList
+        >["reservations"]
+      }
+    />
+  ),
+  get_qos_details: (result) => (
+    <SlurmQosDetails qos={result as ComponentProps<typeof SlurmQosDetails>["qos"]} />
+  ),
+  get_cluster_info: (result) => (
+    <GenericJsonResult title="Cluster Information" value={result} />
+  ),
+  list_qos: (result) => (
+    <NameBadgeList title="Available QoS" records={getRecordArray(result.qos)} />
+  ),
+  list_partitions: (result) => (
+    <NameBadgeList
+      title="Available Partitions"
+      records={getRecordArray(result.partitions)}
+    />
+  ),
+  troubleshoot_job: renderTroubleshootJob,
+  sbatch_helper: renderSbatchHelper,
+  node_health_check: renderNodeHealthCheck,
+};
+
+function getToolName(toolInvocation: ToolInvocationLike) {
+  if (toolInvocation.toolName) return toolInvocation.toolName;
+  if (toolInvocation.type?.startsWith("tool-")) {
+    return toolInvocation.type.substring(5);
+  }
+
+  return undefined;
+}
+
+function isObjectRecord(value: unknown): value is ToolResult {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getRecord(value: unknown) {
+  return isObjectRecord(value) ? value : undefined;
+}
+
+function getRecordArray(value: unknown) {
+  return Array.isArray(value) ? value.filter(isObjectRecord) : [];
+}
+
+function getDisplayName(toolName?: string, toolUiName?: string) {
+  return toolUiName || toolName || "tool";
+}
+
+function sanitizeResultForDisplay(result: ToolResult) {
+  const displayResult = { ...result };
+  delete displayResult._toolUi;
+
+  return displayResult;
+}
+
+function getSupplementalResult(result: ToolResult) {
+  const supplemental = { ...result };
+  delete supplemental.error;
+  delete supplemental._toolUi;
+
+  return Object.keys(supplemental).length > 0 ? supplemental : undefined;
+}
+
+function renderToolResult(toolName: string | undefined, result: ToolResult) {
+  const renderer = toolName ? TOOL_RESULT_RENDERERS[toolName] : undefined;
+  return renderer ? (
+    renderer(result)
+  ) : (
+    <GenericJsonResult title="Result" value={result} />
+  );
+}
+
+function renderTroubleshootJob(result: ToolResult) {
+  const job = getRecord(result.job);
+  const node = getRecord(result.node);
+
+  return (
+    <div className="p-4 space-y-3">
+      <h3 className="font-semibold text-sm">Job Troubleshooting</h3>
+      {getRecordArray(job?.jobs).length > 0 && (
+        <SlurmJobDetails job={job as ComponentProps<typeof SlurmJobDetails>["job"]} />
+      )}
+      {getRecordArray(node?.nodes).length > 0 && (
+        <div className="pt-2 border-t border-border/40">
+          <SlurmNodeDetails node={node as ComponentProps<typeof SlurmNodeDetails>["node"]} />
+        </div>
+      )}
+      {!job && !node && (
+        <GenericJsonResult title="Workflow Result" value={result} compact />
+      )}
+    </div>
+  );
+}
+
+function renderSbatchHelper(result: ToolResult) {
+  const partitions = getRecordArray(getRecord(result.partitions)?.partitions);
+  const qos = getRecordArray(getRecord(result.qos)?.qos);
+
+  return (
+    <div className="p-4 space-y-2">
+      <h3 className="font-semibold text-sm">Cluster Configuration</h3>
+      <NameBadgeList records={partitions} compact />
+      {qos.length > 0 && <NameBadgeList records={qos} compact />}
+    </div>
+  );
+}
+
+function renderNodeHealthCheck(result: ToolResult) {
+  const node = getRecord(result.node);
+
+  return (
+    <div className="p-4 space-y-3">
+      <h3 className="font-semibold text-sm">Node Health Check</h3>
+      {getRecordArray(node?.nodes).length > 0 ? (
+        <SlurmNodeDetails node={node as ComponentProps<typeof SlurmNodeDetails>["node"]} />
+      ) : (
+        <GenericJsonResult title="Workflow Result" value={result} compact />
+      )}
+    </div>
+  );
+}
+
+function GenericErrorResult({ result }: { result: ToolResult }) {
+  const supplemental = getSupplementalResult(result);
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="text-destructive text-sm">
+        {typeof result.error === "string" ? result.error : "Tool call failed."}
+      </div>
+      {supplemental && (
+        <GenericJsonResult title="Additional Context" value={supplemental} />
+      )}
+    </div>
+  );
+}
+
+function GenericJsonResult({
+  title,
+  value,
+  compact = false,
+}: {
+  title: string;
+  value: unknown;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? "space-y-2" : "p-4"}>
+      <h3 className="font-semibold mb-2 text-sm">{title}</h3>
+      <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-60">
+        {JSON.stringify(sanitizeUnknownForDisplay(value), null, 2)}
+      </pre>
+    </div>
+  );
+}
+
+function NameBadgeList({
+  title,
+  records,
+  compact = false,
+}: {
+  title?: string;
+  records: ToolResult[];
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? "space-y-2" : "p-4"}>
+      {title && <h3 className="font-semibold mb-2 text-sm">{title}</h3>}
+      <div className="flex flex-wrap gap-2">
+        {records.map((record, index) => {
+          const name =
+            typeof record.name === "string" && record.name.length > 0
+              ? record.name
+              : "Unknown";
+
+          return (
+            <span
+              key={`${name}-${index}`}
+              className="bg-muted px-2 py-1 rounded text-xs"
+            >
+              {name}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function sanitizeUnknownForDisplay(value: unknown): unknown {
+  return isObjectRecord(value) ? sanitizeResultForDisplay(value) : value;
+}
+
+export const ToolInvocationRenderer = memo(function ToolInvocationRenderer({
+  toolInvocation,
+}: ToolInvocationRendererProps) {
+  const toolName = getToolName(toolInvocation);
 
   if (toolInvocation.state === "output-available") {
-    const result = toolInvocation.output;
-
-    switch (toolName) {
-      case "get_job_details":
-        if (result.error) {
-          return (
-            <BotCard>
-              <div className="text-center p-4 text-red-400">
-                {result.error}
-              </div>
-            </BotCard>
-          );
-        }
-        return (
-          <BotCard>
-            <SlurmJobDetails job={result} />
-          </BotCard>
-        );
-      case "get_node_details":
-        if (result.error)
-          return (
-            <BotCard>
-              {result.error}{" "}
-              {result.availableNodes &&
-                `Available nodes: ${result.availableNodes}`}
-            </BotCard>
-          );
-        return (
-          <BotCard>
-            <SlurmNodeDetails node={result} />
-          </BotCard>
-        );
-      case "get_partition_details":
-        if (result.error)
-          return (
-            <BotCard>
-              {result.error}{" "}
-              {result.availablePartitions &&
-                `Available partitions: ${result.availablePartitions}`}
-            </BotCard>
-          );
-        return (
-          <BotCard>
-            <SlurmPartitionDetails partition={result} />
-          </BotCard>
-        );
-      case "get_reservation_details":
-        if (result.error)
-          return (
-            <BotCard>
-              {result.error}{" "}
-              {result.availableReservations && (
-                <SlurmReservationList
-                  reservations={result.availableReservations}
-                />
-              )}
-            </BotCard>
-          );
-        return (
-          <BotCard>
-            <SlurmReservationDetails reservation={result} />
-          </BotCard>
-        );
-      case "list_reservations":
-        return (
-          <BotCard>
-            <SlurmReservationList reservations={result.reservations} />
-          </BotCard>
-        );
-      case "get_qos_details":
-        if (result.error)
-          return (
-            <BotCard>
-              {result.error}{" "}
-              {result.availableQoS && `Available QoS: ${result.availableQoS}`}
-            </BotCard>
-          );
-        return (
-          <BotCard>
-            <SlurmQosDetails qos={result} />
-          </BotCard>
-        );
-      case "get_cluster_info":
-        return (
-          <BotCard>
-            <div className="p-4">
-              <h3 className="font-semibold mb-2">Cluster Information</h3>
-              <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-60">
-                {JSON.stringify(result, null, 2)}
-              </pre>
-            </div>
-          </BotCard>
-        );
-      case "list_qos":
-        return (
-          <BotCard>
-            <div className="p-4">
-              <h3 className="font-semibold mb-2">Available QoS</h3>
-              <div className="flex flex-wrap gap-2">
-                {result.qos?.map((q: any) => (
-                  <span
-                    key={q.name}
-                    className="bg-muted px-2 py-1 rounded text-sm"
-                  >
-                    {q.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </BotCard>
-        );
-      case "list_partitions":
-        return (
-          <BotCard>
-            <div className="p-4">
-              <h3 className="font-semibold mb-2">Available Partitions</h3>
-              <div className="flex flex-wrap gap-2">
-                {result.partitions?.map((p: any) => (
-                  <span
-                    key={p.name}
-                    className="bg-muted px-2 py-1 rounded text-sm"
-                  >
-                    {p.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </BotCard>
-        );
-      // ── Workflow tools return combined data ──
-      case "troubleshoot_job":
-        return (
-          <BotCard>
-            <div className="p-4 space-y-3">
-              <h3 className="font-semibold text-sm">Job Troubleshooting</h3>
-              {result.error ? (
-                <div className="text-red-400 text-sm">{result.error}</div>
-              ) : (
-                <>
-                  {result.job?.jobs?.[0] && (
-                    <SlurmJobDetails job={result.job} />
-                  )}
-                  {result.node?.nodes?.[0] && (
-                    <div className="pt-2 border-t border-border/40">
-                      <SlurmNodeDetails node={result.node} />
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </BotCard>
-        );
-      case "sbatch_helper":
-        return (
-          <BotCard>
-            <div className="p-4 space-y-2">
-              <h3 className="font-semibold text-sm">Cluster Configuration</h3>
-              <div className="flex flex-wrap gap-2">
-                {result.partitions?.partitions?.map((p: any) => (
-                  <span key={p.name} className="bg-muted px-2 py-1 rounded text-xs">
-                    {p.name}
-                  </span>
-                ))}
-              </div>
-              {result.qos?.qos && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {result.qos.qos.map((q: any) => (
-                    <span key={q.name} className="bg-muted px-2 py-1 rounded text-xs">
-                      {q.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </BotCard>
-        );
-      case "node_health_check":
-        return (
-          <BotCard>
-            <div className="p-4 space-y-3">
-              <h3 className="font-semibold text-sm">Node Health Check</h3>
-              {result.error ? (
-                <div className="text-red-400 text-sm">
-                  {result.error}
-                  {result.availableNodes && (
-                    <span className="block mt-1 text-muted-foreground">
-                      Available: {result.availableNodes}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <>
-                  {result.node?.nodes?.[0] && (
-                    <SlurmNodeDetails node={result.node} />
-                  )}
-                </>
-              )}
-            </div>
-          </BotCard>
-        );
-      default:
-        return (
-          <BotCard>
-            <div className="p-4">
-              <h3 className="font-semibold mb-2">Result</h3>
-              <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-60">
-                {JSON.stringify(result, null, 2)}
-              </pre>
-            </div>
-          </BotCard>
-        );
-    }
-  } else if (toolInvocation.state === "output-error") {
-      return (
-        <BotCard>
-          <div className="p-4 text-destructive">
-            Error calling {toolName}: {toolInvocation.errorText}
-          </div>
-        </BotCard>
+    const result = getRecord(toolInvocation.output) ?? {};
+    const content =
+      typeof result.error === "string" ? (
+        <GenericErrorResult result={result} />
+      ) : (
+        renderToolResult(toolName, result)
       );
-  } else {
+
+    return <BotCard>{content}</BotCard>;
+  }
+
+  if (toolInvocation.state === "output-error") {
     return (
-      <BotMessage>
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Calling {toolName}...</span>
+      <BotCard>
+        <div className="p-4 text-destructive">
+          Error calling {getDisplayName(toolName)}: {toolInvocation.errorText}
         </div>
-      </BotMessage>
+      </BotCard>
     );
   }
-  return null;
-});
 
+  return (
+    <BotMessage>
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Calling {getDisplayName(toolName)}...</span>
+      </div>
+    </BotMessage>
+  );
+});
