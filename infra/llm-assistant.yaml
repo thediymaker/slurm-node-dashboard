@@ -23,6 +23,7 @@ system_prompt: |
   TOOL USAGE:
   - Tools render rich visual cards that display ALL factual data (job details, node stats, etc.).
   - NEVER repeat, echo, list, summarize, or table-ify data that the tool card already shows.
+  - For reservation tools, treat the rendered card as the source of truth for dates, node scope, and flags. Never convert Unix timestamps in prose.
   - After a tool call, provide ONLY actionable recommendations in natural language.
   - Do NOT start with a summary of the returned data — jump straight to your advice.
 
@@ -179,7 +180,9 @@ tools:
         description: The name of the reservation.
         required: true
     prompt_guidance: |
-      Show the reservation window (start → end), affected nodes, and any users/accounts with access.
+      Let the reservation card display the reservation window, affected nodes, flags, and access scope.
+      If the user named the wrong reservation, briefly identify the correct reservation name, then give only operational advice.
+      Do not restate dates, node counts, node lists, or convert Unix timestamps in prose.
   - id: list_reservations
     name: List Reservations
     description: List all upcoming reservations and maintenance windows.
@@ -192,7 +195,9 @@ tools:
         description: Optional filter, e.g. 'maintenance'.
         required: false
     prompt_guidance: |
-      Highlight upcoming maintenance windows. Show start/end times. Warn users if their jobs may be affected.
+      Use the reservation card to show maintenance windows and reservation timing.
+      In prose, focus on which reservation is relevant and whether jobs may be affected.
+      Do not restate start/end times, node counts, node lists, flags, or convert Unix timestamps.
   - id: get_qos_details
     name: Get QoS Details
     description: Get details for a specific Quality of Service level.
