@@ -1,5 +1,6 @@
 type SlurmApiType = 'slurm' | 'slurmdb';
-import { env } from "process";
+
+const env = process.env;
 
 interface FetchSlurmOptions {
   type?: SlurmApiType;

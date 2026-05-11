@@ -1,8 +1,9 @@
 import Footer from "@/components/footer/footer";
 import Rewind from "@/components/rewind/rewind";
 import UnifiedHeader from "@/components/unified-header";
-import { env } from "process";
 import { redirect } from "next/navigation";
+
+const env = process.env;
 
 export default function RewindPage() {
   // Plugin Feature Flag Check

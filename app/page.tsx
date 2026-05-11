@@ -1,9 +1,10 @@
 import Footer from "@/components/footer/footer";
-import { env } from "process";
 import { cookies } from "next/headers";
 import { getRandomGeekName } from "@/lib/utils";
 
 import Nodes from "@/components/nodeCard/nodes";
+
+const env = process.env;
 
 export default async function Dashboard() {
   const cookieStore = await cookies();

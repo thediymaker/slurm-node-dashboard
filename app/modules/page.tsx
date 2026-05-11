@@ -1,5 +1,4 @@
 import Footer from "@/components/footer/footer";
-import { env } from "process";
 import UnifiedHeader from "@/components/unified-header";
 import { redirect } from "next/navigation";
 
@@ -19,7 +18,10 @@ export default function ModulesPage() {
           description="Browse available software modules on the cluster."
         />
         <Modules />
-        <Footer cluster={env.CLUSTER_NAME} logo={env.CLUSTER_LOGO} />
+        <Footer
+          cluster={process.env.CLUSTER_NAME}
+          logo={process.env.CLUSTER_LOGO}
+        />
       </div>
     </div>
   );

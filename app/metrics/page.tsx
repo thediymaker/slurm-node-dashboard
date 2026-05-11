@@ -26,7 +26,8 @@ import UnifiedHeader from "@/components/unified-header";
 import Footer from "@/components/footer/footer";
 import { redirect } from "next/navigation";
 import { addDays } from "date-fns";
-import { env } from "process";
+
+const env = process.env;
 
 const gpuUtilizationEnabled = process.env.NEXT_PUBLIC_ENABLE_GPU_UTILIZATION === "true";
 

@@ -3,7 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { env } from "process";
+
+const env = process.env;
 
 const inter = Inter({ subsets: ["latin"] });
 

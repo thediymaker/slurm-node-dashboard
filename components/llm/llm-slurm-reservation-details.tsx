@@ -3,7 +3,6 @@ import React, { memo, useMemo } from "react";
 import { CardTitle, CardContent, Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { convertUnixToHumanReadable } from "@/utils/nodes";
 import {
   CalendarClock,
   AlertCircle,
@@ -11,53 +10,26 @@ import {
 import {
   CopyButton,
   EmptyState,
-  formatRelativeTime,
   formatDuration,
 } from "./llm-shared-utils";
+import {
+  ReservationRecord,
+  formatReservationRelativeTime,
+  formatReservationTime,
+  normalizeReservation,
+} from "./llm-slurm-reservation-utils";
 
 interface SlurmReservationDetailsProps {
   reservation: {
-    reservations: any[];
+    reservations: ReservationRecord[];
   };
 }
-
-const formatCount = (value: number | { number: number } | undefined): number => {
-  if (typeof value === 'object' && value !== null) return value.number;
-  return value ?? 0;
-};
-
-const getTimeStatus = (startTime: number, endTime: number) => {
-  const now = Date.now() / 1000;
-  if (now < startTime) return { label: 'Upcoming', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' };
-  if (now >= startTime && now < endTime) return { label: 'Active', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' };
-  return { label: 'Expired', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30' };
-};
 
 function SlurmReservationDetailsComponent({ reservation }: SlurmReservationDetailsProps) {
   const reservationData = useMemo(() => {
     if (!reservation?.reservations?.length) return null;
-    
-    const r = reservation.reservations[0];
-    const startTime = r.start_time?.number || 0;
-    const endTime = r.end_time?.number || 0;
-    const durationMinutes = r.duration?.number ? r.duration.number / 60 : 0;
-    const status = getTimeStatus(startTime, endTime);
-    
-    return {
-      name: r.name,
-      partition: r.partition || '',
-      startTime,
-      endTime,
-      durationMinutes,
-      status,
-      nodeCnt: formatCount(r.node_cnt),
-      coreCnt: formatCount(r.core_cnt),
-      nodes: r.nodes || '',
-      users: r.users || '',
-      accounts: r.accounts || '',
-      flags: r.flags || [],
-      features: r.features || '',
-    };
+
+    return normalizeReservation(reservation.reservations[0]);
   }, [reservation]);
 
   if (!reservationData) {
@@ -70,9 +42,20 @@ function SlurmReservationDetailsComponent({ reservation }: SlurmReservationDetai
   }
 
   const { 
-    name, partition, startTime, endTime, durationMinutes, status, 
-    nodeCnt, coreCnt, nodes, users, accounts, flags 
+    name,
+    partition,
+    startTime,
+    endTime,
+    durationSeconds,
+    status,
+    nodeCount,
+    coreCount,
+    nodeList,
+    users,
+    accounts,
+    flags,
   } = reservationData;
+  const durationMinutes = durationSeconds > 0 ? durationSeconds / 60 : 0;
 
   return (
     <Card className="w-full mx-auto bg-card border rounded-xl shadow-sm relative overflow-hidden">
@@ -109,11 +92,11 @@ function SlurmReservationDetailsComponent({ reservation }: SlurmReservationDetai
         <div className="grid grid-cols-4 gap-3 text-center">
           <div className="p-2 rounded-lg border bg-muted/30">
             <div className="text-xs text-muted-foreground">Nodes</div>
-            <div className="font-semibold text-primary">{nodeCnt}</div>
+            <div className="font-semibold text-primary">{nodeCount}</div>
           </div>
           <div className="p-2 rounded-lg border bg-muted/30">
             <div className="text-xs text-muted-foreground">Cores</div>
-            <div className="font-semibold">{coreCnt}</div>
+            <div className="font-semibold">{coreCount}</div>
           </div>
           <div className="p-2 rounded-lg border bg-muted/30">
             <div className="text-xs text-muted-foreground">Duration</div>
@@ -129,14 +112,14 @@ function SlurmReservationDetailsComponent({ reservation }: SlurmReservationDetai
         <div className="flex items-center gap-4 text-xs py-2 px-3 bg-muted/30 rounded-lg flex-wrap">
           <span>
             <span className="text-muted-foreground">Start:</span>{' '}
-            <span className="font-medium">{startTime ? convertUnixToHumanReadable(startTime) : 'N/A'}</span>
-            {startTime > 0 && <span className="text-muted-foreground ml-1">({formatRelativeTime(startTime)})</span>}
+            <span className="font-medium">{formatReservationTime(startTime)}</span>
+            {startTime > 0 && <span className="text-muted-foreground ml-1">({formatReservationRelativeTime(startTime)})</span>}
           </span>
           <span className="text-muted-foreground">→</span>
           <span>
             <span className="text-muted-foreground">End:</span>{' '}
-            <span className="font-medium">{endTime ? convertUnixToHumanReadable(endTime) : 'N/A'}</span>
-            {endTime > 0 && <span className="text-muted-foreground ml-1">({formatRelativeTime(endTime)})</span>}
+            <span className="font-medium">{formatReservationTime(endTime)}</span>
+            {endTime > 0 && <span className="text-muted-foreground ml-1">({formatReservationRelativeTime(endTime)})</span>}
           </span>
         </div>
 
@@ -154,14 +137,14 @@ function SlurmReservationDetailsComponent({ reservation }: SlurmReservationDetai
         </div>
 
         {/* Node List - only if present */}
-        {nodes && (
+        {nodeList && (
           <div className="py-2 px-3 bg-muted/30 rounded-lg">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground">Nodes</span>
-              <CopyButton text={nodes} />
+              <CopyButton text={nodeList} />
             </div>
             <code className="text-xs font-mono text-muted-foreground break-all block">
-              {nodes.length > 100 ? `${nodes.slice(0, 100)}...` : nodes}
+              {nodeList.length > 100 ? `${nodeList.slice(0, 100)}...` : nodeList}
             </code>
           </div>
         )}
