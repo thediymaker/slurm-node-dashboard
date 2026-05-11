@@ -3,6 +3,7 @@ import path from "path";
 import yaml from "js-yaml";
 import { z } from "zod";
 import { tool, type ToolSet } from "ai";
+import { searchDocumentation } from "@/lib/docs-search";
 import { fetchSlurmData } from "@/lib/slurm-api";
 import { buildBuiltinToolTurnUI } from "@/lib/builtin-tool-turn-ui";
 import { attachToolTurnUI, type ToolTurnUI } from "@/lib/tool-turn-ui";
@@ -458,6 +459,10 @@ export async function loadLLMConfig(): Promise<LLMAssistantConfig> {
 
 type ToolParams = Record<string, unknown>;
 type ToolExecutor = (params: ToolParams) => Promise<unknown>;
+type BuiltinToolExecutor = (
+  params: ToolParams,
+  config?: LLMAssistantConfig
+) => Promise<unknown>;
 
 function getParamString(params: ToolParams, name: string) {
   const value = params[name];
@@ -499,7 +504,7 @@ function getNameList(values: unknown[]) {
     .join(", ");
 }
 
-const BUILTIN_EXECUTORS: Record<string, ToolExecutor> = {
+const BUILTIN_EXECUTORS: Record<string, BuiltinToolExecutor> = {
   get_job_details: async (params) => {
     const job = getParamString(params, "job");
     const { data: activeData, error: activeError } = await fetchSlurmData(
@@ -646,6 +651,11 @@ const BUILTIN_EXECUTORS: Record<string, ToolExecutor> = {
     const { data, error } = await fetchSlurmData(`/partitions`);
     if (error) return { error: `Error fetching partitions: ${error}` };
     return data;
+  },
+
+  search_documentation: async (params, config) => {
+    const query = getParamString(params, "query");
+    return searchDocumentation(config?.cluster.documentation_url || "", query);
   },
 
   // Workflow tools orchestrate multiple API calls and return combined context.
@@ -802,7 +812,9 @@ function createCustomExecutor(execution: ToolExecution) {
     // Interpolate {param} placeholders in the endpoint
     let endpoint = execution.endpoint;
     for (const [key, value] of Object.entries(params)) {
-      endpoint = endpoint.replace(`{${key}}`, String(value));
+      endpoint = endpoint
+        .split(`{${key}}`)
+        .join(encodeURIComponent(String(value)));
     }
 
     if (execution.type === "http") {
@@ -881,6 +893,7 @@ function buildConfiguredToolTurnUI(
     toolId: toolConfig.id,
     toolName: toolConfig.name,
     category: toolConfig.category,
+    details: builtinToolUi?.details,
     followUpContext:
       builtinToolUi?.followUpContext || buildGenericFollowUpContext(toolConfig),
     promptGuidance,
@@ -890,6 +903,15 @@ function buildConfiguredToolTurnUI(
 // =============================================================================
 // Dynamic Tool & Prompt Builder  (called from the chat route)
 // =============================================================================
+
+const FACT_GROUNDING_PROMPT = `CLUSTER-SPECIFIC FACT GROUNDING:
+- Treat cluster-specific names, identifiers, policies, contacts, and eligibility rules as unknown unless they appear in the user's message, the configured cluster/defaults/restricted topics, or tool output from this conversation.
+- Never invent support channels, ticket queues, Slack/Teams channel names, email addresses, QoS names, partition names, reservation names, node names, account names, project names, or policy exceptions.
+- Never invent site-specific module names, GRES names, accelerator request flags, partitions, QoS values, or support paths from general HPC knowledge.
+- If documentation search only confirms that a technology exists but does not show exact usage syntax, say that the exact command was not found in the returned docs instead of filling it in.
+- Do not suggest priority boosts, elevated QoS, preemption, rerouting, queue bypasses, or emergency exceptions unless the exact mechanism and exact name are present in config or tool output.
+- When a user's request depends on current Slurm state, call the relevant Slurm tool before answering. If no available tool or configured documentation can provide the needed cluster-specific fact, say what is unknown and point to the configured support contact/details.
+- For site-specific command values that are not known, use placeholders such as <qos-name> instead of guessing.`;
 
 export function buildToolsAndPrompt(config: LLMAssistantConfig) {
   const tools: ToolSet = {};
@@ -906,7 +928,7 @@ export function buildToolsAndPrompt(config: LLMAssistantConfig) {
     if (tc.builtin && BUILTIN_EXECUTORS[tc.id]) {
       const builtinExecute = BUILTIN_EXECUTORS[tc.id];
       execute = async (params: Record<string, unknown>) => {
-        const result = await builtinExecute(params);
+        const result = await builtinExecute(params, config);
         return attachToolTurnUI(
           result,
           buildConfiguredToolTurnUI(tc, result, params)
@@ -944,6 +966,7 @@ export function buildToolsAndPrompt(config: LLMAssistantConfig) {
 
   // Base system prompt
   promptParts.push(config.system_prompt.trim());
+  promptParts.push(FACT_GROUNDING_PROMPT);
 
   // Cluster identity
   const c = config.cluster;

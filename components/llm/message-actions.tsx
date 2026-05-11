@@ -19,11 +19,31 @@ interface MessageActionsProps {
   isLoading: boolean;
   isLast: boolean;
   reload?: () => void;
+  onRequestFeedback?: (rating?: number) => void;
 }
 
-export function MessageActions({ message, isLoading, isLast, reload }: MessageActionsProps) {
+interface MessageUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  completionTokensDetails?: {
+    reasoningTokens?: number;
+  };
+  reasoningTokens?: number;
+}
+
+interface MessageWithUsage extends UIMessage {
+  usage?: MessageUsage;
+}
+
+export function MessageActions({
+  message,
+  isLoading,
+  isLast,
+  reload,
+  onRequestFeedback,
+}: MessageActionsProps) {
   const [isCopied, setIsCopied] = useState(false);
-  const [feedback, setFeedback] = useState<'good' | 'bad' | null>(null);
 
   const handleCopy = () => {
     const text = message.parts
@@ -34,8 +54,9 @@ export function MessageActions({ message, isLoading, isLast, reload }: MessageAc
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Cast message to any to access usage if it exists on the runtime object but not in the type definition yet
-  const usage = (message as any).usage;
+  const usage = (message as MessageWithUsage).usage;
+  const reasoningTokens =
+    usage?.completionTokensDetails?.reasoningTokens || usage?.reasoningTokens;
 
   return (
     <div className="flex items-center gap-1 mt-2 -ml-2">
@@ -43,10 +64,10 @@ export function MessageActions({ message, isLoading, isLast, reload }: MessageAc
         variant="ghost"
         size="icon"
         className="h-6 w-6 text-muted-foreground hover:text-foreground"
-        onClick={() => setFeedback(feedback === 'good' ? null : 'good')}
+        onClick={() => onRequestFeedback?.(5)}
         title="Good response"
       >
-        <ThumbsUp className={cn("h-3.5 w-3.5", feedback === 'good' && "fill-current text-green-500")} />
+        <ThumbsUp className="h-3.5 w-3.5" />
         <span className="sr-only">Good</span>
       </Button>
 
@@ -54,10 +75,10 @@ export function MessageActions({ message, isLoading, isLast, reload }: MessageAc
         variant="ghost"
         size="icon"
         className="h-6 w-6 text-muted-foreground hover:text-foreground"
-        onClick={() => setFeedback(feedback === 'bad' ? null : 'bad')}
+        onClick={() => onRequestFeedback?.(1)}
         title="Bad response"
       >
-        <ThumbsDown className={cn("h-3.5 w-3.5", feedback === 'bad' && "fill-current text-red-500")} />
+        <ThumbsDown className="h-3.5 w-3.5" />
         <span className="sr-only">Bad</span>
       </Button>
 
@@ -118,11 +139,11 @@ export function MessageActions({ message, isLoading, isLast, reload }: MessageAc
                 <span className="text-right font-mono">{usage.totalTokens}</span>
 
                 {/* Check for reasoning tokens in various possible locations */}
-                {(usage.completionTokensDetails?.reasoningTokens || (usage as any).reasoningTokens) && (
+                {reasoningTokens && (
                    <>
                     <span className="text-muted-foreground">Reasoning:</span>
                     <span className="text-right font-mono">
-                        {usage.completionTokensDetails?.reasoningTokens || (usage as any).reasoningTokens}
+                        {reasoningTokens}
                     </span>
                    </>
                 )}

@@ -17,6 +17,7 @@ const BUILTIN_TOOL_TURN_UI_BUILDERS: Record<string, ToolTurnUiBuilder> = {
   get_cluster_info: buildClusterToolTurnUI,
   list_qos: buildQosListToolTurnUI,
   list_partitions: buildPartitionListToolTurnUI,
+  search_documentation: buildDocumentationSearchToolTurnUI,
   troubleshoot_job: buildTroubleshootJobToolTurnUI,
   sbatch_helper: buildSbatchHelperToolTurnUI,
   node_health_check: buildNodeHealthCheckToolTurnUI,
@@ -432,6 +433,66 @@ function buildPartitionListToolTurnUI(result: ToolTurnRecord): ToolTurnUI {
     },
     followUpContext:
       "A partition list card and deterministic operational summary were shown. Generate follow-up questions about comparing partitions, checking limits, and selecting the right partition for a workload.",
+  };
+}
+
+function buildDocumentationSearchToolTurnUI(
+  result: ToolTurnRecord,
+  params: ToolTurnParams
+): ToolTurnUI {
+  const resultCount = getRecordArray(result.results).length;
+  const source = asRecord(result.source);
+  const documentationUrl = getString(source?.documentationUrl, "the configured documentation site");
+  const query = getString(result.query, getString(params.query, "the search query"));
+
+  if (typeof result.error === "string") {
+    return {
+      details: {
+        title: "Documentation Search",
+        intro: result.error,
+        items: [
+          {
+            label: "Configured docs",
+            value: documentationUrl,
+            tone: "info",
+            code: true,
+          },
+        ],
+        notes: [
+          "If the docs URL is correct but search returned no pages, check whether the site exposes a sitemap or public internal links.",
+        ],
+      },
+      followUpContext:
+        "A documentation search returned an error. Generate follow-up questions about the docs URL, alternate search terms, and contacting support for policy details.",
+    };
+  }
+
+  return {
+    details: {
+      title: "Documentation Search",
+      intro:
+        resultCount > 0
+          ? `The documentation search found ${resultCount} relevant page${resultCount === 1 ? "" : "s"} for "${query}".`
+          : `The documentation search did not find a matching page for "${query}".`,
+      items: [
+        {
+          label: "Source",
+          value: documentationUrl,
+          tone: "info",
+          code: true,
+        },
+      ],
+      notes:
+        resultCount > 0
+          ? [
+              "Use only the returned snippets and source URLs for site-specific policy or support details.",
+            ]
+          : [
+              "Try a narrower query or use the configured support contact if this is a policy question.",
+            ],
+    },
+    followUpContext:
+      "A documentation search card and source URLs were shown. Generate follow-up questions about policy details, support channels, examples from the docs, and related documentation pages.",
   };
 }
 

@@ -17,11 +17,19 @@ system_prompt: |
   - If asked about general topics reply: "I am designed solely to assist with
     Slurm and HPC-related tasks. I cannot help with that request."
   - NEVER fabricate data. Only state facts that come from tool results.
+  - NEVER invent cluster-specific policies, support channels, ticket queues,
+    Slack/Teams channels, QoS names, partition names, reservation names, or
+    exception processes. Use only configured values or tool results.
+  - If a cluster-specific detail depends on current Slurm state, use the
+    relevant Slurm tool before answering. If no available tool or configured
+    documentation can provide the detail, say that it is not visible in the
+    available data and point to the configured support contact.
   - If a tool returns an error, report the error honestly. Do not invent data.
   - Do not narrate your reasoning process. Never output internal thinking, labels like "analysis", or step descriptions. Just respond naturally.
 
   TOOL USAGE:
   - Use tools when a request depends on current cluster state. Answer general Slurm or HPC questions directly when no live data is needed.
+  - Use the documentation search tool for site-specific policies, support channels, examples, tutorials, and how-to guidance that are not live Slurm state.
   - Tools render rich visual cards that display factual data such as job details, node stats, partition limits, QoS, and reservations.
   - Treat the rendered card as the source of truth for factual values.
   - NEVER repeat, echo, list, summarize, or table-ify data that the tool card already shows.
@@ -43,7 +51,8 @@ defaults:
   output_pattern: "%x_%j.out"
   error_pattern: "%x_%j.err"
 custom_instructions: |
-  - Always remind users to load required modules before running programs.
+  - Remind users to load required modules before running programs when the module names are provided by the user, documentation search, or tool output.
+  - If module names are not visible in available context, say that the exact module was not found and suggest checking `module spider <software-name>`.
   - Suggest 'squeue -u $USER' to check job status.
   - Recommend 'sacct' for checking historical job data.
 restricted_topics:
@@ -185,7 +194,8 @@ tools:
       Let the reservation card display the reservation window, affected nodes, flags, and access scope.
       If the user named the wrong reservation, briefly identify the correct reservation name, then give only operational advice.
       If the reservation has the MAINT flag, treat it as a maintenance/outage notice, not as a reservation the user should submit to.
-      For MAINT reservations, advise users to check whether their jobs are affected, reschedule around the window, inspect affected nodes, or contact support/admins.
+      For MAINT reservations, advise users to check whether their jobs are affected, reschedule around the window, inspect affected nodes, or contact the configured support contact if they need an exception.
+      Do not invent priority boosts, special QoS names, support channels, ticket queues, or rerouting processes.
       Do not tell users to submit jobs to the reservation and do not provide `--reservation` examples for MAINT reservations.
       Do not restate dates, node counts, node lists, or convert Unix timestamps in prose.
   - id: list_reservations
@@ -203,6 +213,7 @@ tools:
       Use the reservation card to show maintenance windows and reservation timing.
       In prose, focus on which reservation is relevant and whether jobs may be affected.
       For MAINT reservations, frame the response as maintenance impact guidance, not job submission guidance.
+      Do not invent priority boosts, special QoS names, support channels, ticket queues, or rerouting processes.
       Do not suggest using `--reservation` or submitting jobs to MAINT reservations.
       Do not restate start/end times, node counts, node lists, flags, or convert Unix timestamps.
   - id: get_qos_details
@@ -218,6 +229,7 @@ tools:
         required: true
     prompt_guidance: |
       Explain the QoS limits: max walltime, max jobs, priority, resource caps.
+      Only describe the requested QoS if it exists in tool output. Do not infer that higher-priority or emergency QoS options exist.
   - id: get_cluster_info
     name: Get Cluster Info
     description: Get general cluster status and information.
@@ -227,6 +239,26 @@ tools:
     parameters: []
     prompt_guidance: |
       Summarize the cluster status, number of nodes, and any notable issues.
+  - id: search_documentation
+    name: Search Documentation
+    description: >
+      Search the configured cluster documentation URL for site-specific policies, support channels, tutorials, examples,
+      and usage guidance. Use this before answering cluster-specific documentation or policy questions that are not live
+      Slurm state.
+    enabled: true
+    builtin: true
+    category: docs
+    parameters:
+      - name: query
+        type: string
+        description: Search query for the configured documentation site.
+        required: true
+    prompt_guidance: |
+      Use this for site-specific policies, support channels, examples, tutorials, and how-to guidance that are not live Slurm state.
+      Treat returned snippets and source URLs as the source of truth. Mention the relevant source page when relying on documentation.
+      If no result answers the question, say the configured documentation did not provide that detail and point to the configured support contact.
+      If the returned snippets mention a technology but do not show exact module names, partition/QoS names, GRES names, or Slurm flags, say those exact values were not found in the returned documentation.
+      Do not infer documentation details that were not returned.
   - id: list_qos
     name: List QoS
     description: List all Quality of Service levels available in the cluster.
@@ -237,6 +269,7 @@ tools:
     prompt_guidance: |
       Present QoS options as a concise list with their key limits.
       When helping with sbatch scripts, recommend the best QoS for the user's workload.
+      Only recommend QoS names that appear in the tool output or configured defaults.
   - id: list_partitions
     name: List Partitions
     description: List all partitions in the cluster.
