@@ -56,10 +56,15 @@ export default async function MetricsPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
+  const defaultEndDate = new Date();
+  const defaultStartDate = addDays(defaultEndDate, -30);
+  const startDate = resolvedSearchParams.from ? new Date(resolvedSearchParams.from) : defaultStartDate;
+  const endDate = resolvedSearchParams.to ? new Date(resolvedSearchParams.to) : defaultEndDate;
+
   // Parse Filters
   const filters: MetricsFilters = {
-    startDate: resolvedSearchParams.from ? new Date(resolvedSearchParams.from) : addDays(new Date(), -30),
-    endDate: resolvedSearchParams.to ? new Date(resolvedSearchParams.to) : new Date(),
+    startDate,
+    endDate,
     clusters: resolvedSearchParams.clusters ? resolvedSearchParams.clusters.split(',') : [],
     accounts: resolvedSearchParams.accounts ? resolvedSearchParams.accounts.split(',') : [],
     users: resolvedSearchParams.users ? resolvedSearchParams.users.split(',') : [],
@@ -127,6 +132,10 @@ export default async function MetricsPage({ searchParams }: PageProps) {
           userOptions={filterOptions.users}
           collegeOptions={filterOptions.colleges}
           departmentOptions={filterOptions.departments}
+          initialDateRange={{
+            from: startDate.toISOString(),
+            to: endDate.toISOString(),
+          }}
         />
 
         <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-3 ${gpuUtilizationEnabled ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} mb-6`}>
