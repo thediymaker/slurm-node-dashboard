@@ -50,6 +50,36 @@ interface CaptureResult {
 // ─── Shared Query Helpers ────────────────────────────────────────────────────
 
 const RATE_LIMIT_SECONDS = 60;
+type MetricsPool = NonNullable<ReturnType<typeof getMetricsDb>>;
+
+let didWarnMissingGpuMetricsTable = false;
+
+function isMissingGpuMetricsTableError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
+}
+
+function missingGpuMetricsTableMessage() {
+  return "GPU metrics table is not initialized. Run slurm-history-ingestor/db/migrations/003_add_gpu_metrics.sql against the metrics database, or restart the updated ingestor so embedded migrations run.";
+}
+
+function warnMissingGpuMetricsTable() {
+  if (didWarnMissingGpuMetricsTable) return;
+  console.warn(missingGpuMetricsTableMessage());
+  didWarnMissingGpuMetricsTable = true;
+}
+
+function missingGpuMetricsTableResponse(status = 404) {
+  warnMissingGpuMetricsTable();
+  return NextResponse.json({
+    status,
+    message: missingGpuMetricsTableMessage(),
+  });
+}
+
+async function gpuMetricsTableExists(pool: MetricsPool) {
+  const result = await pool.query("SELECT to_regclass('job_gpu_metrics') AS table_name");
+  return result.rows[0]?.table_name === "job_gpu_metrics";
+}
 
 const queryDirectUtilValues = async (filter: string): Promise<{ utilValues: number[]; jobSet: Set<string>; totalGPUs: number; rawResult: any }> => {
   const result = await prom!.instantQuery(`DCGM_FI_DEV_GPU_UTIL{${filter}}`);
@@ -190,6 +220,10 @@ async function queryJobFromDatabase(jobId: string): Promise<GPUJobData | null> {
       isComplete: row.is_complete,
     };
   } catch (error) {
+    if (isMissingGpuMetricsTableError(error)) {
+      warnMissingGpuMetricsTable();
+      return null;
+    }
     console.error(`Error querying GPU metrics from database for job ${jobId}:`, error);
     return null;
   }
@@ -208,6 +242,10 @@ async function handleOverview(from?: string, to?: string): Promise<NextResponse>
   }
 
   try {
+    if (!(await gpuMetricsTableExists(pool))) {
+      return missingGpuMetricsTableResponse();
+    }
+
     const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
@@ -254,6 +292,10 @@ async function handleOverview(from?: string, to?: string): Promise<NextResponse>
 
     return NextResponse.json({ status: 200, data, source: "database" });
   } catch (error) {
+    if (isMissingGpuMetricsTableError(error)) {
+      return missingGpuMetricsTableResponse();
+    }
+
     console.error("Error querying GPU overview from database:", error);
     return NextResponse.json({
       status: 500,
@@ -361,6 +403,10 @@ async function handleCapture(): Promise<NextResponse<CaptureResult>> {
   }
 
   try {
+    if (!(await gpuMetricsTableExists(pool))) {
+      return missingGpuMetricsTableResponse(500);
+    }
+
     const lastCaptureResult = await pool.query(
       `SELECT EXTRACT(EPOCH FROM (NOW() - MAX(last_seen))) as seconds_since_last
        FROM job_gpu_metrics

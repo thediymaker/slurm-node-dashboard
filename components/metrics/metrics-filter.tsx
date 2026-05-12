@@ -3,9 +3,9 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DateRange } from "react-day-picker"
-import { addDays, format } from "date-fns"
+import { addDays } from "date-fns"
 import { DatePickerWithRange } from "./date-range-picker"
-import { MultiSelect, Option } from "./multi-select"
+import { MultiSelect } from "./multi-select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Filter, Calendar, RotateCcw, Check, Search, Bookmark } from "lucide-react"
@@ -21,6 +21,10 @@ interface MetricsFilterProps {
   userOptions: string[]
   collegeOptions: string[]
   departmentOptions: string[]
+  initialDateRange: {
+    from: string
+    to: string
+  }
 }
 
 export function MetricsFilter({
@@ -29,15 +33,16 @@ export function MetricsFilter({
   userOptions,
   collegeOptions,
   departmentOptions,
+  initialDateRange,
 }: MetricsFilterProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   // Initialize state from URL params
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: searchParams.get("from") ? new Date(searchParams.get("from")!) : addDays(new Date(), -30),
-    to: searchParams.get("to") ? new Date(searchParams.get("to")!) : new Date(),
-  })
+  const [date, setDate] = React.useState<DateRange | undefined>(() => ({
+    from: new Date(searchParams.get("from") || initialDateRange.from),
+    to: new Date(searchParams.get("to") || initialDateRange.to),
+  }))
 
   const [selectedClusters, setSelectedClusters] = React.useState<string[]>(
     searchParams.get("clusters")?.split(",") || []

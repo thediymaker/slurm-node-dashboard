@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { addDays, format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
@@ -18,6 +17,19 @@ interface DatePickerWithRangeProps {
   className?: string
   date: DateRange | undefined
   setDate: (date: DateRange | undefined) => void
+}
+
+const metricsTimeZone = process.env.NEXT_PUBLIC_METRICS_TIME_ZONE || "America/Phoenix"
+
+const metricsDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "2-digit",
+  year: "numeric",
+  timeZone: metricsTimeZone,
+})
+
+function formatMetricDate(date: Date) {
+  return metricsDateFormatter.format(date)
 }
 
 export function DatePickerWithRange({
@@ -41,11 +53,11 @@ export function DatePickerWithRange({
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "LLL dd, y")} -{" "}
-                  {format(date.to, "LLL dd, y")}
+                  {formatMetricDate(date.from)} -{" "}
+                  {formatMetricDate(date.to)}
                 </>
               ) : (
-                format(date.from, "LLL dd, y")
+                formatMetricDate(date.from)
               )
             ) : (
               <span>Pick a date</span>
