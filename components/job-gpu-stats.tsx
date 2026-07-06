@@ -40,7 +40,7 @@ const gpuRubric: Record<string, { threshold: number; color: string; barClass: st
     threshold: 50,
     color: "text-foreground",
     barClass: "bg-primary/75",
-    label: "Healthy",
+    label: "Good",
   },
   D: {
     threshold: 30,
