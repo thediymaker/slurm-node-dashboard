@@ -17,6 +17,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# data/ holds the hourly snapshots the history plugin reads. It is gitignored,
+# so create it for builds from a fresh clone; mount a volume over it at runtime.
+RUN mkdir -p data
+
+# Pick one of the bundled favicons, e.g. CLUSTER_FAVICON=sol uses
+# public/favicon.ico.sol. Empty keeps app/favicon.ico.
+ARG CLUSTER_FAVICON=
+RUN if [ -n "$CLUSTER_FAVICON" ]; then cp "public/favicon.ico.$CLUSTER_FAVICON" app/favicon.ico; fi
+
 # Only pass non-secret, build-time app config into the client bundle.
 ARG CLUSTER_NAME=Cluster
 ARG CLUSTER_LOGO=
