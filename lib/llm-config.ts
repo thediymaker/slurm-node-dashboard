@@ -97,11 +97,11 @@ export const LLM_CONFIG_PATH = path.join(
   "llm-assistant.yaml"
 );
 
-export const LLM_LOCAL_CONFIG_PATH = path.join(
-  process.cwd(),
-  "infra",
-  "llm-assistant.local.yaml"
-);
+// The admin page writes local overrides here at runtime. Containers with a
+// read-only image can point this at a persistent volume instead.
+export const LLM_LOCAL_CONFIG_PATH =
+  process.env.LLM_ASSISTANT_LOCAL_CONFIG ||
+  path.join(process.cwd(), "infra", "llm-assistant.local.yaml");
 
 // =============================================================================
 // Defaults
