@@ -6,7 +6,7 @@
   },
   "private": true,
   "overrides": {
-    "postcss": "8.5.13",
+    "postcss": "8.5.31",
     "kysely": "^0.28.17"
   },
   "scripts": {
@@ -49,7 +49,7 @@
     "@types/fs-extra": "^11.0.4",
     "@xyflow/react": "^12.9.3",
     "ai": "^6.0.0",
-    "better-auth": "^1.6.9",
+    "better-auth": "~1.6.33",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "cmdk": "^1.0.0",
@@ -62,13 +62,13 @@
     "js-yaml": "^4.1.1",
     "loglevel": "^1.9.1",
     "lucide-react": "^0.469.0",
-    "next": "^16.2.4",
+    "next": "^16.4.2",
     "next-themes": "^0.4.4",
     "pg": "^8.16.3",
     "prometheus-query": "^3.4.0",
-    "react": "^19.2.5",
+    "react": "^19.3.1",
     "react-day-picker": "^9.4.4",
-    "react-dom": "^19.2.5",
+    "react-dom": "^19.3.1",
     "react-force-graph-2d": "^1.29.0",
     "react-hook-form": "^7.51.3",
     "react-intersection-observer": "^9.13.0",
@@ -93,7 +93,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/semver": "^7.7.1",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.4",
+    "eslint-config-next": "^16.4.2",
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.4.1",
     "typescript": "5.4.5"
