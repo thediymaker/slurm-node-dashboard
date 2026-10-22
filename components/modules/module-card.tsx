@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Package,
   ChevronDown,
   Copy,
@@ -20,6 +27,7 @@ interface Version {
   full?: string;
   path?: string;
   markedDefault?: boolean;
+  parent?: string[][];
 }
 
 interface ModuleCardProps {
@@ -72,6 +80,37 @@ const extractDescription = (help?: string): string => {
   return lines.join(' ').trim() || "No description available";
 };
 
+// Prerequisite modules for a version (the first set, if Lmod lists several)
+const getPrereqs = (ver?: Version): string[] => ver?.parent?.[0] ?? [];
+
+// Full command for a version, including its prerequisites so it works as pasted
+const buildLoadCommand = (ver: Version | undefined, packageName: string): string => {
+  if (!ver?.full) return `module load ${packageName}`;
+  return ["module load", ...getPrereqs(ver), ver.full].join(" ");
+};
+
+const isDefaultVersion = (ver: Version, defaultVersionName?: string | boolean) =>
+  !!ver.markedDefault ||
+  (typeof defaultVersionName === "string" && ver.versionName === defaultVersionName);
+
+// Version to feature at the top of the card: a default that needs no
+// prerequisites (what a plain `module load <name>` gives), otherwise the
+// package's default version, otherwise the first version in the file
+const pickPrimaryVersion = (
+  versions: Version[],
+  defaultVersionName?: string | boolean
+): Version | undefined =>
+  versions.find(v => isDefaultVersion(v, defaultVersionName) && getPrereqs(v).length === 0) ??
+  (typeof defaultVersionName === "string"
+    ? versions.find(v => v.versionName === defaultVersionName)
+    : undefined) ??
+  versions.find(v => v.markedDefault) ??
+  versions[0];
+
+// Help text from the featured version, or from any version that has some
+const pickHelp = (versions: Version[], primary?: Version): string | undefined =>
+  primary?.help || versions.find(v => v.help)?.help;
+
 function CopyButton({ text, className = "" }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -102,21 +141,124 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
   );
 }
 
-// ============ Grid Card (Compact, always-visible info) ============
-function ModuleGridCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
-  const versions: Version[] = !module.versions 
-    ? [] 
-    : Array.isArray(module.versions) 
-      ? module.versions 
-      : [module.versions];
+// Normalize the versions field, which can be a single object or a list
+const toVersionList = (versions?: Version | Version[]): Version[] =>
+  !versions ? [] : Array.isArray(versions) ? versions : [versions];
 
+// Everything both views need to describe one module
+const getModuleInfo = (module: ModuleCardProps["module"]) => {
+  const versions = toVersionList(module.versions);
   const packageName = module.package || "Unknown Module";
-  const { baseName, version, compiler } = parseModuleName(packageName);
-  const description = extractDescription(versions[0]?.help);
-  
-  const loadCommand = versions[0]?.full 
-    ? `module load ${versions[0].full}` 
-    : `module load ${packageName}`;
+  const primary = pickPrimaryVersion(versions, module.defaultVersionName);
+  return {
+    versions,
+    packageName,
+    primary,
+    ...parseModuleName(packageName),
+    description: extractDescription(pickHelp(versions, primary)),
+    loadCommand: buildLoadCommand(primary, packageName),
+    // Featured version first, then the rest in file order
+    orderedVersions: primary ? [primary, ...versions.filter(v => v !== primary)] : versions,
+  };
+};
+
+// ============ Module details (shared by the list view and the grid popup) ============
+function ModuleDetails({ module }: { module: ModuleCardProps["module"] }) {
+  const { packageName, primary, description, loadCommand, orderedVersions } = getModuleInfo(module);
+
+  return (
+    <div className="space-y-3">
+      {/* Module Load Command */}
+      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+        <Terminal className="w-4 h-4 text-muted-foreground shrink-0" />
+        <code className="text-sm font-mono text-foreground flex-1 truncate">
+          {loadCommand}
+        </code>
+        <CopyButton text={loadCommand} />
+      </div>
+
+      {/* Full Description */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Info className="w-3.5 h-3.5 text-primary" />
+          Description
+        </div>
+        <p className="text-sm text-muted-foreground leading-relaxed pl-5">
+          {description}
+        </p>
+      </div>
+
+      {/* Versions */}
+      {orderedVersions.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Tag className="w-3.5 h-3.5 text-primary" />
+            Available Versions
+          </div>
+          <div className="space-y-1.5 pl-5">
+            {orderedVersions.map((ver, idx) => {
+              const isDefault = isDefaultVersion(ver, module.defaultVersionName);
+              const prereqSets = ver.parent ?? [];
+              return (
+                <div key={idx} className="flex items-center gap-2 flex-wrap text-xs">
+                  <Badge
+                    variant={isDefault ? "default" : "secondary"}
+                    className={`text-xs rounded-md ${
+                      isDefault ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : ''
+                    }`}
+                  >
+                    {ver.versionName || ver.full || 'default'}
+                    {isDefault && (
+                      <span className="ml-1 text-[10px] opacity-70">(default)</span>
+                    )}
+                  </Badge>
+                  {prereqSets.length > 0 ? (
+                    <>
+                      <span className="text-muted-foreground">Requires</span>
+                      {prereqSets.map((set, setIdx) => (
+                        <React.Fragment key={setIdx}>
+                          {setIdx > 0 && <span className="text-muted-foreground">or</span>}
+                          {set.map(dep => (
+                            <code
+                              key={dep}
+                              className="font-mono px-1.5 py-0.5 rounded-md border border-muted"
+                            >
+                              {dep}
+                            </code>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">No prerequisites</span>
+                  )}
+                  {ver.full && (
+                    <CopyButton text={buildLoadCommand(ver, packageName)} className="ml-auto" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Module Path */}
+      {primary?.path && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-muted">
+          <span>Path:</span>
+          <code className="font-mono truncate flex-1">{primary.path}</code>
+          <CopyButton text={primary.path} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============ Grid Card (Compact; click to open full details) ============
+function ModuleGridCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { versions, primary, baseName, version, compiler, description, loadCommand } =
+    getModuleInfo(module);
 
   return (
     <motion.div
@@ -124,7 +266,18 @@ function ModuleGridCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.015, duration: 0.2 }}
     >
-      <Card className="bg-card border hover:border-primary/30 transition-all duration-200 h-full">
+      <Card
+        className="bg-card border hover:border-primary/30 transition-all duration-200 h-full cursor-pointer"
+        onClick={() => setIsOpen(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsOpen(true);
+          }
+        }}
+      >
         <CardHeader className="p-4 pb-2">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-sm font-semibold text-primary truncate">
@@ -165,18 +318,34 @@ function ModuleGridCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
               <span className="text-muted-foreground">
                 {versions.length === 1 ? '1 version' : `${versions.length} versions`}
               </span>
-              {versions[0]?.full && (
-                <Badge 
-                  variant="secondary" 
+              {primary?.full && (
+                <Badge
+                  variant="secondary"
                   className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0 rounded-md"
                 >
-                  {versions[0].versionName || 'default'}
+                  {primary.versionName || 'default'}
                 </Badge>
               )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Kept outside the Card so clicks inside the popup don't reach the card's onClick */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-primary" />
+              <span className="text-primary">{baseName}</span>
+            </DialogTitle>
+            <DialogDescription>
+              {versions.length === 1 ? '1 version' : `${versions.length} versions`}
+            </DialogDescription>
+          </DialogHeader>
+          <ModuleDetails module={module} />
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
@@ -185,22 +354,7 @@ function ModuleGridCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
 function ModuleListCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const versions: Version[] = !module.versions 
-    ? [] 
-    : Array.isArray(module.versions) 
-      ? module.versions 
-      : [module.versions];
-
-  const packageName = module.package || "Unknown Module";
-  const { baseName, version, compiler } = parseModuleName(packageName);
-  const description = extractDescription(versions[0]?.help);
-  const defaultVersion = typeof module.defaultVersionName === 'string' 
-    ? module.defaultVersionName 
-    : versions.find(v => v.markedDefault)?.versionName;
-
-  const loadCommand = versions[0]?.full 
-    ? `module load ${versions[0].full}` 
-    : `module load ${packageName}`;
+  const { versions, baseName, version, compiler, description } = getModuleInfo(module);
 
   return (
     <motion.div
@@ -265,67 +419,8 @@ function ModuleListCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
               className="overflow-hidden"
             >
               <Separator />
-              <CardContent className="p-4 space-y-3">
-                {/* Module Load Command */}
-                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                  <Terminal className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <code className="text-sm font-mono text-foreground flex-1 truncate">
-                    {loadCommand}
-                  </code>
-                  <CopyButton text={loadCommand} />
-                </div>
-
-                {/* Full Description */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Info className="w-3.5 h-3.5 text-primary" />
-                    Description
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed pl-5">
-                    {description}
-                  </p>
-                </div>
-
-                {/* Versions */}
-                {versions.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Tag className="w-3.5 h-3.5 text-primary" />
-                      Available Versions
-                    </div>
-                    <div className="flex flex-wrap gap-2 pl-5">
-                      {versions.map((ver, idx) => (
-                        <div key={idx} className="flex items-center gap-1">
-                          <Badge 
-                            variant={ver.markedDefault || ver.versionName === defaultVersion ? "default" : "secondary"}
-                            className={`text-xs rounded-md ${
-                              ver.markedDefault || ver.versionName === defaultVersion
-                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                                : ''
-                            }`}
-                          >
-                            {ver.versionName || ver.full || 'default'}
-                            {(ver.markedDefault || ver.versionName === defaultVersion) && (
-                              <span className="ml-1 text-[10px] opacity-70">(default)</span>
-                            )}
-                          </Badge>
-                          {ver.full && (
-                            <CopyButton text={`module load ${ver.full}`} />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Module Path */}
-                {versions[0]?.path && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-muted">
-                    <span>Path:</span>
-                    <code className="font-mono truncate flex-1">{versions[0].path}</code>
-                    <CopyButton text={versions[0].path} />
-                  </div>
-                )}
+              <CardContent className="p-4">
+                <ModuleDetails module={module} />
               </CardContent>
             </motion.div>
           )}
