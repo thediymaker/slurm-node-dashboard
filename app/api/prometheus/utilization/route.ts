@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
-import { prom } from "@/lib/prometheus";
+import { prom, escapePromString, getInstanceForNode } from "@/lib/prometheus";
 
 type PrometheusMetric = {
   labels: Record<string, string>;
@@ -51,14 +51,7 @@ export async function GET(
 
   try {
     // Get instance name for the node
-    const unameRes = (await prom.rangeQuery(
-      `node_uname_info{nodename=~"${node}"}`,
-      start,
-      end,
-      STEP_INTERVAL
-    )) as unknown as { result: PrometheusResult[] };
-
-    const instance = unameRes.result[0]?.metric?.labels["instance"];
+    const instance = await getInstanceForNode(node);
     if (!instance) {
       return NextResponse.json({
         status: 404,
@@ -68,7 +61,7 @@ export async function GET(
 
     // Query CPU usage
     const cpuRes = (await prom.rangeQuery(
-      `100 - (avg by (instance) (rate(node_cpu_seconds_total{instance="${instance}",mode="idle"}[5m])) * 100)`,
+      `100 - (avg by (instance) (rate(node_cpu_seconds_total{instance="${escapePromString(instance)}",mode="idle"}[5m])) * 100)`,
       start,
       end,
       STEP_INTERVAL

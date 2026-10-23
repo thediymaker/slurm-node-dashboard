@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { PrometheusQueryResponse } from "@/types/types";
 import { NextResponse } from "next/server";
-import { prom } from "@/lib/prometheus";
+import { prom, escapePromString, getInstanceForNode, nodeNameRegex } from "@/lib/prometheus";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -17,6 +17,11 @@ export async function GET(req: Request) {
     });
   }
 
+  // The metric name is spliced into PromQL, so only accept a bare metric name
+  if (!/^[a-zA-Z_:][a-zA-Z0-9_:]*$/.test(query)) {
+    return NextResponse.json({ status: 400, message: `Invalid metric name: ${query}` });
+  }
+
   if (!prom) {
     return NextResponse.json({ status: 404, message: "Prometheus not configured" });
   }
@@ -26,39 +31,35 @@ export async function GET(req: Request) {
   const step = 15 * 60; // 15 minutes
 
   try {
-    const unameQuery = "node_uname_info";
-    const unameRes: PrometheusQueryResponse = await prom.rangeQuery(
-      `${unameQuery}{nodename="${node}"}`,
-      start,
-      end,
-      step
-    );
-
-    const instance = unameRes.result[0]?.metric?.labels["instance"];
-
-    if (!instance) {
-      return NextResponse.json({
-        status: 404,
-        message: "No instance found for the specified node.",
-      });
-    }
-
     // Build the appropriate query based on metric type
     let prometheusQuery: string;
-    
+
     if (query.startsWith("DCGM_")) {
       // DCGM metrics have volatile labels (hpc_job, UUID, etc.) that change per job,
       // creating multiple time series over a range. Aggregate with max to merge them
       // into one series per GPU, so we don't pick up a stale/idle series.
-      prometheusQuery = `max by (Hostname, gpu) (${query}{Hostname="${node}"})`;
-    } else if (query === "node_hwmon_temp_celsius") {
-      // Get CPU package temperature (sensor temp1 on coretemp)
-      prometheusQuery = `${query}{instance="${instance}", chip=~".*coretemp.*", sensor="temp1"}`;
-    } else if (query.includes("network") && query.includes("_bytes_total")) {
-      // Network counters need rate() to show throughput, exclude loopback and virtual interfaces
-      prometheusQuery = `rate(${query}{instance="${instance}", device!~"lo|veth.*|docker.*|br.*|virbr.*"}[5m])`;
+      // These are keyed by Hostname, so GPU nodes don't need node_exporter.
+      prometheusQuery = `max by (Hostname, gpu) (${query}{Hostname=~"${nodeNameRegex(node)}"})`;
     } else {
-      prometheusQuery = `${query}{instance="${instance}"}`;
+      const instance = await getInstanceForNode(node, days);
+
+      if (!instance) {
+        return NextResponse.json({
+          status: 404,
+          message: `No node_exporter data found for ${node}. Check that node_uname_info has a nodename or instance label matching it.`,
+        });
+      }
+
+      const instanceLabel = `instance="${escapePromString(instance)}"`;
+      if (query === "node_hwmon_temp_celsius") {
+        // Get CPU package temperature (sensor temp1 on coretemp)
+        prometheusQuery = `${query}{${instanceLabel}, chip=~".*coretemp.*", sensor="temp1"}`;
+      } else if (query.includes("network") && query.includes("_bytes_total")) {
+        // Network counters need rate() to show throughput, exclude loopback and virtual interfaces
+        prometheusQuery = `rate(${query}{${instanceLabel}, device!~"lo|veth.*|docker.*|br.*|virbr.*"}[5m])`;
+      } else {
+        prometheusQuery = `${query}{${instanceLabel}}`;
+      }
     }
 
     let loadRes: PrometheusQueryResponse;
