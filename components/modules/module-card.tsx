@@ -272,6 +272,8 @@ function ModuleGridCard({ module, index }: Omit<ModuleCardProps, 'viewMode'>) {
         role="button"
         tabIndex={0}
         onKeyDown={(e: React.KeyboardEvent) => {
+          // Ignore keys from inner controls (e.g. the copy button) so they keep working
+          if (e.target !== e.currentTarget) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setIsOpen(true);
