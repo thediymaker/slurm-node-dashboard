@@ -288,7 +288,7 @@ export function NodeMetricsPanel({ data, metricName, isLoading }: NodeMetricsPan
           <CardDescription>{displayInfo.description}</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[200px] text-muted-foreground">
-          No data available for this metric on this node
+          {data?.message || "No data available for this metric on this node"}
         </CardContent>
       </Card>
     );
