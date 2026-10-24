@@ -249,6 +249,30 @@ export async function getNodeHistory(
   }));
 }
 
+// Nodes that went unavailable, or came back, in the last few minutes
+export interface RecentNodeChange {
+  node: string;
+  change: "unavailable" | "available";
+  at: string;
+}
+
+export async function getRecentNodeChanges(pool: DbPool, cluster: string, minutes: number): Promise<RecentNodeChange[]> {
+  const { rows } = await pool.query(
+    `SELECT node, 'unavailable' AS change, started_at AS at FROM node_events
+     WHERE cluster = $1 AND ended_at IS NULL AND started_at > now() - make_interval(mins => $2)
+     UNION ALL
+     SELECT node, 'available', ended_at FROM node_events
+     WHERE cluster = $1 AND ended_at > now() - make_interval(mins => $2)
+       AND NOT EXISTS (SELECT 1 FROM node_events o WHERE o.cluster = $1 AND o.node = node_events.node AND o.ended_at IS NULL)`,
+    [cluster, minutes]
+  );
+  return rows.map((r: { node: string; change: RecentNodeChange["change"]; at: Date }) => ({
+    node: r.node,
+    change: r.change,
+    at: new Date(r.at).toISOString(),
+  }));
+}
+
 // Seconds per state for each recorded hour, oldest first
 export interface NodeStateHour {
   hour: string;

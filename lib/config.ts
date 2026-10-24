@@ -42,6 +42,8 @@ export interface PublicConfig {
   baseUrl?: string;
   metricsTimeZone: string;
   hierarchyLabels: { level1: string; level2: string };
+  // Node temperature (°C) at which large node cards highlight it
+  nodeTempWarn: number;
 }
 
 export function getPublicConfig(): PublicConfig {
@@ -58,5 +60,6 @@ export function getPublicConfig(): PublicConfig {
       level2:
         readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL_2_LABEL") ?? readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL2_LABEL") ?? "Department",
     },
+    nodeTempWarn: Number(readEnv("NODE_TEMP_WARN_C")) || 80,
   };
 }

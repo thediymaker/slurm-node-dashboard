@@ -1,25 +1,23 @@
 "use client";
 
-import { NodeCard } from "@/components/nodeCard/node-card";
-import GroupedNodes from "@/components/grouped-nodes";
 import useSWR from "swr";
-import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
-import NodeHeader from "./node-header";
-import CardSkeleton from "./card-skeleton";
-import { Slider } from "../ui/slider";
 import Stats from "./stats";
-import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
 import { LastUpdated } from "../last-updated";
-import { Node } from "@/types/types";
+import { Node, NodeConfig } from "@/types/types";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
-import NodeCount from "./node-counts";
 import ChatIcon from "../llm/chat-icon";
-import { useFeature } from "@/components/runtime-config";
+import UnifiedHeader from "@/components/unified-header";
+import { useFeature, useRuntimeConfig } from "@/components/runtime-config";
 import { LogicType } from "@/components/feature-selector";
 import { withBasePath } from "@/lib/base-path";
+import type { NodeExtras } from "@/app/api/nodes/extras/route";
+import ClusterSummary from "./cluster-summary";
+import NodeToolbar from "./node-toolbar";
+import { GroupBy, NodeGroups } from "./node-grid";
+import { CardSize, STATE_ORDER, TILE_WIDTH, isOverloaded, needsAttention, stateOf } from "./node-view";
 
 const nodeURL = withBasePath("/api/slurm/nodes");
 const nodeFetcher = async () => {
@@ -71,8 +69,34 @@ const nodeFetcher = async () => {
   }
 };
 
+const jsonFetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+
+// localStorage can throw in private windows; fall back to the default
+function stored<T>(key: string, parse: (raw: string) => T | undefined, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : parse(raw) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function save(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Private windows can refuse storage
+  }
+}
+
+const GROUP_BYS: GroupBy[] = ["rack", "partition", "state", "none"];
+
 const Nodes = ({ username }: { username?: string }) => {
   const aiEnabled = useFeature("ai");
+  const prometheusEnabled = useFeature("prometheus");
+  const nodeHistoryEnabled = useFeature("nodeHistory");
+  const { nodeTempWarn } = useRuntimeConfig();
   // Track connection errors that occur during revalidation
   const [lastFetchError, setLastFetchError] = useState<Error | null>(null);
 
@@ -82,216 +106,107 @@ const Nodes = ({ username }: { username?: string }) => {
     isLoading: nodeIsLoading,
   } = useSWR(nodeURL, nodeFetcher, {
     refreshInterval: 15000,
-    onSuccess: () => {
-      // Clear error on success
-      setLastFetchError(null);
-    },
-    onError: (err) => {
-      // Track errors even when we have cached data
-      setLastFetchError(err);
-    },
+    onSuccess: () => setLastFetchError(null),
+    // Track errors even when we have cached data
+    onError: (err) => setLastFetchError(err),
   });
 
   // Determine if we have a connection issue (either initial error or revalidation error)
   const hasConnectionError = !!(nodeError || (lastFetchError && nodeData));
 
-  // Use lazy initializers - function is only called once on mount
-  const [cardSize, setCardSize] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      return parseInt(localStorage.getItem("cardSize") || "100", 10);
-    }
-    return 100;
-  });
+  const [cardSize, setCardSize] = useState<CardSize>(() =>
+    stored("cardSize", (raw) => ([50, 100, 150].includes(Number(raw)) ? (Number(raw) as CardSize) : undefined), 100)
+  );
+  const [showStats, setShowStats] = useState<boolean>(() => stored("showStats", (raw) => raw === "true", false));
+  const [colorSchema, setColorSchema] = useState<string>(() => stored("colorSchema", (raw) => raw, "default"));
+  // Before 3.0 there was a separate rack list view; carry that choice over
+  const [groupBy, setGroupBy] = useState<GroupBy>(() =>
+    stored(
+      "groupBy",
+      (raw) => (GROUP_BYS.includes(raw as GroupBy) ? (raw as GroupBy) : undefined),
+      stored("isGroupedView", (raw) => (raw === "true" ? "rack" : "none"), "none") as GroupBy
+    )
+  );
+  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(() =>
+    stored("selectedNodeFeatures", (raw) => {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : undefined;
+    }, [] as string[])
+  );
+  const [featureLogicType, setFeatureLogicType] = useState<LogicType>(() =>
+    stored("featureLogicType", (raw) => (raw === "OR" ? "OR" : "AND"), "AND" as LogicType)
+  );
+  const [nodeType, setNodeType] = useState("all");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [partition, setPartition] = useState("all");
 
-  const [showStats, setShowStats] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("showStats") === "true";
-    }
-    return false;
-  });
+  useEffect(() => save("cardSize", String(cardSize)), [cardSize]);
+  useEffect(() => save("showStats", String(showStats)), [showStats]);
+  useEffect(() => save("colorSchema", colorSchema), [colorSchema]);
+  useEffect(() => save("groupBy", groupBy), [groupBy]);
+  useEffect(() => save("selectedNodeFeatures", JSON.stringify(selectedNodeFeatures)), [selectedNodeFeatures]);
+  useEffect(() => save("featureLogicType", featureLogicType), [featureLogicType]);
 
-  const [colorSchema, setColorSchema] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("colorSchema") || "default";
-    }
-    return "default";
-  });
+  // Rack layout from node.cfg; a site without one just doesn't get the Rack option
+  const { data: rackConfig } = useSWR<NodeConfig | null>(withBasePath("/api/node-config"), async (url: string) => {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && !data.error ? data : null;
+  }, { revalidateOnFocus: false });
+  const hasRacks = !!rackConfig && Object.keys(rackConfig).length > 0;
+  const effectiveGroupBy: GroupBy = groupBy === "rack" && rackConfig !== undefined && !hasRacks ? "none" : groupBy;
 
-  const [isGroupedView, setIsGroupedView] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("isGroupedView") === "true";
-    }
-    return false;
-  });
+  // Power, temperature, GPU busyness and load trend only show on large cards
+  const { data: extrasData } = useSWR<{ enabled: boolean; nodes: Record<string, NodeExtras> } | null>(
+    cardSize === 150 && prometheusEnabled ? withBasePath("/api/nodes/extras") : null,
+    jsonFetcher,
+    { refreshInterval: 30000 }
+  );
 
-  const [selectedNodeFeatures, setSelectedNodeFeatures] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const storedFeatures = localStorage.getItem("selectedNodeFeatures");
-      if (storedFeatures) {
-        try {
-          return JSON.parse(storedFeatures);
-        } catch (e) {
-          return [];
-        }
-      }
-    }
-    return [];
-  });
+  // Nodes that went unavailable or came back in the last few minutes get a ring
+  const { data: recentData } = useSWR<{ changes?: { node: string }[] } | null>(
+    nodeHistoryEnabled ? withBasePath("/api/node-history/recent") : null,
+    jsonFetcher,
+    { refreshInterval: 60000 }
+  );
+  const changed = useMemo(() => new Set((recentData?.changes ?? []).map((c) => c.node)), [recentData]);
 
-  const [featureLogicType, setFeatureLogicType] = useState<LogicType>(() => {
-    if (typeof window !== "undefined") {
-      const logicType = localStorage.getItem("featureLogicType") as LogicType;
-      return logicType === "OR" ? "OR" : "AND";
-    }
-    return "AND";
-  });
-
-  const [selectedNodeType, setSelectedNodeType] = useState<string>("allNodes");
-  const [selectedNodeState, setSelectedNodeState] =
-    useState<string>("allState");
-  const [selectedNodePartitions, setSelectedNodePartitions] =
-    useState<string>("allPartitions");
-
-  const systems: Node[] = nodeData?.nodes || [];
-
-  useEffect(() => {
-    localStorage.setItem("cardSize", cardSize.toString());
-  }, [cardSize]);
-
-  useEffect(() => {
-    localStorage.setItem("showStats", showStats.toString());
-  }, [showStats]);
-
-  useEffect(() => {
-    localStorage.setItem("colorSchema", colorSchema);
-  }, [colorSchema]);
-
-  useEffect(() => {
-    localStorage.setItem("isGroupedView", isGroupedView.toString());
-  }, [isGroupedView]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      "selectedNodeFeatures",
-      JSON.stringify(selectedNodeFeatures)
-    );
-  }, [selectedNodeFeatures]);
-
-  useEffect(() => {
-    localStorage.setItem("featureLogicType", featureLogicType);
-  }, [featureLogicType]);
-
-  // SWR handles polling via refreshInterval - no manual interval needed
+  const systems: Node[] = useMemo(() => nodeData?.nodes || [], [nodeData]);
 
   const uniquePartitions = useMemo(() => {
     const partitions = new Set<string>();
-    systems.forEach((node) => {
-      node.partitions.forEach((partition) => partitions.add(partition));
-    });
-    return Array.from(partitions);
+    systems.forEach((node) => node.partitions.forEach((p) => partitions.add(p)));
+    return Array.from(partitions).sort();
   }, [systems]);
 
   const uniqueFeatures = useMemo(() => {
     const features = new Set<string>();
-    systems.forEach((node) => {
-      if (node.features && Array.isArray(node.features)) {
-        node.features.forEach((feature) => {
-          if (feature) features.add(feature);
-        });
-      }
-    });
-    return Array.from(features);
+    systems.forEach((node) => node.features?.forEach((f) => f && features.add(f)));
+    return Array.from(features).sort();
   }, [systems]);
 
   const filteredNodes = useMemo(() => {
     return systems.filter((node: any) => {
-      const nodeMatchesType =
-        selectedNodeType === "allNodes" ||
-        (selectedNodeType === "gpuNodes" && node.gres !== "") ||
-        (selectedNodeType === "cpuNodes" && node.gres === "");
+      if (nodeType === "gpu" && !node.gres) return false;
+      if (nodeType === "cpu" && node.gres) return false;
+      if (partition !== "all" && !node.partitions.includes(partition)) return false;
+      if (stateFilter === "attention" && !needsAttention(node)) return false;
+      if (stateFilter === "overloaded" && !isOverloaded(node)) return false;
+      if (STATE_ORDER.includes(stateFilter as never) && stateOf(node) !== stateFilter) return false;
 
-      const nodeMatchesState =
-        selectedNodeState === "allState" ||
-        (selectedNodeState === "idleState" && node.state[0] === "IDLE") ||
-        (selectedNodeState === "mixedState" && node.state[0] === "MIXED") ||
-        (selectedNodeState === "allocState" && node.state[0] === "ALLOCATED") ||
-        (selectedNodeState === "downState" && node.state[0] === "DOWN") ||
-        (selectedNodeState === "drainState" && node.state[1] === "DRAIN");
-
-      const nodeMatchesPartitions =
-        selectedNodePartitions === "allPartitions" ||
-        node.partitions.includes(selectedNodePartitions);
-
-      // Check if node has features based on selected logic type
-      let nodeMatchesFeatures = true;
-      if (selectedNodeFeatures && selectedNodeFeatures.length > 0) {
-        if (featureLogicType === "AND") {
-          // Node must have ALL selected features
-          nodeMatchesFeatures = selectedNodeFeatures.every(
-            (feature) =>
-              node.features &&
-              Array.isArray(node.features) &&
-              node.features.includes(feature)
-          );
-        } else {
-          // Node must have AT LEAST ONE of the selected features (OR logic)
-          nodeMatchesFeatures = selectedNodeFeatures.some(
-            (feature) =>
-              node.features &&
-              Array.isArray(node.features) &&
-              node.features.includes(feature)
-          );
-        }
+      if (selectedNodeFeatures.length > 0) {
+        const has = (feature: string) => Array.isArray(node.features) && node.features.includes(feature);
+        const matches = featureLogicType === "AND" ? selectedNodeFeatures.every(has) : selectedNodeFeatures.some(has);
+        if (!matches) return false;
       }
-
-      return (
-        nodeMatchesType &&
-        nodeMatchesState &&
-        nodeMatchesPartitions &&
-        nodeMatchesFeatures
-      );
+      return true;
     });
-  }, [
-    systems,
-    selectedNodeType,
-    selectedNodeState,
-    selectedNodePartitions,
-    selectedNodeFeatures,
-    featureLogicType,
-  ]);
+  }, [systems, nodeType, partition, stateFilter, selectedNodeFeatures, featureLogicType]);
 
-  const totalCpuNodes = useMemo(
-    () => systems.filter((node) => !node.gres).length,
-    [systems]
+  const header = (
+    <UnifiedHeader username={username} colorSchema={colorSchema} onColorSchemaChange={setColorSchema} />
   );
-  const totalGpuNodes = useMemo(
-    () => systems.filter((node) => node.gres).length,
-    [systems]
-  );
-
-  const handleNodeTypeChange = (value: string) => {
-    setSelectedNodeType(value);
-  };
-
-  const handleNodeStateChange = (value: string) => {
-    setSelectedNodeState(value);
-  };
-
-  const handleNodePartitionsChange = (value: string) => {
-    setSelectedNodePartitions(value);
-  };
-
-  const handleNodeFeatureChange = (
-    features: string[],
-    logicType: LogicType
-  ) => {
-    setSelectedNodeFeatures(features);
-    setFeatureLogicType(logicType);
-  };
-
-  const handleColorSchemaChange = (value: string) => {
-    setColorSchema(value);
-  };
 
   // Check if we have an error (using either nodeError or lastFetchError)
   const activeError = nodeError || lastFetchError;
@@ -306,141 +221,101 @@ const Nodes = ({ username }: { username?: string }) => {
   // Only show full error state if we have NO data
   if (nodeError && !nodeData) {
     let errorMessage = "An error occurred loading node data. Please try refreshing the page.";
-    
+
     if (isAuthError) {
       errorMessage = "Your session has expired. Please refresh the page to re-authenticate.";
     } else if (isConnectionError) {
       errorMessage = "Unable to connect. The service may be down or unreachable. Please try refreshing the page.";
     }
-    
+
     return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          {errorMessage}
-        </AlertDescription>
-      </Alert>
+      <div>
+        {header}
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   if (nodeIsLoading) {
     return (
       <div>
-        <NodeHeader
-          handleNodeStateChange={handleNodeStateChange}
-          handleNodeTypeChange={handleNodeTypeChange}
-          handleNodePartitionsChange={handleNodePartitionsChange}
-          handleNodeFeatureChange={handleNodeFeatureChange}
-          handleColorSchemaChange={handleColorSchemaChange}
-          handleViewModeChange={setIsGroupedView}
-          isGroupedView={isGroupedView}
-          partitions={[]}
-          features={[]}
-          colorSchema={colorSchema}
-          username={username}
-        />
-        <div className="flex justify-between">
-          <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
-            <div className="font-extralight">Card Size</div>
-            <Slider className="w-[100px]" />
-            <div className="font-extralight">Show Detail</div>
-            <Skeleton className="w-6 h-6" />
-          </div>
-          <div className="flex justify-end w-full mb-4 gap-2 items-center">
-            <div className="flex items-center gap-2 font-extralight">
-              <Skeleton className="w-[120px] h-[30px]" />
-            </div>
-            <div className="flex items-center gap-2 font-extralight">
-              <Skeleton className="w-[120px] h-[30px]" />
-            </div>
-            <div className="flex items-center gap-2 font-extralight">
-              <Skeleton className="w-[150px] h-[30px]" />
-            </div>
+        {header}
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-2">
+          <Skeleton className="h-[104px] w-full rounded-xl" />
+          <Skeleton className="h-8 w-full max-w-[720px]" />
+          <div
+            className="grid gap-1.5"
+            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${TILE_WIDTH[cardSize]}px, 1fr))` }}
+          >
+            {Array.from({ length: 120 }, (_, i) => (
+              <Skeleton key={i} className="aspect-square w-full rounded-[9px]" />
+            ))}
           </div>
         </div>
-        <Separator />
-        <CardSkeleton qty={300} size={85} />
       </div>
     );
   }
 
   return (
-    <div className="mr-2">
-      <NodeHeader
-        handleNodeStateChange={handleNodeStateChange}
-        handleNodeTypeChange={handleNodeTypeChange}
-        handleNodePartitionsChange={handleNodePartitionsChange}
-        handleNodeFeatureChange={handleNodeFeatureChange}
-        handleColorSchemaChange={handleColorSchemaChange}
-        handleViewModeChange={setIsGroupedView}
-        isGroupedView={isGroupedView}
-        partitions={uniquePartitions}
-        features={uniqueFeatures}
-        colorSchema={colorSchema}
-        selectedFeatures={selectedNodeFeatures}
-        featureLogicType={featureLogicType}
-        username={username}
-      />
-      <div className="flex justify-between">
-        <div className="flex justify-start w-full mb-4 pl-2 gap-4 items-center">
-          <div className="font-extralight">Card Size</div>
-          <Slider
-            className="w-[100px]"
-            value={[cardSize]}
-            min={50}
-            max={150}
-            step={50}
-            onValueChange={(values) => setCardSize(values[0])}
-          />
-          <div className="font-extralight">Show Detail</div>
-          <Checkbox
-            checked={showStats}
-            onCheckedChange={(checked) => {
-              setShowStats(checked as boolean);
-            }}
-          />
-        </div>
-        <NodeCount
-          totalGpuNodes={totalGpuNodes}
-          totalCpuNodes={totalCpuNodes}
-          filteredNodes={filteredNodes.length}
-          totalNodes={systems.length}
-        />
-      </div>
-      {showStats && nodeData ? (
-        <Stats data={nodeData} colorSchema={colorSchema} />
-      ) : null}
-      <Separator />
-
-      {isGroupedView ? (
-        <GroupedNodes
-          nodes={filteredNodes}
-          cardSize={cardSize}
+    <div>
+      {header}
+      <div className="mx-auto mb-20 flex max-w-[1600px] flex-col gap-4 px-2">
+        <ClusterSummary
+          nodes={systems}
           colorSchema={colorSchema}
+          lastUpdate={nodeData?.last_update?.number}
+          stateFilter={stateFilter}
+          onStateFilter={setStateFilter}
         />
-      ) : (
-        <div className="flex flex-wrap p-3 uppercase mb-20">
-          {filteredNodes.map((node: any) => (
-            <NodeCard
-              size={cardSize}
-              key={node.hostname}
-              name={node.name}
-              load={node.cpu_load?.number}
-              partitions={node.partitions}
-              features={node.features}
-              coresTotal={node.cpus}
-              coresUsed={node.alloc_cpus}
-              memoryTotal={node.real_memory}
-              memoryUsed={node.alloc_memory}
-              status={node.state}
-              nodeData={node}
-              colorSchema={colorSchema}
-            />
-          ))}
-        </div>
-      )}
-      <LastUpdated 
-        data={nodeData?.last_update?.number} 
+        <NodeToolbar
+          partitions={uniquePartitions}
+          features={uniqueFeatures}
+          partition={partition}
+          state={stateFilter}
+          nodeType={nodeType}
+          selectedFeatures={selectedNodeFeatures}
+          featureLogicType={featureLogicType}
+          groupBy={effectiveGroupBy}
+          hasRacks={hasRacks}
+          size={cardSize}
+          showing={filteredNodes.length}
+          total={systems.length}
+          showDetails={showStats}
+          onPartition={setPartition}
+          onState={setStateFilter}
+          onNodeType={setNodeType}
+          onFeatures={(features, logicType) => {
+            setSelectedNodeFeatures(features);
+            setFeatureLogicType(logicType);
+          }}
+          onGroupBy={setGroupBy}
+          onSize={setCardSize}
+          onShowDetails={setShowStats}
+        />
+        {showStats && nodeData ? <Stats data={nodeData} colorSchema={colorSchema} /> : null}
+
+        {filteredNodes.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+            No nodes match these filters.
+          </div>
+        ) : (
+          <NodeGroups
+            nodes={filteredNodes}
+            groupBy={effectiveGroupBy}
+            rackConfig={rackConfig ?? undefined}
+            size={cardSize}
+            colorSchema={colorSchema}
+            extras={extrasData?.nodes}
+            changed={changed}
+            tempWarn={nodeTempWarn}
+          />
+        )}
+      </div>
+      <LastUpdated
+        data={nodeData?.last_update?.number}
         hasConnectionError={hasConnectionError}
       />
       {aiEnabled && <ChatIcon />}

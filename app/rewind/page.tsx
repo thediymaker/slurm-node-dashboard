@@ -13,7 +13,7 @@ export default async function RewindPage() {
 
   return (
     <div className="mb-5">
-      <div className="p-2 ml-2 mx-auto">
+      <div className="px-2 pb-2">
         <UnifiedHeader
           title="Cluster Rewind"
           description="Replay historical cluster state and utilization."
