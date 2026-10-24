@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, type ComponentProps, type ReactNode } from "react";
-import { BotCard, BotMessage } from "@/components/llm/message";
+import { BotCard } from "@/components/llm/message";
 import { SlurmJobDetails } from "@/components/llm/llm-slurm-job-details";
 import { SlurmNodeDetails } from "@/components/llm/llm-slurm-node-details";
 import { SlurmPartitionDetails } from "@/components/llm/llm-slurm-partition-details";
@@ -347,11 +347,11 @@ export const ToolInvocationRenderer = memo(function ToolInvocationRenderer({
   }
 
   return (
-    <BotMessage>
-      <div className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Calling {getDisplayName(toolName)}...</span>
-      </div>
-    </BotMessage>
+    <div className="mb-3 inline-flex items-center gap-2 rounded-md border bg-card px-2.5 py-1 text-xs text-muted-foreground">
+      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      <span>
+        Calling <span className="font-mono text-foreground/80">{getDisplayName(toolName)}</span>…
+      </span>
+    </div>
   );
 });

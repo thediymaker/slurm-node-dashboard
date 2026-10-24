@@ -1,22 +1,18 @@
 import { cn } from "@/lib/utils";
-import { User, Sparkles, Bot } from "lucide-react";
 import { ReactNode } from "react";
 
+// User turns are right-aligned bubbles
 export function UserMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="group relative flex items-start justify-end gap-3 mb-6 pl-12">
-      <div className="flex-1 space-y-2 overflow-hidden flex flex-col items-end">
-        <div className="bg-primary text-primary-foreground px-4 py-3 rounded-lg shadow-sm text-sm">
-          {children}
-        </div>
-      </div>
-      <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm mt-0.5">
-        <User className="h-4 w-4" />
+    <div className="group relative mb-4 flex justify-end">
+      <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-muted px-3.5 py-2 text-sm leading-relaxed">
+        {children}
       </div>
     </div>
   );
 }
 
+// Assistant text reads as plain text, without a bubble
 export function BotMessage({
   children,
   className,
@@ -27,23 +23,19 @@ export function BotMessage({
   action?: ReactNode;
 }) {
   return (
-    <div className={cn("group relative flex items-start gap-3 mb-6 pr-12", className)}>
-      <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg bg-primary/10 border border-primary/20 shadow-sm mt-0.5">
-        <Bot className="h-4 w-4 text-primary" />
+    <div className={cn("group relative mb-3", className)}>
+      <div className="prose prose-sm dark:prose-invert max-w-none break-words text-sm leading-relaxed prose-p:my-2 prose-pre:my-2 prose-ul:my-2 prose-ol:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0">
+        {children}
       </div>
-      <div className="flex-1 space-y-2 overflow-hidden">
-        <div className="bg-muted/50 border px-4 py-3 rounded-lg shadow-sm text-sm prose dark:prose-invert max-w-none break-words">
-          {children}
-        </div>
-        {action && <div className="mt-2">{action}</div>}
-      </div>
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }
 
+// Tool results: a compact card. The tool components bring their own card,
+// so its border, shadow and rounding give way to this one.
 export function BotCard({
   children,
-  showAvatar = true,
   action,
 }: {
   children: ReactNode;
@@ -51,21 +43,11 @@ export function BotCard({
   action?: ReactNode;
 }) {
   return (
-    <div className="group relative flex items-start gap-3 mb-6 pr-12">
-      <div
-        className={cn(
-          "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg bg-primary/10 border border-primary/20 shadow-sm mt-0.5",
-          !showAvatar && "invisible"
-        )}
-      >
-        <Bot className="h-4 w-4 text-primary" />
+    <div className="group relative mb-3">
+      <div className="w-full overflow-hidden rounded-lg border bg-card text-sm [&>.border]:rounded-none [&>.border]:border-0 [&>.border]:shadow-none [&_.p-4]:p-3">
+        {children}
       </div>
-      <div className="flex-1 space-y-2 overflow-hidden">
-        <div className="bg-muted/30 border px-4 py-3 rounded-lg shadow-sm text-sm w-full mx-0">
-          {children}
-        </div>
-        {action && <div className="mt-2">{action}</div>}
-      </div>
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }

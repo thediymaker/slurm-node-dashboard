@@ -143,7 +143,7 @@ export function ChatList({
   return (
     <div
       ref={chatContainerRef}
-      className="relative w-full h-full overflow-y-auto scrollbar-none px-4"
+      className="relative w-full"
     >
       {messages.map((message, index) => {
         const isLast = index === messages.length - 1;
@@ -166,7 +166,7 @@ export function ChatList({
             : null;
 
         return (
-          <div key={key} className="pb-4">
+          <div key={key} className="pb-5">
             {message.parts.map((part, partIndex) => {
               if (part.type === "text") {
                 // Only render if there is actual text content
@@ -190,7 +190,7 @@ export function ChatList({
                           }
                           return (
                             <code
-                              className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-foreground"
+                              className="bg-muted px-1.5 py-0.5 rounded text-[13px] font-mono text-foreground before:content-none after:content-none"
                               {...props}
                             >
                               {children}
@@ -216,7 +216,7 @@ export function ChatList({
             })}
 
             {!isLoading && (
-              <div className="ml-10">
+              <div>
                 <MessageActions 
                   message={message} 
                   isLoading={!!isLoading} 
@@ -228,7 +228,7 @@ export function ChatList({
             )}
 
             {isLast && !isLoading && lastUserMessage && (
-              <div className="mt-2 ml-10">
+              <div>
                 <FollowUpGenerator
                   context={followUpContext}
                   onSelect={onSelectFollowUp}
@@ -236,7 +236,7 @@ export function ChatList({
               </div>
             )}
             {isLast && isLoading && (
-              <div className="mt-2 ml-10">
+              <div>
                 <FollowUpLoading />
               </div>
             )}
