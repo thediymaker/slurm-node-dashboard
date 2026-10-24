@@ -6,7 +6,8 @@
 
 - **Settings are read when the server starts.** Before 3.0, plugin flags, the cluster name and logo, the support URL, the metrics time zone and the hierarchy labels were baked in when the app was built. Changing one now needs a restart instead of a rebuild. Your `.env` file still works. The only build-time setting left is `NEXT_PUBLIC_BASE_PATH`.
 - **Features turn on when what they need is configured.** You no longer have to set a flag for each feature. A flag set to `"false"` still turns its feature off. The admin page's **Plugins** tab now shows every feature's state and why.
-- **The dashboard collects history itself.** With a database configured, it saves hourly Rewind snapshots, records each node's states and drain and down periods (new: node history), and captures GPU history. These replace the cron jobs from earlier versions.
+- **The dashboard collects history itself.** With a database configured, it saves hourly Rewind snapshots, records each node's states and drain and down periods (new: node history), records the cluster's hourly CPU and GPU capacity (for utilization on the metrics page), and captures GPU history. These replace the cron jobs from earlier versions.
+- **The metrics page has four tabs.** Overview, Explorer (any metric grouped by account, user, college, department, partition, QoS, job size, wall time, state or cluster), Efficiency and Jobs share one filter bar, and the URL holds the whole view, so links can be shared. Every table and chart exports CSV.
 - **`SLURM_API_VERSION` is optional.** When it's unset, the dashboard uses the newest version your slurmrestd serves.
 - **`DATABASE_URL` replaces `SLURM_JOB_METRICS_DATABASE_URL`.** The old name still works.
 
@@ -38,7 +39,7 @@ Build arguments for plugin flags, `CLUSTER_NAME`, `CLUSTER_LOGO`, `NEXT_PUBLIC_B
 
 ### If you use job metrics, GPU history or Rewind
 
-- **Database permissions:** on first start, the dashboard creates the tables it writes (`dashboard_schema_migrations`, `node_events`, `node_state_time`, `node_snapshots`, and `accounts`, `organizations`, `account_mappings` and `job_gpu_metrics` if they're missing). Its database user needs `CREATE` permission on the database for that first start. If it doesn't have it, job metrics keep working, and Rewind snapshots and node history stay off until you grant it:
+- **Database permissions:** on first start, the dashboard creates the tables it writes (`dashboard_schema_migrations`, `node_events`, `node_state_time`, `node_snapshots`, `cluster_capacity`, and `accounts`, `organizations`, `account_mappings` and `job_gpu_metrics` if they're missing). Its database user needs `CREATE` permission on the database for that first start. If it doesn't have it, job metrics keep working, and Rewind snapshots and node history stay off until you grant it:
 
   ```sql
   GRANT CREATE ON SCHEMA public TO <dashboard user>;
@@ -56,6 +57,8 @@ The sample `public/modules.json` is no longer shipped (it's now `infra/modules.e
 
 Upgrade to the release that ships with 3.0. It saves its sync position, so a quiet cluster no longer re-scans its whole history on every pass, which could pin a CPU. In API mode it uses the newest API version slurmrestd serves when `SLURM_API_VERSION` is unset (the old default, v0.0.41, isn't served by Slurm 26.05), and it's published as a container image. The first pass after upgrading still scans from the last finished job, once.
 
+The metrics page's CPU efficiency needs slurm-history-ingestor 1.1, which records the CPU time each job used (`total_cpu_seconds`). With an older ingestor the page works and shows "needs slurm-history-ingestor 1.1" where CPU efficiency would be; jobs ingested before the upgrade have no CPU time. In sacct mode 1.1 also records each job's peak memory, which memory efficiency uses.
+
 ## Removed
 
 - **InfluxDB and maintenance notification flags** (`NEXT_PUBLIC_ENABLE_INFLUXDB_PLUGIN`, `NEXT_PUBLIC_MAINT_NOTIFICATIONS_ENABLED`): neither did anything beyond showing a status in the admin panel.
@@ -72,6 +75,7 @@ Upgrade to the release that ships with 3.0. It saves its sync position, so a qui
 | `GPU_METRICS_HISTORY` | on with a database and GPU utilization | `false` turns GPU history off |
 | `NODE_HISTORY_INTERVAL_SECONDS` | `60` | `0` turns node history collection off |
 | `NODE_HISTORY_RETENTION_DAYS` | `30` | `0` keeps node history forever |
+| `CAPACITY_RETENTION_DAYS` | `400` | Days of hourly cluster capacity (utilization) to keep; never less than `NODE_HISTORY_RETENTION_DAYS`. `0` keeps it forever |
 | `SNAPSHOT_INTERVAL_MINUTES` | `60` | `0` turns built-in Rewind snapshots off |
 | `SNAPSHOT_RETENTION_DAYS` | `30` | `0` keeps snapshots forever |
 | `GPU_CAPTURE_INTERVAL_SECONDS` | `60` | `0` turns built-in GPU capture off |
