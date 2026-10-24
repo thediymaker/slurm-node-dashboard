@@ -82,4 +82,21 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    // How long each node spent in each state (full, partial, idle, drained,
+    // down...) per hour, for the node history bar. Hourly totals keep the size
+    // fixed however often jobs start and end.
+    version: "003_node_state_time",
+    sql: `
+      CREATE TABLE IF NOT EXISTS node_state_time (
+        cluster TEXT NOT NULL,
+        node TEXT NOT NULL,
+        hour TIMESTAMPTZ NOT NULL,
+        state TEXT NOT NULL,
+        seconds INTEGER NOT NULL,
+        PRIMARY KEY (cluster, node, hour, state)
+      );
+      CREATE INDEX IF NOT EXISTS idx_node_state_time_hour ON node_state_time (hour);
+    `,
+  },
 ];

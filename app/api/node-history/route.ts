@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getFeatures } from "@/lib/features";
-import { getNodeHistory } from "@/lib/node-history";
+import { getNodeHistory, getNodeStateHours } from "@/lib/node-history";
 import { getSlurmClusterName } from "@/lib/slurm-cluster";
 
 // GET /api/node-history?node=<name>&days=<1-365, default 30>
@@ -19,12 +19,16 @@ export async function GET(req: Request) {
   const feature = (await getFeatures()).nodeHistory;
   const pool = getDb();
   if (!feature.enabled || !pool) {
-    return NextResponse.json({ enabled: false, events: [] });
+    return NextResponse.json({ enabled: false, events: [], hours: [] });
   }
 
   try {
-    const events = await getNodeHistory(pool, await getSlurmClusterName(), node, days);
-    return NextResponse.json({ enabled: true, days, now: new Date().toISOString(), events });
+    const cluster = await getSlurmClusterName();
+    const [events, hours] = await Promise.all([
+      getNodeHistory(pool, cluster, node, days),
+      getNodeStateHours(pool, cluster, node, days),
+    ]);
+    return NextResponse.json({ enabled: true, days, now: new Date().toISOString(), events, hours });
   } catch (err) {
     console.error("Error reading node history:", err);
     return NextResponse.json({ message: "Error reading node history" }, { status: 500 });

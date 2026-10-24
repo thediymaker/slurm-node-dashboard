@@ -54,7 +54,7 @@ export interface DatabaseStatus {
   // The dashboard's own tables (node history, snapshots)
   schema: "ready" | "failed" | "disabled";
   schemaError?: string;
-  tables: { jobHistory: boolean; gpuMetrics: boolean; nodeEvents: boolean; nodeSnapshots: boolean };
+  tables: { jobHistory: boolean; gpuMetrics: boolean; nodeEvents: boolean; nodeStateTime: boolean; nodeSnapshots: boolean };
 }
 
 const CACHE_MS = 30_000;
@@ -67,6 +67,7 @@ const TABLES_QUERY = `
   SELECT to_regclass('public.job_history') IS NOT NULL AS job_history,
          to_regclass('public.job_gpu_metrics') IS NOT NULL AS job_gpu_metrics,
          to_regclass('public.node_events') IS NOT NULL AS node_events,
+         to_regclass('public.node_state_time') IS NOT NULL AS node_state_time,
          to_regclass('public.node_snapshots') IS NOT NULL AS node_snapshots`;
 
 export async function getDatabaseStatus(): Promise<DatabaseStatus> {
@@ -79,7 +80,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     configured: Boolean(getDatabaseUrl()),
     reachable: false,
     schema: "disabled",
-    tables: { jobHistory: false, gpuMetrics: false, nodeEvents: false, nodeSnapshots: false },
+    tables: { jobHistory: false, gpuMetrics: false, nodeEvents: false, nodeStateTime: false, nodeSnapshots: false },
   };
 
   const pool = getDb();
@@ -98,6 +99,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
         jobHistory: rows[0].job_history,
         gpuMetrics: rows[0].job_gpu_metrics,
         nodeEvents: rows[0].node_events,
+        nodeStateTime: rows[0].node_state_time,
         nodeSnapshots: rows[0].node_snapshots,
       };
     } catch (err) {
@@ -196,9 +198,9 @@ export async function getFeatures(): Promise<Features> {
       return { enabled: false, reason: schemaProblem ?? "Snapshot table missing." };
     }),
     nodeHistory: feature("nodeHistory", "Node history", "ENABLE_NODE_HISTORY", true, () =>
-      !schemaProblem && db.tables.nodeEvents
-        ? { enabled: true, reason: "Recording drain and down periods in the database." }
-        : { enabled: false, reason: schemaProblem ?? "Node events table missing." }
+      !schemaProblem && db.tables.nodeEvents && db.tables.nodeStateTime
+        ? { enabled: true, reason: "Recording node states, and drain and down periods, in the database." }
+        : { enabled: false, reason: schemaProblem ?? "Node history tables missing." }
     ),
     gpuHistory: feature("gpuHistory", "GPU history", "GPU_METRICS_HISTORY", true, () => {
       if (!gpu.enabled) return { enabled: false, reason: `Needs GPU utilization. ${gpu.reason}` };

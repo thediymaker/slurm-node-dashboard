@@ -39,7 +39,7 @@ function databaseSummary(db: DatabaseStatus): { label: string; detail: string; o
   const tables = [
     db.tables.jobHistory && "job history (ingestor)",
     db.tables.gpuMetrics && "GPU metrics",
-    db.tables.nodeEvents && "node events",
+    db.tables.nodeEvents && db.tables.nodeStateTime && "node history",
     db.tables.nodeSnapshots && "node snapshots",
   ].filter(Boolean);
   return { label: "Connected", detail: `Tables: ${tables.join(", ") || "none"}.`, ok: true };

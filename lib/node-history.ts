@@ -1,9 +1,11 @@
 import type { DbPool } from "@/lib/db";
 import type { SlurmNode } from "@/lib/nodes";
 
-// Node history records the periods a node was unavailable: drained, down,
-// failed, not responding or in maintenance, with Slurm's reason. Busy/idle
-// changes and power saving aren't recorded.
+// Node history keeps two records per node:
+// - node_state_time: seconds spent in each state (full, partial, idle,
+//   drained, down...) per hour, for the history bar
+// - node_events: the periods a node was unavailable (drained, down, failed,
+//   not responding or in maintenance), with Slurm's reason
 export const UNAVAILABLE_FLAGS = [
   "DOWN",
   "DRAIN",
@@ -67,6 +69,71 @@ export function nodeCondition(node: SlurmNode, now: Date): NodeCondition | null 
     setBy: node.reason_set_by_user ? String(node.reason_set_by_user) : null,
     since,
   };
+}
+
+// One state per node for the history bar, most significant first: a drained
+// node that's down counts as down, a draining node still runs jobs
+export const NODE_STATES = [
+  "down",
+  "maintenance",
+  "drained",
+  "draining",
+  "powered_down",
+  "reserved",
+  "allocated",
+  "mixed",
+  "idle",
+  "other",
+] as const;
+export type NodeState = (typeof NODE_STATES)[number];
+
+export function nodeState(node: SlurmNode): NodeState {
+  const flags = new Set(nodeFlags(node));
+  const busy = flags.has("ALLOCATED") || flags.has("MIXED") || flags.has("COMPLETING");
+  if (["DOWN", "FAIL", "ERROR", "NOT_RESPONDING", "INVALID_REG", "UNKNOWN"].some((f) => flags.has(f))) return "down";
+  if (flags.has("MAINTENANCE") || flags.has("REBOOT_ISSUED")) return "maintenance";
+  if (flags.has("DRAIN")) return busy ? "draining" : "drained";
+  if (["POWERED_DOWN", "POWERING_DOWN", "POWERING_UP", "POWER_DOWN"].some((f) => flags.has(f)) && !busy)
+    return "powered_down";
+  if (flags.has("ALLOCATED")) return "allocated";
+  if (flags.has("MIXED") || flags.has("COMPLETING")) return "mixed";
+  if (flags.has("RESERVED")) return "reserved";
+  if (flags.has("IDLE")) return "idle";
+  return "other";
+}
+
+// Add the seconds since the last check to each node's current state for this hour
+export async function recordNodeStates(pool: DbPool, cluster: string, nodes: SlurmNode[], seconds: number, now = new Date()) {
+  const names: string[] = [];
+  const states: string[] = [];
+  for (const node of nodes) {
+    const name = node.name ?? node.hostname;
+    if (!name) continue;
+    names.push(name);
+    states.push(nodeState(node));
+  }
+  if (names.length === 0 || seconds <= 0) return;
+  await pool.query(
+    `INSERT INTO node_state_time (cluster, node, hour, state, seconds)
+     SELECT $1, n, date_trunc('hour', $2::timestamptz), s, $3
+     FROM unnest($4::text[], $5::text[]) AS t(n, s)
+     ON CONFLICT (cluster, node, hour, state)
+     DO UPDATE SET seconds = node_state_time.seconds + EXCLUDED.seconds`,
+    [cluster, now, Math.round(seconds), names, states]
+  );
+}
+
+// Drop state totals and finished drain/down periods older than the retention
+export async function pruneNodeHistory(pool: DbPool, cluster: string, days: number): Promise<number> {
+  const states = await pool.query(
+    "DELETE FROM node_state_time WHERE cluster = $1 AND hour < now() - make_interval(days => $2)",
+    [cluster, days]
+  );
+  const events = await pool.query(
+    "DELETE FROM node_events WHERE cluster = $1 AND ended_at < now() - make_interval(days => $2)",
+    [cluster, days]
+  );
+  return (states.rowCount ?? 0) + (events.rowCount ?? 0);
 }
 
 export interface NodeEventPlan {
@@ -179,5 +246,29 @@ export async function getNodeHistory(
     setBy: r.reason_set_by,
     startedAt: new Date(r.started_at).toISOString(),
     endedAt: r.ended_at ? new Date(r.ended_at).toISOString() : null,
+  }));
+}
+
+// Seconds per state for each recorded hour, oldest first
+export interface NodeStateHour {
+  hour: string;
+  seconds: Partial<Record<NodeState, number>>;
+}
+
+export async function getNodeStateHours(
+  pool: DbPool,
+  cluster: string,
+  node: string,
+  days: number
+): Promise<NodeStateHour[]> {
+  const { rows } = await pool.query(
+    `SELECT hour, json_object_agg(state, seconds) AS seconds FROM node_state_time
+     WHERE cluster = $1 AND node = $2 AND hour > now() - make_interval(days => $3)
+     GROUP BY hour ORDER BY hour`,
+    [cluster, node, days]
+  );
+  return rows.map((r: { hour: Date; seconds: Partial<Record<NodeState, number>> }) => ({
+    hour: new Date(r.hour).toISOString(),
+    seconds: r.seconds,
   }));
 }

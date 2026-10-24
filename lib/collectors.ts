@@ -2,7 +2,7 @@ import { readEnv } from "@/lib/config";
 import { ensureSchema, getDb } from "@/lib/db";
 import { getDatabaseStatus, getFeatures } from "@/lib/features";
 import { handleCapture } from "@/lib/gpu-service";
-import { recordNodeEvents } from "@/lib/node-history";
+import { pruneNodeHistory, recordNodeEvents, recordNodeStates } from "@/lib/node-history";
 import { fetchNodesPayload, type NodesPayload } from "@/lib/nodes";
 import { rememberSlurmClusterName } from "@/lib/slurm-cluster";
 import { latestSnapshotTime, pruneSnapshots, saveSnapshot } from "@/lib/snapshots";
@@ -38,6 +38,7 @@ export function startCollectors() {
   }
 
   const nodeIntervalS = seconds("NODE_HISTORY_INTERVAL_SECONDS", 60);
+  const nodeRetentionDays = seconds("NODE_HISTORY_RETENTION_DAYS", 30);
   const snapshotIntervalM = seconds("SNAPSHOT_INTERVAL_MINUTES", 60);
   const retentionDays = seconds("SNAPSHOT_RETENTION_DAYS", 30);
   const gpuIntervalS = seconds("GPU_CAPTURE_INTERVAL_SECONDS", 60);
@@ -56,15 +57,33 @@ export function startCollectors() {
 
   const jobs: Job[] = [];
   if (nodeIntervalS > 0) {
+    let lastStateAt: number | undefined;
+    let lastPruneAt = 0;
     jobs.push({
       name: "node history",
       intervalMs: nodeIntervalS * 1000,
       run: async () => {
-        if (!(await getFeatures()).nodeHistory.enabled) return;
+        if (!(await getFeatures()).nodeHistory.enabled) {
+          lastStateAt = undefined;
+          return;
+        }
         const payload = await nodes();
-        const plan = await recordNodeEvents(pool, clusterOf(payload), payload.nodes);
+        const cluster = clusterOf(payload);
+        const plan = await recordNodeEvents(pool, cluster, payload.nodes);
         if (plan.open.length || plan.close.length) {
           console.log(`[collectors] node history: ${plan.open.length} opened, ${plan.close.length} closed`);
+        }
+
+        // Credit the time since the last check, capped so a stall shows as no data
+        const now = Date.now();
+        const elapsedS = lastStateAt === undefined ? nodeIntervalS : Math.min((now - lastStateAt) / 1000, nodeIntervalS * 2);
+        lastStateAt = now;
+        await recordNodeStates(pool, cluster, payload.nodes, elapsedS);
+
+        if (nodeRetentionDays > 0 && now - lastPruneAt > 3_600_000) {
+          lastPruneAt = now;
+          const pruned = await pruneNodeHistory(pool, cluster, nodeRetentionDays);
+          if (pruned) console.log(`[collectors] node history: pruned ${pruned} rows older than ${nodeRetentionDays} days`);
         }
       },
     });

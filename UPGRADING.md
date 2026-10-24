@@ -6,7 +6,7 @@
 
 - **Settings are read when the server starts.** Before 3.0, plugin flags, the cluster name and logo, the support URL, the metrics time zone and the hierarchy labels were baked in when the app was built. Changing one now needs a restart instead of a rebuild. Your `.env` file still works. The only build-time setting left is `NEXT_PUBLIC_BASE_PATH`.
 - **Features turn on when what they need is configured.** You no longer have to set a flag for each feature. A flag set to `"false"` still turns its feature off. The admin page's **Plugins** tab now shows every feature's state and why.
-- **The dashboard collects history itself.** With a database configured, it saves hourly Rewind snapshots, records node drain and down periods (new: node history), and captures GPU history. These replace the cron jobs from earlier versions.
+- **The dashboard collects history itself.** With a database configured, it saves hourly Rewind snapshots, records each node's states and drain and down periods (new: node history), and captures GPU history. These replace the cron jobs from earlier versions.
 - **`SLURM_API_VERSION` is optional.** When it's unset, the dashboard uses the newest version your slurmrestd serves.
 - **`DATABASE_URL` replaces `SLURM_JOB_METRICS_DATABASE_URL`.** The old name still works.
 
@@ -38,7 +38,7 @@ Build arguments for plugin flags, `CLUSTER_NAME`, `CLUSTER_LOGO`, `NEXT_PUBLIC_B
 
 ### If you use job metrics, GPU history or Rewind
 
-- **Database permissions:** on first start, the dashboard creates the tables it writes (`dashboard_schema_migrations`, `node_events`, `node_snapshots`, and `accounts`, `organizations`, `account_mappings` and `job_gpu_metrics` if they're missing). Its database user needs `CREATE` permission on the database for that first start. If it doesn't have it, job metrics keep working, and Rewind snapshots and node history stay off until you grant it:
+- **Database permissions:** on first start, the dashboard creates the tables it writes (`dashboard_schema_migrations`, `node_events`, `node_state_time`, `node_snapshots`, and `accounts`, `organizations`, `account_mappings` and `job_gpu_metrics` if they're missing). Its database user needs `CREATE` permission on the database for that first start. If it doesn't have it, job metrics keep working, and Rewind snapshots and node history stay off until you grant it:
 
   ```sql
   GRANT CREATE ON SCHEMA public TO <dashboard user>;
@@ -71,6 +71,7 @@ Upgrade to the release that ships with 3.0. It saves its sync position, so a qui
 | `ENABLE_NODE_HISTORY` | on with a database | `false` turns node history off |
 | `GPU_METRICS_HISTORY` | on with a database and GPU utilization | `false` turns GPU history off |
 | `NODE_HISTORY_INTERVAL_SECONDS` | `60` | `0` turns node history collection off |
+| `NODE_HISTORY_RETENTION_DAYS` | `30` | `0` keeps node history forever |
 | `SNAPSHOT_INTERVAL_MINUTES` | `60` | `0` turns built-in Rewind snapshots off |
 | `SNAPSHOT_RETENTION_DAYS` | `30` | `0` keeps snapshots forever |
 | `GPU_CAPTURE_INTERVAL_SECONDS` | `60` | `0` turns built-in GPU capture off |
