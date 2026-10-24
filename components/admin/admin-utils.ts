@@ -82,6 +82,9 @@ export interface AdminDiagResponse {
         server_start_time?: { number?: number; set?: boolean };
     };
     meta?: {
+        plugin?: {
+            data_parser?: string;
+        };
         slurm?: {
             version?: {
                 major?: string;

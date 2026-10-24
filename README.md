@@ -50,8 +50,9 @@ CLUSTER_NAME=My Cluster
 SLURM_SERVER=slurmrestd.example.edu
 SLURM_SERVER_PORT=6820
 SLURM_PROTOCOL=http
-# Match the version exposed by your slurmrestd, for example v0.0.40
-SLURM_API_VERSION=v0.0.40
+# Match a version your slurmrestd serves (Slurm 26.05 serves v0.0.42-v0.0.45;
+# list them with: slurmrestd -d list)
+SLURM_API_VERSION=v0.0.42
 SLURM_API_ACCOUNT=dashboard
 SLURM_API_TOKEN=replace-with-your-token
 ```
