@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { getDatabaseUrl, readEnv, readFlag } from "@/lib/config";
+import { getDatabaseUrl, getModulesFile, readEnv, readFlag } from "@/lib/config";
 import { ensureSchema, getDb, tableExists } from "@/lib/db";
 
 // Which optional features are on, and why not when they're off.
@@ -104,7 +104,7 @@ async function hasLegacySnapshots(): Promise<boolean> {
 
 async function fileExists(file: string): Promise<boolean> {
   try {
-    await fs.access(file);
+    await fs.access(/*turbopackIgnore: true*/ file);
     return true;
   } catch {
     return false;
@@ -121,7 +121,7 @@ export async function getFeatures(): Promise<Features> {
   const [db, legacySnapshots, modulesFile] = await Promise.all([
     getDatabaseStatus(),
     hasLegacySnapshots(),
-    fileExists(path.join(process.cwd(), "public", "modules.json")),
+    fileExists(getModulesFile()),
   ]);
   const dbProblem = databaseProblem(db);
   const schemaProblem =
@@ -159,8 +159,8 @@ export async function getFeatures(): Promise<Features> {
   const features: Features = {
     modules: feature("modules", "Modules", "NEXT_PUBLIC_ENABLE_MODULES_PLUGIN", false, () =>
       modulesFile
-        ? { enabled: true, reason: "Reading public/modules.json." }
-        : { enabled: false, reason: "Add public/modules.json (Lmod spider output) to turn this on." }
+        ? { enabled: true, reason: `Reading ${getModulesFile()}.` }
+        : { enabled: false, reason: "Add public/modules.json (Lmod spider output), or set MODULES_FILE, to turn this on." }
     ),
     prometheus,
     gpu,

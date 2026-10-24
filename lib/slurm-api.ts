@@ -38,6 +38,50 @@ async function withSlurmSlot<T>(task: () => Promise<T>): Promise<T> {
   }
 }
 
+// Newest first. Each Slurm release serves a few of these (26.05 serves
+// v0.0.42-v0.0.45), so detection picks the newest one this slurmrestd has.
+const KNOWN_API_VERSIONS = ["v0.0.45", "v0.0.44", "v0.0.43", "v0.0.42", "v0.0.41", "v0.0.40", "v0.0.39"];
+
+let detectedVersion: Promise<string> | undefined;
+
+class SlurmApiVersionError extends Error {}
+
+async function detectApiVersion(): Promise<string> {
+  const protocol = env.SLURM_PROTOCOL || 'http';
+  const port = env.SLURM_SERVER_PORT || '6820';
+  for (const version of KNOWN_API_VERSIONS) {
+    const res = await fetch(`${protocol}://${env.SLURM_SERVER}:${port}/slurm/${version}/ping`, {
+      headers: {
+        "X-SLURM-USER-NAME": `${env.SLURM_API_ACCOUNT}`,
+        "X-SLURM-USER-TOKEN": `${env.SLURM_API_TOKEN}`,
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.ok) {
+      console.log(`[slurm] SLURM_API_VERSION not set; using ${version}, the newest this slurmrestd serves`);
+      return version;
+    }
+    // slurmrestd checks the token before the path, so this isn't a version problem
+    if (res.status === 401 || res.status === 403) {
+      throw new SlurmApiVersionError(`slurmrestd rejected the token (HTTP ${res.status}); check SLURM_API_TOKEN and SLURM_API_ACCOUNT`);
+    }
+  }
+  throw new SlurmApiVersionError(`slurmrestd serves none of ${KNOWN_API_VERSIONS.join(", ")}; set SLURM_API_VERSION`);
+}
+
+// SLURM_API_VERSION if set, otherwise the detected version. A failed detection
+// isn't cached, so the next request tries again.
+export function getSlurmApiVersion(): Promise<string> {
+  const configured = env.SLURM_API_VERSION?.trim();
+  if (configured) return Promise.resolve(configured);
+  detectedVersion ??= detectApiVersion().catch((err) => {
+    detectedVersion = undefined;
+    throw err;
+  });
+  return detectedVersion;
+}
+
 export async function fetchSlurmData(endpoint: string, options: FetchSlurmOptions | SlurmApiType = {}) {
   // Handle backward compatibility or simple string usage
   const finalOptions: FetchSlurmOptions = typeof options === 'string' 
@@ -48,7 +92,6 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
   
   const protocol = env.SLURM_PROTOCOL || 'http';
   const port = env.SLURM_SERVER_PORT || '6820';
-  const baseUrl = `${protocol}://${env.SLURM_SERVER}:${port}/${type}/${env.SLURM_API_VERSION}`;
   
   const fetchOptions: RequestInit = {
     method,
@@ -65,6 +108,7 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
   }
   
   try {
+    const baseUrl = `${protocol}://${env.SLURM_SERVER}:${port}/${type}/${await getSlurmApiVersion()}`;
     const res = await withSlurmSlot(() =>
       fetch(`${baseUrl}${endpoint}`, {
         ...fetchOptions,
@@ -79,6 +123,10 @@ export async function fetchSlurmData(endpoint: string, options: FetchSlurmOption
     const data = await res.json();
     return { data };
   } catch (error) {
+    if (error instanceof SlurmApiVersionError) {
+      console.error(`Error fetching ${endpoint}: ${error.message}`);
+      return { error: error.message, status: 502 };
+    }
     console.error(`Error fetching ${endpoint}:`, error);
     
     // Check if slurmrestd timed out

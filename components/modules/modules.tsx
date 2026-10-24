@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { Separator } from "../ui/separator";
 import ModuleGrid from "./module-grid";
 import fs from "fs-extra";
-import path from "path";
+import { getModulesFile } from "@/lib/config";
 import { Package } from "lucide-react";
 
 type Version = {
@@ -20,9 +20,9 @@ type Module = {
 };
 
 async function fetchData(): Promise<Module[]> {
-  const filePath = path.join(process.cwd(), "public", "modules.json");
+  const filePath = getModulesFile();
   try {
-    const jsonData = await fs.readFile(filePath, "utf-8");
+    const jsonData = await fs.readFile(/*turbopackIgnore: true*/ filePath, "utf-8");
     const data: Module[] = JSON.parse(jsonData);
     if (!Array.isArray(data) || data.length === 0) {
       throw new Error("No valid data");
@@ -53,7 +53,7 @@ function EmptyState() {
       </div>
       <p className="text-red-400 font-medium">No modules data found</p>
       <p className="text-sm text-muted-foreground mt-2">
-        Please ensure modules.json exists in the public directory.
+        Add public/modules.json, or set MODULES_FILE to its path.
       </p>
     </div>
   );

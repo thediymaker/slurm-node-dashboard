@@ -1,3 +1,5 @@
+import path from "path";
+
 // Runtime settings. Everything here is read from the environment when the
 // server runs, not when the app is built, so one image works for every
 // install. NEXT_PUBLIC_BASE_PATH is the exception: Next.js needs it at build.
@@ -18,6 +20,12 @@ export function readFlag(name: string): boolean | undefined {
   if (["true", "1", "yes", "on"].includes(value)) return true;
   if (["false", "0", "no", "off"].includes(value)) return false;
   return undefined;
+}
+
+// Lmod spider output for the Modules page. MODULES_FILE lets a container
+// mount it anywhere; infra/modules.example.json shows the format.
+export function getModulesFile(): string {
+  return readEnv("MODULES_FILE") ?? path.join(process.cwd(), "public", "modules.json");
 }
 
 // DATABASE_URL is the setting from 3.0 on; the old name still works
