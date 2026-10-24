@@ -5,7 +5,7 @@ import { useEnterSubmit } from "@/lib/use-enter-submit";
 import TextareaAutosize from "react-textarea-autosize";
 import { type SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, X, Sparkles, Square, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowUp, Plus, X, MessageCircle, Square, Maximize2, Minimize2 } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useRef, useCallback, memo, useMemo, useState } from "react";
 import { EmptyState } from "@/components/llm/empty-state";
@@ -24,6 +24,9 @@ export interface ChatInput {
 interface ChatModalProps {
   showChat: boolean;
   setShowChat: (show: boolean) => void;
+  // A question to send as soon as the panel is open, e.g. from a node's "Ask the assistant"
+  pendingPrompt?: string | null;
+  onPromptSent?: () => void;
 }
 
 function createChatId() {
@@ -33,7 +36,7 @@ function createChatId() {
 const chatTransport = new DefaultChatTransport({ api: withBasePath("/api/chat") });
 
 // The assistant, docked on the right over a lightly dimmed page
-function ChatModal({ showChat, setShowChat }: ChatModalProps) {
+function ChatModal({ showChat, setShowChat, pendingPrompt, onPromptSent }: ChatModalProps) {
   const { assistantModel } = useRuntimeConfig();
   const [expanded, setExpanded] = useState(false);
   const [chatId, setChatId] = useState(createChatId);
@@ -93,6 +96,14 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
   }, [setMessages, stop]);
 
   useEffect(() => {
+    if (!showChat || !pendingPrompt || isLoading) return;
+    onPromptSent?.();
+    sendMessage({ text: pendingPrompt }).catch((error) => {
+      console.error('Failed to send message:', error);
+    });
+  }, [showChat, pendingPrompt, isLoading, sendMessage, onPromptSent]);
+
+  useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
         chatContainerRef.current.scrollHeight;
@@ -148,7 +159,7 @@ function ChatModal({ showChat, setShowChat }: ChatModalProps) {
         >
           {/* Header */}
           <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b pl-4 pr-2.5">
-            <Sparkles className="h-[18px] w-[18px] shrink-0" style={{ color: "hsl(var(--chart-1))" }} />
+            <MessageCircle className="h-[18px] w-[18px] shrink-0" style={{ color: "hsl(var(--chart-1))" }} />
             <DialogPrimitive.Title className="text-sm font-semibold">Assistant</DialogPrimitive.Title>
             {assistantModel && (
               <span

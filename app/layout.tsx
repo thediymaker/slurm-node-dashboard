@@ -11,6 +11,8 @@ import { getPublicConfig } from "@/lib/config";
 import { getFeatures, toClientFeatures } from "@/lib/features";
 import { getRandomGeekName } from "@/lib/utils";
 import AppHeader from "@/components/app-header";
+import { AssistantProvider } from "@/components/assistant";
+import { getSession, isAdminLoginConfigured } from "@/auth";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -40,6 +42,10 @@ export default async function RootLayout({
   await connection();
   const runtimeConfig = { ...getPublicConfig(), features: toClientFeatures(await getFeatures()) };
   const username = (await cookies()).get("SSONAME")?.value || getRandomGeekName();
+  const admin = {
+    signedIn: !!(await getSession().catch(() => null)),
+    canSignIn: isAdminLoginConfigured(),
+  };
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -51,8 +57,10 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AppHeader username={username} />
-            {children}
+            <AssistantProvider>
+              <AppHeader username={username} admin={admin} />
+              {children}
+            </AssistantProvider>
             <Toaster />
           </ThemeProvider>
         </RuntimeConfigProvider>

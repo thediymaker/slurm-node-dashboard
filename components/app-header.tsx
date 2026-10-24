@@ -1,29 +1,34 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { LogIn, MessageCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import HeaderMenu from "@/components/header/header-menu";
 import ColorSchemaSelector from "@/components/color-schema-selector";
 import JobSearch from "@/components/job-search";
 import { useRuntimeConfig } from "@/components/runtime-config";
 import { useColorSchema } from "@/components/use-color-schema";
-import ChatModal from "@/components/modals/chat-modal";
+import { useAssistant } from "@/components/assistant";
 import { Button } from "@/components/ui/button";
 import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 
-// Pages that share the app header; admin and login have their own
-const APP_PAGES = ["/", "/rewind", "/modules", "/metrics"];
+const APP_PAGES = ["/", "/rewind", "/modules", "/metrics", "/admin", "/login"];
 
 // One header for every page, rendered by the root layout so it sits in the
 // same place everywhere
-export default function AppHeader({ username }: { username?: string }) {
+export default function AppHeader({
+  username,
+  admin,
+}: {
+  username?: string;
+  // Signed in as the dashboard admin, and whether admin sign-in is set up at all
+  admin: { signedIn: boolean; canSignIn: boolean };
+}) {
   const { clusterName, clusterLogo, features } = useRuntimeConfig();
   const pathname = usePathname() ?? "/";
   const [colorSchema, setColorSchema] = useColorSchema();
-  const [showChat, setShowChat] = useState(false);
+  const assistant = useAssistant();
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
   if (!APP_PAGES.some(isActive)) return null;
@@ -33,6 +38,7 @@ export default function AppHeader({ username }: { username?: string }) {
     { href: "/rewind", label: "Rewind", show: features.rewind.enabled },
     { href: "/modules", label: "Modules", show: features.modules.enabled },
     { href: "/metrics", label: "Metrics", show: features.jobMetrics.enabled },
+    { href: "/admin", label: "Admin", show: admin.signedIn },
   ].filter((item) => item.show);
 
   return (
@@ -63,23 +69,30 @@ export default function AppHeader({ username }: { username?: string }) {
         <div className="flex-1" />
         <div className="flex items-center gap-1">
           <JobSearch />
-          {features.ai.enabled && (
+          {assistant.enabled && (
             <Button
               variant="ghost"
               size="icon"
               className="h-9 w-9"
               aria-label="Open assistant"
-              aria-pressed={showChat}
-              onClick={() => setShowChat(!showChat)}
+              aria-pressed={assistant.open}
+              onClick={() => assistant.setOpen(!assistant.open)}
             >
-              <Sparkles className="h-5 w-5" />
+              <MessageCircle className="h-5 w-5" />
             </Button>
           )}
           <ColorSchemaSelector value={colorSchema} onChange={setColorSchema} />
-          <HeaderMenu username={username} />
+          {!admin.signedIn && admin.canSignIn && pathname !== "/login" && (
+            <Button asChild variant="ghost" size="sm" className="h-9 gap-1.5 text-[13px]">
+              <Link href="/login">
+                <LogIn className="h-4 w-4" />
+                Log in
+              </Link>
+            </Button>
+          )}
+          <HeaderMenu username={username} signedIn={admin.signedIn} />
         </div>
       </div>
-      {features.ai.enabled && <ChatModal showChat={showChat} setShowChat={setShowChat} />}
     </header>
   );
 }

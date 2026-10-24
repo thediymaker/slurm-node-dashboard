@@ -9,7 +9,8 @@ import {
   Sun,
   Moon,
   Menu,
-  ArrowUpCircle
+  ArrowUpCircle,
+  LogOut,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,6 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -31,18 +34,24 @@ import { useRuntimeConfig } from "@/components/runtime-config";
 
 interface HeaderMenuProps {
   username?: string;
+  // Signed in as the dashboard admin: offer sign out
+  signedIn?: boolean;
 }
 
-export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
+export default function HeaderMenu({ username = "RC User", signedIn = false }: HeaderMenuProps) {
+  const router = useRouter();
+  const signOut = async () => {
+    await authClient.signOut().catch(() => undefined);
+    router.push("/");
+    router.refresh();
+  };
   const { setTheme, theme } = useTheme();
   const { supportUrl: configuredSupportUrl } = useRuntimeConfig();
-  const [mounted, setMounted] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState("");
   const [updateUrl, setUpdateUrl] = useState("");
 
   useEffect(() => {
-    setMounted(true);
     checkUpdate().then((result) => {
       if (result.hasUpdate) {
         setUpdateAvailable(true);
@@ -103,6 +112,15 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
             </DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuGroup>
+        {signedIn && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer" onSelect={() => void signOut()}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sign out of admin</span>
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <div className="flex items-center justify-between p-2">
           <span className="text-sm pl-2">Theme</span>

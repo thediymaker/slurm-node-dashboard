@@ -12,6 +12,7 @@ import { getTerm, setTerm } from "@/lib/metrics/job-query";
 import { expandHostlist } from "@/lib/metrics/hostlist";
 import { useMetricsNav } from "@/components/metrics/metrics-nav";
 import { CsvButton, EmptyState, QuietNote } from "@/components/metrics/panel";
+import { AskAssistantButton } from "@/components/assistant";
 import { fmtBytes, fmtClock, fmtInt, fmtNum, fmtPct, stateDotClass, stateLabel } from "@/components/metrics/format";
 
 const PAGE_SIZE = 50;
@@ -343,6 +344,10 @@ function JobDetailView({ job, totalCpu }: { job: JobDetail; totalCpu: boolean })
               {job.arrayTaskId !== null ? `_${job.arrayTaskId}` : ""}
             </span>
           )}
+          <AskAssistantButton
+            className="ml-auto"
+            question={`Tell me about job ${job.jobId}: how it ended and why, how well it used what it asked for, and what to change next time.`}
+          />
         </div>
         {job.name && <span className="text-sm">{job.name}</span>}
         <span className="text-xs text-muted-foreground" title={job.department ? `${level2}: ${job.department}` : undefined}>

@@ -1,6 +1,7 @@
 'use server'
 
 import { getMetricsDb } from "@/lib/metrics-db";
+import { getSession } from "@/auth";
 import { revalidatePath, unstable_cache } from "next/cache";
 
 export interface Organization {
@@ -15,6 +16,14 @@ export interface Organization {
 export interface Account {
   id: number;
   name: string;
+}
+
+// Server actions can be called by anyone who loads the site, so every change
+// checks for the admin session itself
+async function requireAdmin() {
+  if (!(await getSession().catch(() => null))) {
+    throw new Error("Sign in as admin to change the hierarchy.");
+  }
 }
 
 async function getHierarchyInternal() {
@@ -105,6 +114,7 @@ export async function getFlatHierarchyFresh() {
 }
 
 export async function createOrganization(data: { name: string; type: string; parent_id?: number | null; info?: string }) {
+  await requireAdmin();
   const pool = getMetricsDb();
   if (!pool) {
     throw new Error('Database not configured. Enable the metrics database to use hierarchy features.');
@@ -120,6 +130,7 @@ export async function createOrganization(data: { name: string; type: string; par
 }
 
 export async function updateOrganization(id: number, data: { name: string; type: string; parent_id?: number | null; info?: string }) {
+  await requireAdmin();
   const pool = getMetricsDb();
   if (!pool) {
     throw new Error('Database not configured. Enable the metrics database to use hierarchy features.');
@@ -134,6 +145,7 @@ export async function updateOrganization(id: number, data: { name: string; type:
 }
 
 export async function deleteOrganization(id: number) {
+  await requireAdmin();
   const pool = getMetricsDb();
   if (!pool) {
     throw new Error('Database not configured. Enable the metrics database to use hierarchy features.');
@@ -191,6 +203,7 @@ export async function getAccountMappings(orgId: number) {
 }
 
 export async function addAccountMapping(orgId: number, accountId: number) {
+  await requireAdmin();
     const pool = getMetricsDb();
     if (!pool) {
       throw new Error('Database not configured. Enable the metrics database to use hierarchy features.');
@@ -205,6 +218,7 @@ export async function addAccountMapping(orgId: number, accountId: number) {
 }
 
 export async function removeAccountMapping(orgId: number, accountId: number) {
+  await requireAdmin();
     const pool = getMetricsDb();
     if (!pool) {
       throw new Error('Database not configured. Enable the metrics database to use hierarchy features.');
@@ -219,6 +233,7 @@ export async function removeAccountMapping(orgId: number, accountId: number) {
 }
 
 export async function deleteAllHierarchy() {
+  await requireAdmin();
   const pool = getMetricsDb();
   if (!pool) {
     throw new Error('Database not configured. Enable the metrics database to use hierarchy features.');

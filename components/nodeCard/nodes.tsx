@@ -17,6 +17,9 @@ import ClusterSummary from "./cluster-summary";
 import NodeToolbar from "./node-toolbar";
 import { GroupBy, NodeGroups } from "./node-grid";
 import { CardSize, STATE_ORDER, TILE_WIDTH, isOverloaded, needsAttention, stateOf } from "./node-view";
+import { expandHostlist } from "@/lib/metrics/hostlist";
+import { Button } from "../ui/button";
+import { LocateFixed, X } from "lucide-react";
 
 const nodeURL = withBasePath("/api/slurm/nodes");
 const nodeFetcher = async () => {
@@ -118,7 +121,36 @@ const Nodes = () => {
   const [colorSchema] = useColorSchema();
   // /?node=<name> (linked from Job Metrics) opens that node's detail panel
   const router = useRouter();
-  const linkedNode = useSearchParams().get("node");
+  const searchParams = useSearchParams();
+  const linkedNode = searchParams.get("node");
+  // /?user=<name> or /?job=<id> highlights the nodes their running jobs are on
+  const highlightUser = searchParams.get("user");
+  const highlightJob = searchParams.get("job");
+  const highlightUrl = highlightUser
+    ? withBasePath(`/api/slurm/jobs/user/${encodeURIComponent(highlightUser)}`)
+    : highlightJob
+      ? withBasePath(`/api/slurm/job/${encodeURIComponent(highlightJob)}`)
+      : null;
+  const { data: highlightData, isLoading: highlightLoading } = useSWR<{ jobs?: { nodes?: string; job_state?: string[]; state?: { current?: string[] } }[] } | null>(
+    highlightUrl,
+    jsonFetcher,
+    { refreshInterval: 30000 }
+  );
+  const highlight = useMemo(() => {
+    if (!highlightUrl || !highlightData) return undefined;
+    const running = (highlightData.jobs ?? []).filter((j) => {
+      const state = j.job_state ?? j.state?.current ?? [];
+      return state.includes("RUNNING");
+    });
+    const nodes = new Set<string>();
+    for (const job of running) for (const n of expandHostlist(job.nodes)) nodes.add(n);
+    return { nodes, jobs: running.length };
+  }, [highlightUrl, highlightData]);
+  const setHighlight = (query: string | null) => {
+    const q = query?.trim();
+    if (!q) router.replace("/", { scroll: false });
+    else router.replace(/^\d+(_\d+)?$/.test(q) ? `/?job=${encodeURIComponent(q)}` : `/?user=${encodeURIComponent(q)}`, { scroll: false });
+  };
   // Before 3.0 there was a separate rack list view; carry that choice over
   const [groupBy, setGroupBy] = useState<GroupBy>(() =>
     stored(
@@ -284,7 +316,30 @@ const Nodes = () => {
           }}
           onGroupBy={setGroupBy}
           onSize={setCardSize}
+          highlightQuery={highlightUser ?? highlightJob ?? ""}
+          onHighlight={setHighlight}
         />
+        {highlightUrl && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow-300/40 bg-yellow-300/5 px-3 py-2 text-sm">
+            <LocateFixed className="h-4 w-4 text-yellow-300" />
+            <span className="flex-1">
+              {highlightLoading || !highlight
+                ? `Finding ${highlightUser ? `${highlightUser}'s jobs` : `job ${highlightJob}`}…`
+                : highlight.jobs === 0
+                  ? highlightUser
+                    ? `${highlightUser} has no running jobs.`
+                    : `Job ${highlightJob} isn't running.`
+                  : highlightUser
+                    ? `${highlightUser}'s ${highlight.jobs} running ${highlight.jobs === 1 ? "job is" : "jobs are"} on ${highlight.nodes.size} ${highlight.nodes.size === 1 ? "node" : "nodes"}.`
+                    : `Job ${highlightJob} is running on ${highlight.nodes.size} ${highlight.nodes.size === 1 ? "node" : "nodes"}.`}
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 gap-1 text-[13px]" onClick={() => setHighlight(null)}>
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          </div>
+        )}
+
         {filteredNodes.length === 0 ? (
           <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
             No nodes match these filters.
@@ -298,6 +353,7 @@ const Nodes = () => {
             colorSchema={colorSchema}
             extras={extrasData?.nodes}
             changed={changed}
+            highlighted={highlight?.nodes}
             tempWarn={nodeTempWarn}
           />
         )}

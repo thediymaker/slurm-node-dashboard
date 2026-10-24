@@ -1,14 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
+import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, LogOut, RefreshCw } from "lucide-react";
 
 import { AdminKPICards } from "./admin-kpi-cards";
 import ClusterStats from "./cluster-stats";
@@ -33,30 +27,7 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ initialOrgs = [], accounts = [], features, database }: AdminDashboardProps) {
   const gpuEnabled = useFeature("gpu");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
-  const router = useRouter();
-
-  const handleSignOut = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { error } = await authClient.signOut();
-      if (error) {
-        throw error;
-      }
-      router.push("/login");
-      router.refresh();
-    } catch {
-      setError("Failed to sign out. Please try again.");
-      setIsLoading(false);
-    }
-  }, [router]);
-
-  const handleDismissError = useCallback(() => {
-    setError(null);
-  }, []);
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -70,125 +41,70 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [], featur
     { id: "settings", label: "Settings" },
   ];
 
+  // Sits under the app header, in the same frame as the other pages; sign out
+  // is in the header menu
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-6 space-y-6 max-w-[95%]">
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-            <p className="text-muted-foreground">
-              Cluster management and system overview
-            </p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link href="/">
-              <Button variant="outline" size="sm" className="h-9">
-                <Home className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Home</span>
-              </Button>
-            </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSignOut}
-              disabled={isLoading}
-              className="h-9"
-            >
-              {isLoading ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <LogOut className="mr-2 h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">
-                {isLoading ? "Signing out..." : "Sign Out"}
-              </span>
-            </Button>
-          </div>
-        </header>
-
-        <Separator />
-
-        {/* KPI Cards */}
-        <AdminKPICards />
-
-        {/* Error message */}
-        {error && (
-          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive flex items-center justify-between">
-            <span>{error}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-1 text-destructive hover:bg-transparent hover:underline"
-              onClick={handleDismissError}
-            >
-              Dismiss
-            </Button>
-          </div>
-        )}
-
-        {/* Main Tabs */}
-        <Tabs 
-          value={activeTab} 
-          onValueChange={setActiveTab} 
-          className="space-y-6"
-        >
-          <TabsList className="flex-wrap h-auto gap-1 p-1">
+    <div className="mx-auto max-w-[1600px] px-4 pb-10">
+      <div className="flex flex-col gap-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-4">
+          <TabsList className="h-auto w-full justify-start gap-5 overflow-x-auto rounded-none border-b bg-transparent p-0">
             {tabs.map((tab) => (
-              <TabsTrigger 
-                key={tab.id} 
+              <TabsTrigger
+                key={tab.id}
                 value={tab.id}
-                className="data-[state=active]:bg-background"
+                className="-mb-px rounded-none border-b-2 border-transparent bg-transparent px-0 py-2.5 text-sm font-normal text-muted-foreground shadow-none hover:text-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 {tab.label}
               </TabsTrigger>
             ))}
           </TabsList>
 
+          {activeTab === "overview" && <AdminKPICards />}
+
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6 mt-6">
+          <TabsContent value="overview" className="mt-0 space-y-6">
             <ClusterStats />
           </TabsContent>
 
           {/* Partitions Tab */}
-          <TabsContent value="partitions" className="space-y-6 mt-6">
+          <TabsContent value="partitions" className="mt-0 space-y-6">
             <PartitionsPanel />
           </TabsContent>
 
           {/* Reservations Tab */}
-          <TabsContent value="reservations" className="space-y-6 mt-6">
+          <TabsContent value="reservations" className="mt-0 space-y-6">
             <ReservationsPanel />
           </TabsContent>
 
           {/* QoS Tab */}
-          <TabsContent value="qos" className="space-y-6 mt-6">
+          <TabsContent value="qos" className="mt-0 space-y-6">
             <QoSPanel />
           </TabsContent>
 
           {/* GPU Analysis Tab */}
           {gpuEnabled && (
-            <TabsContent value="gpu" className="space-y-6 mt-6">
+            <TabsContent value="gpu" className="mt-0 space-y-6">
               <GPUAnalysisPanel />
             </TabsContent>
           )}
 
           {/* Plugins Tab */}
-          <TabsContent value="plugins" className="space-y-6 mt-6">
+          <TabsContent value="plugins" className="mt-0 space-y-6">
             <AdminPlugins features={features} database={database} />
           </TabsContent>
 
           {/* Hierarchy Tab */}
-          <TabsContent value="hierarchy" className="space-y-6 mt-6">
+          <TabsContent value="hierarchy" className="mt-0 space-y-6">
             <HierarchyManager initialOrgs={initialOrgs} accounts={accounts} />
           </TabsContent>
 
           {/* LLM Config Tab */}
-          <TabsContent value="llm" className="space-y-6 mt-6">
+          <TabsContent value="llm" className="mt-0 space-y-6">
             <LLMConfigPanel />
           </TabsContent>
 
           {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6 mt-6">
+          <TabsContent value="settings" className="mt-0 space-y-6">
             <SystemInfoPanel />
           </TabsContent>
         </Tabs>

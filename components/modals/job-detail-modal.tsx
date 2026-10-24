@@ -1,5 +1,7 @@
 import React, { memo, useMemo } from "react";
 import useSWR from "swr";
+import { AskAssistantButton } from "@/components/assistant";
+import { ShowOnNodesButton } from "@/components/nodeCard/show-on-nodes";
 import {
   Dialog,
   DialogContent,
@@ -303,6 +305,12 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
             </DialogTitle>
             {job && <div className="text-sm text-muted-foreground">{job.name || "Unnamed Job"}</div>}
           </div>
+          {isRunning && <ShowOnNodesButton job={searchID} onShow={() => setOpen(false)} />}
+          <AskAssistantButton
+            className="mr-6"
+            question={`Tell me about job ${searchID}: its state, what it asked for and what it's using, and whether anything looks wrong.`}
+            onAsk={() => setOpen(false)}
+          />
         </div>
 
         <Separator />

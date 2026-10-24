@@ -1,6 +1,7 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
+import { LocateFixed } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FeatureSelector, { LogicType } from "@/components/feature-selector";
 import { cn } from "@/lib/utils";
@@ -54,15 +55,41 @@ interface NodeToolbarProps {
   size: CardSize;
   showing: number;
   total: number;
+  highlightQuery: string;
   onPartition: (value: string) => void;
   onState: (value: string) => void;
   onNodeType: (value: string) => void;
   onFeatures: (features: string[], logicType: LogicType) => void;
   onGroupBy: (value: GroupBy) => void;
   onSize: (value: CardSize) => void;
+  onHighlight: (query: string | null) => void;
 }
 
 const trigger = "h-8 w-auto min-w-[120px] gap-2 text-[13px]";
+
+// Highlight the nodes a user's or job's running jobs are on
+function HighlightInput({ initial, onSubmit }: { initial: string; onSubmit: (query: string | null) => void }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <form
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(value || null);
+      }}
+      className="flex h-8 items-center gap-1.5 rounded-md border bg-background px-2 focus-within:ring-1 focus-within:ring-ring"
+    >
+      <LocateFixed className="h-3.5 w-3.5 flex-none text-muted-foreground" />
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Highlight user or job"
+        aria-label="Highlight the nodes a user or job is running on"
+        className="w-[150px] bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
+      />
+    </form>
+  );
+}
 
 const NodeToolbar = (p: NodeToolbarProps) => {
   const groupOptions: { value: GroupBy; label: string }[] = [
@@ -121,6 +148,8 @@ const NodeToolbar = (p: NodeToolbarProps) => {
         onFeaturesChange={p.onFeatures}
         logicType={p.featureLogicType}
       />
+
+      <HighlightInput key={p.highlightQuery} initial={p.highlightQuery} onSubmit={p.onHighlight} />
 
       <div className="ml-2">
         <Segmented label="Group by" value={p.groupBy} options={groupOptions} onChange={p.onGroupBy} />

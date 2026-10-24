@@ -26,6 +26,7 @@ import { JobGPUStats } from "@/components/job-gpu-stats";
 import { CopyButton, formatMemory } from "@/components/llm/llm-shared-utils";
 import { useFeature } from "@/components/runtime-config";
 import { useColorSchema } from "@/components/use-color-schema";
+import { AskAssistantButton } from "@/components/assistant";
 import { getStatusColor } from "@/lib/color-schemas";
 import { getStatusDef } from "@/utils/nodes";
 import { parseGPUResources } from "@/utils/gpu-parse";
@@ -739,6 +740,12 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
                 ))}
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                <AskAssistantButton
+                  className="mr-1"
+                  label="Ask"
+                  question={`Tell me about node ${nodename}: its current state and why, what's running on it, and anything that looks unusual.`}
+                  onAsk={() => setOpen(false)}
+                />
                 <CopyButton text={nodename} className="h-8 w-8 inline-flex items-center justify-center" />
                 <SheetClose asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">

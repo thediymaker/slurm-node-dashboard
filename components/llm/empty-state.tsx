@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 interface EmptyStateProps {
     setInput: (value: string) => void;
@@ -32,7 +32,7 @@ export function EmptyState({ setInput }: EmptyStateProps) {
         <div className="flex h-full flex-col justify-end gap-4 px-4 pb-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Sparkles className="h-4 w-4" style={{ color: "hsl(var(--chart-1))" }} />
+                    <MessageCircle className="h-4 w-4" style={{ color: "hsl(var(--chart-1))" }} />
                     How can I help?
                 </div>
                 <p className="text-sm text-muted-foreground">

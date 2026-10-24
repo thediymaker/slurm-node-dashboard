@@ -1,6 +1,6 @@
-import { useState, memo, useMemo } from "react";
+import React, { useState, memo, useMemo } from "react";
 import { useInView } from "react-intersection-observer";
-import { CircleAlert, Gauge, Lock, Pause, RotateCw, Wrench, type LucideIcon } from "lucide-react";
+import { CircleAlert, Lock, Pause, RotateCw, Wrench, type LucideIcon } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
@@ -43,29 +43,13 @@ interface CardModel {
 
 const pct = (used: number, total: number) => (total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0);
 
-function Bar({
-  value,
-  height,
-  light,
-  tick,
-}: {
-  value: number;
-  height: number;
-  light: boolean;
-  tick?: number;
-}) {
+function Bar({ value, height, light }: { value: number; height: number; light: boolean }) {
   return (
     <div
       className={cn("relative flex-1 rounded-[3px]", light ? "bg-slate-900/20" : "bg-black/30")}
       style={{ height }}
     >
       <div className="h-full rounded-[3px] bg-current transition-[width] duration-300" style={{ width: `${value}%` }} />
-      {tick !== undefined && (
-        <div
-          className="absolute -top-0.5 -bottom-0.5 w-0.5 rounded-sm bg-yellow-300"
-          style={{ left: `calc(${Math.min(99, tick)}% - 1px)` }}
-        />
-      )}
     </div>
   );
 }
@@ -85,14 +69,9 @@ function GpuSegments({ model, height }: { model: CardModel; height: number }) {
   );
 }
 
-// Show where load sits against allocation when they're far apart
-function loadTick(model: CardModel): number | undefined {
-  return model.overloaded || Math.abs(model.loadPct - model.cpuPct) >= 25 ? model.loadPct : undefined;
-}
-
 const SmallCardContent = memo(({ model }: { model: CardModel }) => (
   <div className="flex h-full flex-col justify-between p-[5px]">
-    <div className="truncate font-mono text-[9px] font-semibold leading-none tracking-tight" title={model.name}>
+    <div className="truncate text-[9px] font-bold uppercase leading-none" title={model.name}>
       {model.name}
     </div>
     <div className="flex flex-col gap-0.5">
@@ -104,48 +83,37 @@ const SmallCardContent = memo(({ model }: { model: CardModel }) => (
 SmallCardContent.displayName = "SmallCardContent";
 
 function CornerIcon({ model, size }: { model: CardModel; size: number }) {
-  if (model.overloaded) return <Gauge aria-label="Overloaded" className="flex-none text-yellow-300" style={{ width: size, height: size }} strokeWidth={2.6} />;
   const Icon = model.reboot ? RotateCw : STATE_ICONS[model.state];
   return Icon ? <Icon aria-hidden className="flex-none" style={{ width: size, height: size }} strokeWidth={2.4} /> : null;
 }
 
+// Label and value over a full-width bar, top-down from the name, like the
+// pre-3.0 cards. CPU nodes show load where GPU nodes show their GPUs.
 const MediumCardContent = memo(({ model }: { model: CardModel }) => {
-  const sub = model.light ? "text-slate-900/70" : "text-white/80";
-  const row = (label: string, value: number, text: string, tick?: number, warn = false) => (
-    <div className="flex items-center gap-[5px]">
-      <span className={cn("w-6 flex-none text-[9px] tracking-wide", sub)}>{label}</span>
-      <Bar value={value} height={4} light={model.light} tick={tick} />
-      <span className={cn("w-[26px] flex-none text-right text-[9px] tabular-nums", warn ? "font-bold text-yellow-300" : sub)}>
-        {text}
-      </span>
+  const sub = model.light ? "text-slate-900/75" : "text-white/85";
+  const stacked = (label: string, text: string, bar: React.ReactNode) => (
+    <div className="flex flex-col gap-[3px]">
+      <div className={cn("flex justify-between text-[10px] leading-none tabular-nums", sub)}>
+        <span>{label}</span>
+        <span>{text}</span>
+      </div>
+      <div className="flex">{bar}</div>
     </div>
   );
   return (
-    <div className="flex h-full flex-col justify-between p-[9px]">
+    <div className="flex h-full flex-col gap-1.5 p-2">
       <div className="flex min-w-0 items-start justify-between gap-1">
-        <span className="truncate font-mono text-[12px] font-semibold leading-tight" title={model.name}>
+        <span className="truncate text-[13px] font-bold uppercase leading-tight" title={model.name}>
           {model.name}
         </span>
         <CornerIcon model={model} size={12} />
       </div>
-      <div className="flex flex-col gap-[5px]">
-        {row(
-          "CPU",
-          model.cpuPct,
-          model.overloaded ? `${(model.loadPct / 100).toFixed(1)}×` : `${model.cpuPct}%`,
-          loadTick(model),
-          model.overloaded
-        )}
-        {row("MEM", model.memPct, `${model.memPct}%`)}
-        {model.gpuTotal > 0 && (
-          <div className="flex items-center gap-[5px]">
-            <span className={cn("w-6 flex-none text-[9px] tracking-wide", sub)}>GPU</span>
-            <GpuSegments model={model} height={4} />
-            <span className={cn("w-[26px] flex-none text-right text-[9px] tabular-nums", sub)}>
-              {model.gpuUsed}/{model.gpuTotal}
-            </span>
-          </div>
-        )}
+      <div className="flex flex-col gap-1">
+        {stacked("CPU", `${model.cpuPct}%`, <Bar value={model.cpuPct} height={4} light={model.light} />)}
+        {stacked("MEM", `${model.memPct}%`, <Bar value={model.memPct} height={4} light={model.light} />)}
+        {model.gpuTotal > 0
+          ? stacked("GPU", `${model.gpuUsed}/${model.gpuTotal}`, <GpuSegments model={model} height={4} />)
+          : stacked("LOAD", `${model.loadPct}%`, <Bar value={Math.min(100, model.loadPct)} height={4} light={model.light} />)}
       </div>
     </div>
   );
@@ -171,11 +139,11 @@ const LargeCardContent = memo(
     const many = model.gpuTotal > 4;
     const util = extras?.gpuUtil;
 
-    const row = (label: string, value: number, text: string, tick?: number, warn = false) => (
+    const row = (label: string, value: number, text: string) => (
       <div className="flex items-center gap-1.5">
         <span className={cn("w-[30px] flex-none text-[11px] font-medium", sub)}>{label}</span>
-        <Bar value={value} height={6} light={model.light} tick={tick} />
-        <span className={cn("w-[34px] flex-none text-right text-[11px] tabular-nums", warn ? "font-bold text-yellow-300" : sub)}>
+        <Bar value={value} height={6} light={model.light} />
+        <span className={cn("w-[34px] flex-none text-right text-[11px] tabular-nums", sub)}>
           {text}
         </span>
       </div>
@@ -196,7 +164,7 @@ const LargeCardContent = memo(
         )}
         <div className="relative flex items-baseline justify-between gap-1">
           <span className="inline-flex min-w-0 items-center gap-[5px]">
-            <span className="truncate font-mono text-[16px] font-semibold leading-tight" title={model.name}>
+            <span className="truncate text-[16px] font-bold uppercase leading-tight" title={model.name}>
               {model.name}
             </span>
             <CornerIcon model={model} size={14} />
@@ -210,14 +178,9 @@ const LargeCardContent = memo(
           )}
         </div>
         <div className="relative flex flex-col gap-2">
-          {row(
-            "CPU",
-            model.cpuPct,
-            model.overloaded ? `${(model.loadPct / 100).toFixed(1)}×` : `${model.cpuPct}%`,
-            loadTick(model),
-            model.overloaded
-          )}
+          {row("CPU", model.cpuPct, `${model.cpuPct}%`)}
           {row("MEM", model.memPct, `${model.memPct}%`)}
+          {model.gpuTotal === 0 && row("LOAD", Math.min(100, model.loadPct), `${model.loadPct}%`)}
           {model.gpuTotal > 0 && (
             <div
               className="grid gap-[3px]"
@@ -255,9 +218,17 @@ export const NodeCard = memo(({
   colorSchema = "default",
   extras,
   changed = false,
+  highlight,
   tempWarn = 80,
   ...props
-}: NodeCardProps & { colorSchema?: string; extras?: NodeExtras; changed?: boolean; tempWarn?: number }) => {
+}: NodeCardProps & {
+  colorSchema?: string;
+  extras?: NodeExtras;
+  changed?: boolean;
+  // While a user's or job's nodes are highlighted: true rings this card, false dims it
+  highlight?: boolean;
+  tempWarn?: number;
+}) => {
   const [open, setOpen] = useState(false);
   const { ref, inView } = useInView({
     rootMargin: "200px", // pre-render 200px before entering viewport
@@ -310,7 +281,7 @@ export const NodeCard = memo(({
   // Off-screen: render lightweight placeholder with same dimensions and color
   // Avoids mounting HoverCard, Modal, gradients, shadows for invisible cards
   if (!inView) {
-    return <div ref={ref} className={cn(shape, background, "border border-white/10")} />;
+    return <div ref={ref} className={cn(shape, background, "border border-white/10", highlight === false && "opacity-25")} />;
   }
 
   const watts = props.nodeData.energy?.current_watts?.set !== false && props.nodeData.energy?.current_watts?.number > 0
@@ -333,7 +304,9 @@ export const NodeCard = memo(({
             "relative cursor-pointer overflow-hidden border border-white/10 shadow-sm",
             "transition-[transform,filter] duration-150 ease-out hover:-translate-y-px hover:brightness-110",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            changed && "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+            changed && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+            highlight === true && "ring-2 ring-yellow-300 ring-offset-2 ring-offset-background",
+            highlight === false && "opacity-25 hover:opacity-60"
           )}
           style={{ contain: "layout style", backgroundImage: pattern }}
           onClick={props.historical ? undefined : () => setOpen(true)}

@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Job, JobDetails } from "@/types/types";
 import { withBasePath } from "@/lib/base-path";
+import { ShowOnNodesButton } from "@/components/nodeCard/show-on-nodes";
 
 // Utility function moved outside component
 const convertUnixToHumanReadable = (unixTimestamp: number): string => {
@@ -334,9 +335,10 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
           jobData?.errors?.length === 0 &&
           jobData?.jobs?.length > 0 ? (
           <div>
-            <h1 className="text-2xl mb-2 font-extralight uppercase">
-              {searchID}
-            </h1>
+            <div className="mb-2 mr-6 flex flex-wrap items-center gap-3">
+              <h1 className="flex-1 text-2xl font-extralight uppercase">{searchID}</h1>
+              <ShowOnNodesButton user={searchID} onShow={() => setOpen(false)} />
+            </div>
             <DialogTitle className="mb-5">User Job Details</DialogTitle>
             <Table>
               <TableHeader>

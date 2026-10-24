@@ -161,3 +161,8 @@ export async function getSession() {
     headers: await headers(),
   });
 }
+
+// Whether the admin sign-in is set up (ADMIN_USERNAME, ADMIN_PASSWORD and a secret)
+export function isAdminLoginConfigured() {
+  return getAdminCredentials() !== null;
+}

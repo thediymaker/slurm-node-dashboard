@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from "react";
 import useSWR from "swr";
+import { AskAssistantButton } from "@/components/assistant";
 import {
   Dialog,
   DialogContent,
@@ -522,6 +523,11 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
             </DialogTitle>
             {job && <div className="text-sm text-muted-foreground">{job.name || "Unnamed Job"}</div>}
           </div>
+          <AskAssistantButton
+            className="mr-6"
+            question={`Tell me about job ${searchID}: how it ended and why, how well it used what it asked for, and what to change next time.`}
+            onAsk={() => setOpen(false)}
+          />
         </div>
 
         <Separator />

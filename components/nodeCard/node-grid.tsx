@@ -25,12 +25,14 @@ interface GridOptions {
   colorSchema: string;
   extras?: Record<string, NodeExtras>;
   changed?: Set<string>;
+  // Nodes to ring; every other node is dimmed while this is set
+  highlighted?: Set<string>;
   tempWarn?: number;
   historical?: boolean;
 }
 
 // Square tiles that stretch to fill each row, so there's no ragged gap on the right
-export const NodeGrid = memo(({ nodes, size, colorSchema, extras, changed, tempWarn, historical }: GridOptions & { nodes: any[] }) => (
+export const NodeGrid = memo(({ nodes, size, colorSchema, extras, changed, highlighted, tempWarn, historical }: GridOptions & { nodes: any[] }) => (
   <div
     className="grid"
     style={{
@@ -55,6 +57,7 @@ export const NodeGrid = memo(({ nodes, size, colorSchema, extras, changed, tempW
         colorSchema={colorSchema}
         extras={extras?.[shortName(node.name ?? node.hostname ?? "")]}
         changed={changed?.has(node.name ?? node.hostname)}
+        highlight={highlighted ? highlighted.has(node.name ?? node.hostname) : undefined}
         tempWarn={tempWarn}
         historical={historical}
       />
