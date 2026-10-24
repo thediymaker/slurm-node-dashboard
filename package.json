@@ -1,6 +1,6 @@
 {
   "name": "nextjs-hpc-dashboard",
-  "version": "2.1.5",
+  "version": "3.0.0",
   "engines": {
     "node": ">=20.9.0"
   },
