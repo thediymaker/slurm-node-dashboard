@@ -296,3 +296,19 @@ export async function getNodeStateHours(
     seconds: r.seconds,
   }));
 }
+
+// Seconds per state across every node, per hour, for the Rewind timeline
+export async function getClusterStateHours(pool: DbPool, cluster: string, from: Date, to: Date): Promise<NodeStateHour[]> {
+  const { rows } = await pool.query(
+    `SELECT hour, json_object_agg(state, seconds) AS seconds FROM (
+       SELECT hour, state, sum(seconds)::int AS seconds FROM node_state_time
+       WHERE cluster = $1 AND hour BETWEEN $2 AND $3
+       GROUP BY hour, state
+     ) t GROUP BY hour ORDER BY hour`,
+    [cluster, from, to]
+  );
+  return rows.map((r: { hour: Date; seconds: Partial<Record<NodeState, number>> }) => ({
+    hour: new Date(r.hour).toISOString(),
+    seconds: r.seconds,
+  }));
+}
