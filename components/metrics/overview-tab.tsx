@@ -237,6 +237,20 @@ export function OverviewTab({ data }: { data: OverviewData }) {
         )}
       </div>
 
+      {data.preemption.preempted > 0 && (
+        <Panel
+          title="Preemption by node"
+          description={`${fmtInt(data.preemption.preempted)} of ${fmtInt(data.preemption.jobs)} jobs were preempted · nodes with the most`}
+          csv={() => ({
+            filename: `preemption-by-node_${range}`,
+            header: ["node", "jobs", "preempted"],
+            rows: data.preemption.nodes.map((n) => [n.node, n.jobs, n.preempted]),
+          })}
+        >
+          <PreemptionRows rows={data.preemption.nodes} />
+        </Panel>
+      )}
+
       {notes.map((n) => (
         <QuietNote key={n}>{n}</QuietNote>
       ))}
@@ -435,6 +449,35 @@ function OutcomesPanel({ data, range }: { data: OverviewData; range: string }) {
         ))}
       </div>
     </Panel>
+  );
+}
+
+function PreemptionRows({ rows }: { rows: OverviewData["preemption"]["nodes"] }) {
+  const max = Math.max(...rows.map((r) => r.preempted), 0);
+  return (
+    <div className="flex flex-col">
+      <div className="grid grid-cols-[7rem_minmax(0,1fr)_4rem_4rem_4rem] gap-3 text-[11px] uppercase tracking-wide text-muted-foreground pb-1.5">
+        <span>Node</span>
+        <span />
+        <span className="text-right">Preempted</span>
+        <span className="text-right">Jobs</span>
+        <span className="text-right">Rate</span>
+      </div>
+      {rows.map((n) => (
+        <div
+          key={n.node}
+          className="grid grid-cols-[7rem_minmax(0,1fr)_4rem_4rem_4rem] gap-3 items-center text-sm py-1.5 border-t tabular-nums"
+        >
+          <span className="font-mono text-xs truncate">{n.node}</span>
+          <span className="h-2 rounded-full bg-muted overflow-hidden">
+            <span className="block h-full rounded-full bg-[hsl(var(--chart-5))]" style={{ width: max ? `${(n.preempted / max) * 100}%` : 0 }} />
+          </span>
+          <span className="text-right">{fmtInt(n.preempted)}</span>
+          <span className="text-right text-muted-foreground">{fmtInt(n.jobs)}</span>
+          <span className="text-right text-muted-foreground">{fmtPct(n.jobs ? n.preempted / n.jobs : null, 1)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 

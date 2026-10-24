@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Job, JobDetails } from "@/types/types";
 import { withBasePath } from "@/lib/base-path";
+import { FairsharePanel } from "@/components/fairshare-panel";
 import { ShowOnNodesButton } from "@/components/nodeCard/show-on-nodes";
 
 // Utility function moved outside component
@@ -199,7 +200,7 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
     </div>
   );
 
-  const TablePagination = () => {
+  const renderPagination = () => {
     const renderPageNumbers = () => {
       const maxPagesToShow = 10;
       const paginationItems = [];
@@ -338,6 +339,9 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
             <div className="mb-2 mr-6 flex flex-wrap items-center gap-3">
               <h1 className="flex-1 text-2xl font-extralight uppercase">{searchID}</h1>
               <ShowOnNodesButton user={searchID} onShow={() => setOpen(false)} />
+            </div>
+            <div className="mb-5">
+              <FairsharePanel user={searchID} />
             </div>
             <DialogTitle className="mb-5">User Job Details</DialogTitle>
             <Table>
@@ -537,7 +541,7 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
                 </TableRow>
               </TableFooter>
             </Table>
-            <TablePagination />
+            {renderPagination()}
           </div>
         ) : (
           <div className="m-auto text-center">
@@ -547,6 +551,9 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
               currently have any jobs running on the system.
             </p>
             <p className="mt-5">Please try another user ID.</p>
+            <div className="mx-auto mt-8 max-w-xl text-left">
+              <FairsharePanel user={searchID} />
+            </div>
           </div>
         )}
       </DialogContent>

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getFeatures } from "@/lib/features";
 import { prom } from "@/lib/prometheus";
 import { buildGpuMetricsFilter, extractNumericValue, promSelector } from "@/lib/gpu-metrics";
+import { fetchIpmiPower, hostOf } from "@/lib/node-power";
 
 // Per-node extras for the large node cards, all from Prometheus and all
 // optional: power and temperature (IPMI or node_exporter), per-GPU
@@ -27,12 +28,6 @@ interface SeriesItem {
   values?: { time: Date; value: number }[];
 }
 
-// Short host name from whichever label the exporter uses
-function hostOf(labels: Labels): string | undefined {
-  const raw = labels.nodename || labels.Hostname || labels.hostname || labels.node || labels.instance;
-  return raw?.replace(/:\d+$/, "").split(".")[0];
-}
-
 async function instant(query: string): Promise<SeriesItem[]> {
   const res = await prom!.instantQuery(query);
   return (res?.result ?? []) as SeriesItem[];
@@ -53,13 +48,9 @@ export async function GET() {
   const start = new Date(end.getTime() - 60 * 60 * 1000);
 
   await Promise.all([
-    instant('ipmi_power_watts{name="Pwr Consumption"} or ipmi_dcmi_power_consumption_watts')
-      .then((items) => {
-        for (const item of items) {
-          const host = hostOf(item.metric?.labels ?? {});
-          const value = extractNumericValue(item.value as never);
-          if (host && Number.isFinite(value)) entry(host).power = Math.round(value);
-        }
+    fetchIpmiPower()
+      .then((power) => {
+        for (const [host, watts] of power) entry(host).power = watts;
       })
       .catch(() => {}),
 

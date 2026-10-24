@@ -1,6 +1,7 @@
 import { getEfficiencyHistograms, getEfficiencyKpis, getUserEfficiency } from "@/lib/metrics/efficiency";
 import type { EfficiencyHistograms, EfficiencyKpis, UserEfficiencyRow } from "@/lib/metrics/efficiency";
 import { runExplorer, type ExplorerResult } from "@/lib/metrics/explorer";
+import { getPreemptionByNode, type PreemptionSummary } from "@/lib/metrics/preemption";
 import { getJobDetail, searchJobs, type JobDetail, type JobSearchResult } from "@/lib/metrics/jobs";
 import {
   getGpuByPartition,
@@ -39,6 +40,7 @@ export interface OverviewData {
   wallTime: WallTimeUsed;
   queueWait: QueueWaitRow[];
   outcomes: Outcomes;
+  preemption: PreemptionSummary;
   gpu: GpuPartitionRow[];
 }
 
@@ -125,7 +127,7 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
       };
       const noUtil: Utilization = { buckets: [], percent: null, since: null };
       const drill = params.drill && opts.hierarchy ? params.drill : undefined;
-      const [kpis, utilization, previous, colleges, departments, accounts, jobSize, wallTime, queueWait, outcomes, gpu] =
+      const [kpis, utilization, previous, colleges, departments, accounts, jobSize, wallTime, queueWait, outcomes, gpu, preemption] =
         await Promise.all([
           safe("KPIs", getOverviewKpis(db, ctx), { current: emptyKpis, previous: emptyKpis }),
           safe("utilization", getUtilization(db, ctx, "current"), noUtil),
@@ -142,6 +144,7 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
           safe("queue wait", getQueueWait(db, ctx), []),
           safe("outcomes", getOutcomes(db, ctx), { states: [], failedShare: null }),
           safe("GPU by partition", getGpuByPartition(db, ctx), []),
+          safe("preemption by node", getPreemptionByNode(db, ctx), { nodes: [], preempted: 0, jobs: 0 }),
         ]);
       data = {
         tab: "overview",
@@ -157,6 +160,7 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
           queueWait,
           outcomes,
           gpu,
+          preemption,
         },
       };
       break;

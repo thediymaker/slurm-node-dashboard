@@ -24,6 +24,8 @@
 | Node history | Built-in collection | Yes |
 | GPU history (finished jobs) | GPU utilization | Yes |
 | Job metrics and hierarchy | slurm-history-ingestor writing to the same database | Yes |
+| Fair share | slurmrestd, `PriorityType=priority/multifactor` | No |
+| Event log | `EVENT_LOG` | No |
 
 ## Upgrade steps
 
@@ -81,3 +83,8 @@ The metrics page's CPU efficiency needs slurm-history-ingestor 1.1, which record
 | `GPU_CAPTURE_INTERVAL_SECONDS` | `60` | `0` turns built-in GPU capture off |
 | `DATABASE_POOL_MAX` | `10` | Maximum database connections per dashboard process |
 | `DATABASE_CONNECT_TIMEOUT_MS` | `5000` | How long to wait for a database connection before treating it as unreachable |
+| `EVENT_LOG` | off | `stdout` or a file path: JSON lines of node state changes and node and cluster metrics, for Telegraf, Vector and similar |
+| `EVENT_LOG_INTERVAL_SECONDS` | `60` | How often the event log writes metrics (at least 10) |
+| `EVENT_LOG_METRICS` | `true` | `false` writes only node state changes |
+| `ENABLE_FAIRSHARE` | on | `false` hides fair share in a user's job details |
+| `FAIRSHARE_CACHE_SECONDS` | `300` | How long the slurmrestd `/shares` tree is reused |

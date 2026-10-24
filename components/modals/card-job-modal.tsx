@@ -20,6 +20,7 @@ import React from "react";
 import { Job, JobDetails, NodeCardModalProps } from "@/types/types";
 import { NodeMetricsPanel } from "../nodeCard/node-metrics-panel";
 import { NodeHistoryPanel } from "../nodeCard/node-history-panel";
+import { NodePreemption } from "../nodeCard/node-preemption";
 import { metricGroups, dayArray } from "../prom-metric";
 import NodeUtilization from "../node-utilization";
 import { JobGPUStats } from "@/components/job-gpu-stats";
@@ -835,8 +836,9 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
               )}
 
               {/* Renders nothing when node history is off, so the card hides itself */}
-              <div className="rounded-lg border bg-card p-4 empty:hidden">
+              <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 empty:hidden">
                 <NodeHistoryPanel nodeName={nodename} />
+                <NodePreemption nodeName={nodename} />
               </div>
 
               {/* Running jobs */}

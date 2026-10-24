@@ -13,6 +13,7 @@ const DESCRIPTIONS: Record<FeatureState["id"], string> = {
   nodeHistory: "When nodes were drained or down, and why",
   gpuHistory: "GPU utilization of finished jobs",
   jobMetrics: "Job statistics and analytics from the history ingestor",
+  fairshare: "A user's FairShare factor and LevelFS in their job details",
 };
 
 const FeatureItem = ({ feature }: { feature: FeatureState }) => (

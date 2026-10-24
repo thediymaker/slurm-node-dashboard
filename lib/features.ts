@@ -23,7 +23,8 @@ export type FeatureId =
   | "rewind"
   | "nodeHistory"
   | "gpuHistory"
-  | "jobMetrics";
+  | "jobMetrics"
+  | "fairshare";
 
 export interface FeatureState {
   id: FeatureId;
@@ -237,6 +238,10 @@ export async function getFeatures(): Promise<Features> {
         return { enabled: false, reason: "No job history yet. Run slurm-history-ingestor against this database." };
       return { enabled: true, reason: "Reporting on job history written by slurm-history-ingestor." };
     }),
+    fairshare: feature("fairshare", "Fair share", "ENABLE_FAIRSHARE", false, () => ({
+      enabled: true,
+      reason: "Read from slurmrestd /shares when a user's jobs are opened; needs PriorityType=priority/multifactor.",
+    })),
   };
   return features;
 }

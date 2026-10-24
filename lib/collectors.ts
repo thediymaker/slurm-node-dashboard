@@ -2,6 +2,7 @@ import { pruneClusterCapacity, recordClusterCapacity } from "@/lib/cluster-capac
 import { readEnv } from "@/lib/config";
 import { ensureSchema, getDb } from "@/lib/db";
 import { getDatabaseStatus, getFeatures } from "@/lib/features";
+import { EventLog, eventLogConfig, type EventLogConfig } from "@/lib/event-log";
 import { handleCapture } from "@/lib/gpu-service";
 import { pruneNodeHistory, recordNodeEvents, recordNodeStates } from "@/lib/node-history";
 import { fetchNodesPayload, type NodesPayload } from "@/lib/nodes";
@@ -32,12 +33,6 @@ export function startCollectors() {
   if (globalForCollectors.slurmdashCollectors) return;
   globalForCollectors.slurmdashCollectors = true;
 
-  const pool = getDb();
-  if (!pool) {
-    console.log("[collectors] no database configured; node history, Rewind snapshots and GPU history are off");
-    return;
-  }
-
   const nodeIntervalS = seconds("NODE_HISTORY_INTERVAL_SECONDS", 60);
   const nodeRetentionDays = seconds("NODE_HISTORY_RETENTION_DAYS", 30);
   // Capacity is small (one row per cluster per hour) and utilization is
@@ -59,6 +54,16 @@ export function startCollectors() {
     return result.data;
   }
   const clusterOf = (payload: NodesPayload) => payload?.meta?.slurm?.cluster || readEnv("CLUSTER_NAME") || "cluster";
+
+  // The event log needs no database and runs in every dashboard process
+  const eventLog = eventLogConfig();
+  if (eventLog) startEventLog(eventLog, nodes, clusterOf);
+
+  const pool = getDb();
+  if (!pool) {
+    console.log("[collectors] no database configured; node history, Rewind snapshots and GPU history are off");
+    return;
+  }
 
   const jobs: Job[] = [];
   if (nodeIntervalS > 0) {
@@ -136,6 +141,35 @@ export function startCollectors() {
   }
 
   void lead(jobs);
+}
+
+// Checks node states at least every 30 seconds so changes go out promptly;
+// EventLog writes metrics once per its interval
+function startEventLog(
+  config: EventLogConfig,
+  nodes: () => Promise<NodesPayload>,
+  clusterOf: (payload: NodesPayload) => string
+) {
+  const log = new EventLog(config);
+  const every = Math.min(config.intervalS, 30) * 1000;
+  let running = false;
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try {
+      const payload = await nodes();
+      await log.record(clusterOf(payload), payload.nodes);
+    } catch (err) {
+      console.error("[collectors] event log:", (err as Error).message);
+    } finally {
+      running = false;
+    }
+  };
+  console.log(
+    `[collectors] event log to ${config.target}: node state changes${config.metrics ? `, metrics every ${config.intervalS}s` : ""}`
+  );
+  void tick();
+  setInterval(tick, every);
 }
 
 // Hold the leader lock on a dedicated connection; retry every minute until we
