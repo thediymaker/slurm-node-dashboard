@@ -19,7 +19,6 @@ import {
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 import { Organization } from '@/actions/hierarchy';
-import { useTheme } from 'next-themes';
 
 interface HierarchyFlowProps {
   data: Organization[];
@@ -29,12 +28,13 @@ interface HierarchyFlowProps {
 const nodeWidth = 172;
 const nodeHeight = 36;
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
+const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
   const isHorizontal = direction === 'LR';
-  dagreGraph.setGraph({ rankdir: direction });
+  // Left to right: a wide tree of departments would otherwise shrink to nothing
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 14, ranksep: 70 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -67,7 +67,6 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 };
 
 function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
-  const { resolvedTheme } = useTheme();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { fitView } = useReactFlow();
@@ -140,7 +139,7 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
       onConnect={onConnect}
       onNodeClick={handleNodeClick}
       fitView
-      colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
+      minZoom={0.1}
       attributionPosition="bottom-right"
       proOptions={{ hideAttribution: true }}
     >
@@ -150,10 +149,20 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
   );
 }
 
+// React Flow's controls in the app's colors, so they follow light and dark mode
+const FLOW_COLORS = {
+  '--xy-controls-button-background-color': 'hsl(var(--card))',
+  '--xy-controls-button-background-color-hover': 'hsl(var(--muted))',
+  '--xy-controls-button-color': 'hsl(var(--foreground))',
+  '--xy-controls-button-color-hover': 'hsl(var(--foreground))',
+  '--xy-controls-button-border-color': 'hsl(var(--border))',
+  '--xy-controls-box-shadow': 'none',
+} as React.CSSProperties;
+
 export function HierarchyFlow(props: HierarchyFlowProps) {
     return (
         <ReactFlowProvider>
-            <div className="w-full h-full min-h-[500px] border rounded-lg overflow-hidden bg-card">
+            <div className="w-full h-full min-h-[500px] border rounded-lg overflow-hidden bg-card" style={FLOW_COLORS}>
                 <HierarchyFlowContent {...props} />
             </div>
         </ReactFlowProvider>
