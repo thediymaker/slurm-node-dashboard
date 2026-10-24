@@ -20,6 +20,9 @@ export function getDb(): DbPool | null {
       connectionString: url,
       max: Number(readEnv("DATABASE_POOL_MAX")) || 10,
       idleTimeoutMillis: 30000,
+      // Every page checks the database's status, so an unreachable host must
+      // fail fast instead of hanging requests
+      connectionTimeoutMillis: Number(readEnv("DATABASE_CONNECT_TIMEOUT_MS")) || 5000,
     });
     // An idle client losing its connection emits 'error' on the pool, which
     // would otherwise crash the process
@@ -96,9 +99,4 @@ export function ensureSchema(): Promise<SchemaStatus> {
     });
   }
   return globalForDb.slurmdashSchema;
-}
-
-export async function tableExists(pool: DbPool, table: string): Promise<boolean> {
-  const { rows } = await pool.query("SELECT to_regclass($1) IS NOT NULL AS exists", [`public.${table}`]);
-  return rows[0]?.exists === true;
 }

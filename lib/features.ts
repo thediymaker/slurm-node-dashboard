@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { getDatabaseUrl, getModulesFile, readEnv, readFlag } from "@/lib/config";
-import { ensureSchema, getDb, tableExists } from "@/lib/db";
+import { ensureSchema, getDb } from "@/lib/db";
 
 // Which optional features are on, and why not when they're off.
 //
@@ -58,10 +58,22 @@ export interface DatabaseStatus {
 }
 
 const CACHE_MS = 30_000;
+// Longer when the database is unreachable, so at most one request a minute
+// waits for the connect timeout
+const UNREACHABLE_CACHE_MS = 60_000;
 let cached: { at: number; value: DatabaseStatus } | undefined;
 
+const TABLES_QUERY = `
+  SELECT to_regclass('public.job_history') IS NOT NULL AS job_history,
+         to_regclass('public.job_gpu_metrics') IS NOT NULL AS job_gpu_metrics,
+         to_regclass('public.node_events') IS NOT NULL AS node_events,
+         to_regclass('public.node_snapshots') IS NOT NULL AS node_snapshots`;
+
 export async function getDatabaseStatus(): Promise<DatabaseStatus> {
-  if (cached && Date.now() - cached.at < CACHE_MS) return cached.value;
+  if (cached) {
+    const ttl = cached.value.configured && !cached.value.reachable ? UNREACHABLE_CACHE_MS : CACHE_MS;
+    if (Date.now() - cached.at < ttl) return cached.value;
+  }
 
   const status: DatabaseStatus = {
     configured: Boolean(getDatabaseUrl()),
@@ -73,15 +85,21 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
   const pool = getDb();
   if (pool) {
     try {
+      // Reachable first, so a down database costs one connect timeout, not several
+      await pool.query("SELECT 1");
+      status.reachable = true;
+
       const schema = await ensureSchema();
       status.schema = schema.state === "ready" ? "ready" : schema.state === "failed" ? "failed" : "disabled";
       if (schema.state === "failed") status.schemaError = schema.error;
 
-      const [jobHistory, gpuMetrics, nodeEvents, nodeSnapshots] = await Promise.all(
-        ["job_history", "job_gpu_metrics", "node_events", "node_snapshots"].map((t) => tableExists(pool, t))
-      );
-      status.reachable = true;
-      status.tables = { jobHistory, gpuMetrics, nodeEvents, nodeSnapshots };
+      const { rows } = await pool.query(TABLES_QUERY);
+      status.tables = {
+        jobHistory: rows[0].job_history,
+        gpuMetrics: rows[0].job_gpu_metrics,
+        nodeEvents: rows[0].node_events,
+        nodeSnapshots: rows[0].node_snapshots,
+      };
     } catch (err) {
       status.error = (err as Error).message;
     }
