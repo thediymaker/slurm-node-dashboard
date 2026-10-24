@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { GPUResources } from "@/types/types";
+import { withBasePath } from "@/lib/base-path";
 
 interface GPUResourcesDisplayProps {
   gpuResources?: GPUResources;
@@ -34,7 +35,7 @@ const GPUResourcesDisplay: React.FC<GPUResourcesDisplayProps> = ({
     const fetchUtilization = async () => {
       try {
         const response = await fetch(
-          `/api/gpu/node?name=${encodeURIComponent(hostname)}`
+          withBasePath(`/api/gpu/node?name=${encodeURIComponent(hostname)}`)
         );
         const result = await response.json();
         if (result.status === 200 && result.data?.length > 0) {

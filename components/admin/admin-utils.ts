@@ -5,6 +5,7 @@
 
 import useSWR, { SWRConfiguration } from "swr";
 import { useState } from "react";
+import { withBasePath } from "@/lib/base-path";
 
 // -----------------------------------------------------------------------------
 // API Response Types
@@ -220,13 +221,13 @@ export const defaultSWRConfig: SWRConfiguration = {
 // -----------------------------------------------------------------------------
 
 export const API_ENDPOINTS = {
-    DIAG: "/api/slurm/diag",
-    NODES: "/api/slurm/nodes",
-    PARTITIONS: "/api/slurm/partitions",
-    JOBS: "/api/slurm/jobs",
-    RESERVATIONS: "/api/slurm/reservations",
-    QOS: "/api/slurm/qos",
-    CLUSTER: "/api/slurm/cluster",
+    DIAG: withBasePath("/api/slurm/diag"),
+    NODES: withBasePath("/api/slurm/nodes"),
+    PARTITIONS: withBasePath("/api/slurm/partitions"),
+    JOBS: withBasePath("/api/slurm/jobs"),
+    RESERVATIONS: withBasePath("/api/slurm/reservations"),
+    QOS: withBasePath("/api/slurm/qos"),
+    CLUSTER: withBasePath("/api/slurm/cluster"),
 } as const;
 
 // -----------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gauge, AlertTriangle } from "lucide-react";
 import { gpuUtilizationPluginMetadata } from "@/actions/plugins";
+import { withBasePath } from "@/lib/base-path";
 
 interface GPUJobData {
   jobId: string;
@@ -69,7 +70,7 @@ interface JobGPUStatsProps {
 }
 
 export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
-  const gpuUrl = `/api/gpu?job_id=${encodeURIComponent(jobId)}`;
+  const gpuUrl = withBasePath(`/api/gpu?job_id=${encodeURIComponent(jobId)}`);
   const { data, isLoading } = useSWR<GPUJobResponse>(
     gpuUtilizationPluginMetadata.isEnabled ? gpuUrl : null,
     fetcher,
@@ -220,7 +221,7 @@ interface GPUUtilizationBadgeProps {
 
 export function GPUUtilizationBadge({ jobId, source = "auto" }: GPUUtilizationBadgeProps) {
   const sourceQuery = source === "database" ? "&source=database" : "";
-  const gpuUrl = `/api/gpu?job_id=${encodeURIComponent(jobId)}${sourceQuery}`;
+  const gpuUrl = withBasePath(`/api/gpu?job_id=${encodeURIComponent(jobId)}${sourceQuery}`);
   const { data, isLoading } = useSWR<GPUJobResponse>(
     gpuUtilizationPluginMetadata.isEnabled ? gpuUrl : null,
     fetcher,

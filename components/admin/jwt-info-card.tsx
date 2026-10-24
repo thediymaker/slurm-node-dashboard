@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Key, AlertTriangle, CheckCircle, XCircle, Bell, BellOff } from "lucide-react";
 import useSWR from "swr";
 import { useState } from "react";
+import { withBasePath } from "@/lib/base-path";
 
 interface JWTInfo {
   configured: boolean;
@@ -77,7 +78,7 @@ function getStatusBadge(status: JWTInfo['status']) {
 }
 
 export function JWTInfoCard() {
-  const { data, isLoading, error, mutate } = useSWR<JWTInfo>('/api/slurm/jwt/info', fetcher, {
+  const { data, isLoading, error, mutate } = useSWR<JWTInfo>(withBasePath('/api/slurm/jwt/info'), fetcher, {
     refreshInterval: 60000, // Refresh every minute
     revalidateOnFocus: true
   });
@@ -96,7 +97,7 @@ export function JWTInfoCard() {
     setIsTestingAlert(true);
     setAlertResult(null);
     try {
-      const response = await fetch('/api/slurm/jwt/alert?force=true');
+      const response = await fetch(withBasePath('/api/slurm/jwt/alert?force=true'));
       const result = await response.json();
       setAlertResult(result);
     } catch (err) {

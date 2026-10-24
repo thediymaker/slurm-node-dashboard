@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import MaintModal from "./modals/maint-modal";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { withBasePath } from "@/lib/base-path";
 
 const searchSchema = z.object({
   searchID: z
@@ -60,10 +61,10 @@ const JobSearch = () => {
         if (/^\d+$/.test(trimmedSearchID)) {
           // Fetch active and completed jobs in parallel for better performance
           const [activeJobResult, completedJobResult] = await Promise.allSettled([
-            fetch(`/api/slurm/job/${trimmedSearchID}`, {
+            fetch(withBasePath(`/api/slurm/job/${trimmedSearchID}`), {
               headers: { "Content-Type": "application/json" },
             }).then((res) => res.json()),
-            fetch(`/api/slurm/job/completed/${trimmedSearchID}`, {
+            fetch(withBasePath(`/api/slurm/job/completed/${trimmedSearchID}`), {
               headers: { "Content-Type": "application/json" },
             }).then((res) => res.json()),
           ]);
@@ -126,7 +127,7 @@ const JobSearch = () => {
 
   const fetchMaintenanceData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/slurm/reservations`, {
+      const response = await fetch(withBasePath(`/api/slurm/reservations`), {
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {

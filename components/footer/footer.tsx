@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { HealthIndicator } from "./health-indicator";
 import { SlurmDiag } from "@/types/types";
 import { Box } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 
 // Fetcher function with error handling
 const fetcher = async (url: string) => {
@@ -51,7 +52,7 @@ const Footer = ({ cluster = "Cluster", logo }: FooterProps) => {
   const [lastFetchError, setLastFetchError] = useState<Error | null>(null);
   
   const { data, error, isLoading } = useSWR<SlurmDiag>(
-    "/api/slurm/diag",
+    withBasePath("/api/slurm/diag"),
     fetcher,
     {
       refreshInterval: 15000,
@@ -86,7 +87,7 @@ const Footer = ({ cluster = "Cluster", logo }: FooterProps) => {
         {/* Left Side: Identity & Health */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 select-none">
-            {logo && <img src={logo} alt="Logo" className="h-5 w-5 object-contain" />}
+            {logo && <img src={withBasePath(logo)} alt="Logo" className="h-5 w-5 object-contain" />}
             <span className="text-primary font-bold uppercase tracking-wider text-xs hidden sm:block">
               {cluster}
             </span>

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -44,7 +45,7 @@ export default function LoginPage() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const response = await fetch("/api/auth/admin/sign-in", {
+      const response = await fetch(withBasePath("/api/auth/admin/sign-in"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

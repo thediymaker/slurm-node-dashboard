@@ -12,6 +12,7 @@ import { NodeMetricsPanel } from "../nodeCard/node-metrics-panel";
 import PromComboBox from "../prom-metric";
 import NodeUtilization from "../node-utilization";
 import { JobGPUStats } from "@/components/job-gpu-stats";
+import { withBasePath } from "@/lib/base-path";
 
 // Utility function moved outside component - created once
 const convertUnixToHumanReadable = (unixTimestamp: number): string => {
@@ -248,15 +249,15 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
 
   // Memoize URLs to prevent unnecessary re-fetches
   const slurmURL = useMemo(
-    () => `/api/slurm/jobs/node/${nodename}`,
+    () => withBasePath(`/api/slurm/jobs/node/${nodename}`),
     [nodename]
   );
   const promURL = useMemo(
-    () => `/api/prometheus?node=${nodename}&days=${daysValue}&query=${metricValue}`,
+    () => withBasePath(`/api/prometheus?node=${nodename}&days=${daysValue}&query=${metricValue}`),
     [nodename, daysValue, metricValue]
   );
   const jobDetailsURL = useMemo(
-    () => (expandedJobId ? `/api/slurm/job/${expandedJobId}` : null),
+    () => (expandedJobId ? withBasePath(`/api/slurm/job/${expandedJobId}`) : null),
     [expandedJobId]
   );
 

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { withBasePath } from "@/lib/base-path";
 
 const env = process.env;
 
@@ -12,12 +13,12 @@ export const metadata: Metadata = {
   title: `${env.CLUSTER_NAME} Supercomputer`,
   description: "A Slurm supercomputer dashboard.",
   icons: {
-    icon: "/favicon.ico",
+    icon: withBasePath("/favicon.ico"),
     apple: [
-      { url: "/apple-icon.png" },
-      { url: "/apple-icon-180x180.png", sizes: "180x180", type: "image/png" },
+      { url: withBasePath("/apple-icon.png") },
+      { url: withBasePath("/apple-icon-180x180.png"), sizes: "180x180", type: "image/png" },
     ],
-    shortcut: "/favicon.ico",
+    shortcut: withBasePath("/favicon.ico"),
   },
 };
 

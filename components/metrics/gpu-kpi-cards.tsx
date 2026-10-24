@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Gauge } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
+import { withBasePath } from "@/lib/base-path";
 
 interface GPUOverviewData {
   avgUtilization: number;
@@ -32,7 +33,7 @@ export function GPUKPICards() {
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     const qs = params.toString();
-    return qs ? `/api/gpu?${qs}` : "/api/gpu";
+    return withBasePath(qs ? `/api/gpu?${qs}` : "/api/gpu");
   })();
 
   const { data, error, isLoading } = useSWR<GPUOverviewResponse>(

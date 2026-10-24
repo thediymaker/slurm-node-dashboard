@@ -64,6 +64,10 @@ npm run dev
 
 Open `http://localhost:3020`.
 
+### Serving under a sub-path
+
+To serve the dashboard at a path such as `https://example.edu/slurm/cluster1` (for example, several clusters behind one reverse proxy), set `NEXT_PUBLIC_BASE_PATH=/slurm/cluster1` when building. With Docker, pass it as a build arg. The proxy must forward the path unchanged, e.g. nginx `location /slurm/cluster1 { proxy_pass http://localhost:3020; }` with no trailing slash on `proxy_pass`. If you run `next start` instead of the standalone server, set the variable at runtime too. Login cookies are scoped to the sub-path, so dashboards on the same host keep separate sessions.
+
 ## Documentation
 
 For full deployment, feature flag, AI assistant, GPU metrics, and historical data setup details, see [slurmdash.com](https://slurmdash.com).

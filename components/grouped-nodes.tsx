@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, ChevronsUpDown, ChevronsDownUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { withBasePath } from "@/lib/base-path";
 
 interface GroupedNodesProps {
   nodes: Node[];
@@ -300,7 +301,7 @@ const GroupedNodes: React.FC<GroupedNodesProps> = ({
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const response = await fetch("/api/node-config");
+        const response = await fetch(withBasePath("/api/node-config"));
         const data = await response.json();
 
         if (data.error) {

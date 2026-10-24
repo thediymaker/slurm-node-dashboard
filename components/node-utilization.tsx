@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import useSWR from "swr";
 import { Loader2 } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 
 interface NodeUtilizationProps {
   nodeName: string;
@@ -12,7 +13,7 @@ export default function NodeUtilization({
   className,
 }: NodeUtilizationProps) {
   const { data, error, isLoading } = useSWR(
-    `/api/prometheus/utilization?node=${nodeName}`,
+    withBasePath(`/api/prometheus/utilization?node=${nodeName}`),
     (url) => fetch(url).then((res) => res.json()),
     {
       refreshInterval: 300000,
