@@ -139,13 +139,16 @@ const LargeCardContent = memo(
     const many = model.gpuTotal > 4;
     const util = extras?.gpuUtil;
 
+    // Same stacked rows as the medium card, larger
     const row = (label: string, value: number, text: string) => (
-      <div className="flex items-center gap-1.5">
-        <span className={cn("w-[30px] flex-none text-[11px] font-medium", sub)}>{label}</span>
-        <Bar value={value} height={6} light={model.light} />
-        <span className={cn("w-[34px] flex-none text-right text-[11px] tabular-nums", sub)}>
-          {text}
-        </span>
+      <div className="flex flex-col gap-1">
+        <div className={cn("flex justify-between text-[11px] font-medium leading-none tabular-nums", sub)}>
+          <span>{label}</span>
+          <span>{text}</span>
+        </div>
+        <div className="flex">
+          <Bar value={value} height={6} light={model.light} />
+        </div>
       </div>
     );
 
@@ -177,7 +180,7 @@ const LargeCardContent = memo(
             </span>
           )}
         </div>
-        <div className="relative flex flex-col gap-2">
+        <div className="relative flex flex-col gap-1.5">
           {row("CPU", model.cpuPct, `${model.cpuPct}%`)}
           {row("MEM", model.memPct, `${model.memPct}%`)}
           {model.gpuTotal === 0 && row("LOAD", Math.min(100, model.loadPct), `${model.loadPct}%`)}
@@ -268,7 +271,7 @@ export const NodeCard = memo(({
   // Down gets a hatch so it reads differently from drained at a glance.
   const pattern = useMemo(() => {
     if (model.state === "draining") {
-      return `repeating-linear-gradient(135deg, ${getColorSchema(colorSchema).progressColors.mixed}bf 0 5px, transparent 5px 11px)`;
+      return `repeating-linear-gradient(135deg, ${getColorSchema(colorSchema).progressColors.mixed}80 0 4px, transparent 4px 12px)`;
     }
     if (model.state === "down") return "repeating-linear-gradient(135deg, rgba(15,23,42,.35) 0 2px, transparent 2px 7px)";
     return "linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,0) 45%, rgba(0,0,0,.12))";

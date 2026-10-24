@@ -155,21 +155,22 @@ const NodeToolbar = (p: NodeToolbarProps) => {
         <Segmented label="Group by" value={p.groupBy} options={groupOptions} onChange={p.onGroupBy} />
       </div>
 
-      <div className="flex-1" />
-
-      <span className="text-xs text-muted-foreground tabular-nums">
-        {p.showing === p.total ? `${p.total} nodes` : `${p.showing} of ${p.total} nodes`}
-      </span>
-      <Segmented
-        label="Size"
-        value={p.size}
-        options={[
-          { value: 50 as CardSize, label: "S" },
-          { value: 100 as CardSize, label: "M" },
-          { value: 150 as CardSize, label: "L" },
-        ]}
-        onChange={p.onSize}
-      />
+      {/* Kept together so it wraps as one piece */}
+      <div className="ml-auto flex items-center gap-3">
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {p.showing === p.total ? `${p.total} nodes` : `${p.showing} of ${p.total} nodes`}
+        </span>
+        <Segmented
+          label="Size"
+          value={p.size}
+          options={[
+            { value: 50 as CardSize, label: "S" },
+            { value: 100 as CardSize, label: "M" },
+            { value: 150 as CardSize, label: "L" },
+          ]}
+          onChange={p.onSize}
+        />
+      </div>
     </div>
   );
 };

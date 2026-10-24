@@ -47,17 +47,19 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [], featur
     <div className="mx-auto max-w-[1600px] px-4 pb-10">
       <div className="flex flex-col gap-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-4">
-          <TabsList className="h-auto w-full justify-start gap-5 overflow-x-auto rounded-none border-b bg-transparent p-0">
-            {tabs.map((tab) => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="-mb-px rounded-none border-b-2 border-transparent bg-transparent px-0 py-2.5 text-sm font-normal text-muted-foreground shadow-none hover:text-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-              >
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="border-b">
+            <TabsList className="flex h-auto w-full justify-start gap-5 overflow-x-auto overflow-y-hidden rounded-none bg-transparent p-0 [scrollbar-width:none]">
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-0 py-2.5 text-sm font-normal text-muted-foreground shadow-none hover:text-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           {activeTab === "overview" && <AdminKPICards />}
 
