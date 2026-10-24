@@ -13,6 +13,7 @@ import {
   Background,
   Node,
   useReactFlow,
+  useNodesInitialized,
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -66,21 +67,21 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 };
 
 function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { fitView } = useReactFlow();
 
-  // Memoize node style based on theme
+  // The app's colors, so nodes follow light and dark mode
   const nodeStyle = useMemo(() => ({
-    background: theme === 'dark' ? '#1e293b' : '#ffffff',
-    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
-    border: '1px solid #94a3b8',
+    background: 'hsl(var(--card))',
+    color: 'hsl(var(--foreground))',
+    border: '1px solid hsl(var(--border))',
     borderRadius: '8px',
     padding: '8px',
     fontSize: '12px',
     width: nodeWidth,
-  }), [theme]);
+  }), []);
 
   useEffect(() => {
     if (!data.length) return;
@@ -100,7 +101,7 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
         target: org.id.toString(),
         type: 'smoothstep',
         animated: true,
-        style: { stroke: '#94a3b8' },
+        style: { stroke: 'hsl(var(--muted-foreground))' },
       }));
 
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -124,12 +125,11 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
     onNodeClick(node.data.original as Organization);
   }, [onNodeClick]);
 
-  // Fit view when nodes change
+  // Fit once React Flow has measured the nodes; before that it fits to nothing
+  const nodesInitialized = useNodesInitialized();
   useEffect(() => {
-    if (nodes.length > 0) {
-      fitView({ padding: 0.2 });
-    }
-  }, [nodes.length, fitView]);
+    if (nodesInitialized) fitView({ padding: 0.15 });
+  }, [nodesInitialized, fitView]);
 
   return (
     <ReactFlow
@@ -140,11 +140,12 @@ function HierarchyFlowContent({ data, onNodeClick }: HierarchyFlowProps) {
       onConnect={onConnect}
       onNodeClick={handleNodeClick}
       fitView
+      colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
       attributionPosition="bottom-right"
       proOptions={{ hideAttribution: true }}
     >
       <Controls showInteractive={false} />
-      <Background color="#aaa" gap={16} />
+      <Background color="hsl(var(--muted-foreground) / 0.25)" gap={16} />
     </ReactFlow>
   );
 }

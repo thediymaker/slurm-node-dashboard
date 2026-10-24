@@ -9,7 +9,8 @@ import {
     useAdminNodes, 
     useAdminPartitions, 
     isNodeAvailable,
-    parseNodeState 
+    parseNodeState,
+    getPartitionState
 } from "./admin-utils";
 import { AlertTriangle } from "lucide-react";
 
@@ -99,10 +100,7 @@ export function AdminKPICards() {
         }
         
         const partitions = partitionsData.partitions;
-        const upPartitions = partitions.filter((p: any) => {
-            const state = Array.isArray(p.state) ? p.state[0] : p.state?.current?.[0];
-            return state === "UP";
-        }).length;
+        const upPartitions = partitions.filter((p: Parameters<typeof getPartitionState>[0]) => getPartitionState(p) === "UP").length;
         
         return { total: partitions.length, up: upPartitions };
     }, [partitionsData]);
