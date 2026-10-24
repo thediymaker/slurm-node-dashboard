@@ -38,14 +38,14 @@ Build arguments for plugin flags, `CLUSTER_NAME`, `CLUSTER_LOGO`, `NEXT_PUBLIC_B
 
 ### If you use job metrics, GPU history or Rewind
 
-- **Database permissions:** on first start, the dashboard creates the tables it writes (`dashboard_schema_migrations`, `node_events`, `node_snapshots`, and `organizations`, `account_mappings` and `job_gpu_metrics` if they're missing). Its database user needs `CREATE` permission on the database for that first start. If it doesn't have it, job metrics keep working, and Rewind snapshots and node history stay off until you grant it:
+- **Database permissions:** on first start, the dashboard creates the tables it writes (`dashboard_schema_migrations`, `node_events`, `node_snapshots`, and `accounts`, `organizations`, `account_mappings` and `job_gpu_metrics` if they're missing). Its database user needs `CREATE` permission on the database for that first start. If it doesn't have it, job metrics keep working, and Rewind snapshots and node history stay off until you grant it:
 
   ```sql
   GRANT CREATE ON SCHEMA public TO <dashboard user>;
   ```
 
 - **Remove the GPU capture cron job** (`curl -X POST .../api/gpu`). The dashboard now captures every minute. The endpoint still works, so leaving the cron job in place does no harm.
-- **Remove the Rewind snapshot cron job.** With a database the dashboard saves snapshots itself. Rewind still reads the snapshot files in `data/`, so older history stays available until those files age out.
+- **Remove the Rewind snapshot cron job.** With a database the dashboard saves snapshots itself. Rewind still reads the snapshot files in `data/`, so older history stays available. The cron script was what deleted old files, so delete them yourself once you no longer need them.
 - **Run one collector per database.** If you run several dashboard instances against one database, only one of them collects at a time; the others take over if it stops.
 
 ### If you use the Modules page
@@ -75,3 +75,4 @@ Upgrade to the release that ships with 3.0. It saves its sync position, so a qui
 | `SNAPSHOT_RETENTION_DAYS` | `30` | `0` keeps snapshots forever |
 | `GPU_CAPTURE_INTERVAL_SECONDS` | `60` | `0` turns built-in GPU capture off |
 | `DATABASE_POOL_MAX` | `10` | Maximum database connections per dashboard process |
+| `DATABASE_CONNECT_TIMEOUT_MS` | `5000` | How long to wait for a database connection before treating it as unreachable |
