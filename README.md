@@ -10,10 +10,18 @@ Slurm Node Dashboard combines a live node view with optional historical analytic
 
 ![Dashboard Screenshot](images/dashboard1.png "Slurm Node Dashboard overview")
 
+| Node details | Job metrics |
+|---|---|
+| ![Node details](images/node-details.png "Node details panel") | ![Job metrics](images/metrics.png "Job metrics overview") |
+
 ## Highlights
 
-- Live cluster view with CPU/GPU node status, filtering, rack/group layouts, and 15 second refresh polling
-- Optional pages for software modules, cluster rewind, node history and job metrics, which turn on when what they need is configured
+- Live cluster view: a summary of node states, allocation, power and jobs, node cards in three sizes, filters, grouping by rack, partition or state, and highlighting a user's or job's nodes
+- Node details with Prometheus charts, node history (time in each state, drain and down periods), running jobs and GPUs
+- Job metrics that cover what most sites use XDMoD for: Overview, Explorer, Efficiency and Jobs tabs, utilization against recorded capacity, preemption by node, CSV export and shareable links
+- Optional pages for software modules and Rewind (the cluster at any hour of the last week), which turn on when what they need is configured
+- Fair share in a user's job details, from slurmrestd `/shares`
+- Event log: node state changes and node and cluster metrics as JSON lines for Telegraf, InfluxDB and Grafana
 - GPU analytics from Prometheus/DCGM recording rules, including job-level utilization views
 - AI assistant with streaming chat, built-in Slurm workflow tools, documentation search, and structured tool result cards
 - Admin-managed assistant configuration with YAML overrides, custom tools, restricted topics, and prompt preview/testing
@@ -79,6 +87,8 @@ Features turn on when what they need is configured; set a feature's flag to `fal
 | Node history | Drain and down periods the dashboard records | Yes |
 | GPU history | GPU utilization | Yes |
 | Job metrics | [slurm-history-ingestor](https://github.com/thediymaker/slurm-history-ingestor) writing to the same database | Yes |
+| Fair share | slurmrestd, `PriorityType=priority/multifactor` | No |
+| Event log | `EVENT_LOG=stdout` or a file path | No |
 
 For the database features, set `DATABASE_URL` to a PostgreSQL database the dashboard's user can create tables in. The dashboard creates its tables on startup and collects in the background; with several instances on one database, one of them collects.
 
