@@ -1,58 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import HeaderMenu from "@/components/header/header-menu";
 import ColorSchemaSelector from "@/components/color-schema-selector";
 import JobSearch from "@/components/job-search";
 import { useRuntimeConfig } from "@/components/runtime-config";
-import { getRandomGeekName } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { useColorSchema } from "@/components/use-color-schema";
 import { withBasePath } from "@/lib/base-path";
+import { cn } from "@/lib/utils";
 
-interface UnifiedHeaderProps {
-  // Kept for the pages that pass them; the nav shows which page is open
-  title?: string;
-  description?: string;
-  username?: string;
-  // The nodes page owns the color scheme; other pages keep it here
-  colorSchema?: string;
-  onColorSchemaChange?: (value: string) => void;
-}
+// Pages that share the app header; admin and login have their own
+const APP_PAGES = ["/", "/rewind", "/modules", "/metrics"];
 
-export default function UnifiedHeader({ username, colorSchema: controlledSchema, onColorSchemaChange }: UnifiedHeaderProps) {
+// One header for every page, rendered by the root layout so it sits in the
+// same place everywhere
+export default function AppHeader({ username }: { username?: string }) {
   const { clusterName, clusterLogo, features } = useRuntimeConfig();
-  const pathname = usePathname();
-  const [localSchema, setLocalSchema] = useState(() => {
-    try {
-      return (typeof window !== "undefined" && localStorage.getItem("colorSchema")) || "default";
-    } catch {
-      return "default";
-    }
-  });
-  const [displayUsername, setDisplayUsername] = useState(username);
+  const pathname = usePathname() ?? "/";
+  const [colorSchema, setColorSchema] = useColorSchema();
 
-  useEffect(() => {
-    // Get username from cookie if not provided
-    if (!username) {
-      const cookieUsername = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("SSONAME="))
-        ?.split("=")[1];
-      setDisplayUsername(cookieUsername || getRandomGeekName());
-    }
-  }, [username]);
-
-  const colorSchema = controlledSchema ?? localSchema;
-  const handleColorSchemaChange = (value: string) => {
-    if (onColorSchemaChange) {
-      onColorSchemaChange(value);
-    } else {
-      setLocalSchema(value);
-      localStorage.setItem("colorSchema", value);
-    }
-  };
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
+  if (!APP_PAGES.some(isActive)) return null;
 
   const nav = [
     { href: "/", label: "Nodes", show: true },
@@ -61,11 +30,9 @@ export default function UnifiedHeader({ username, colorSchema: controlledSchema,
     { href: "/metrics", label: "Metrics", show: features.jobMetrics.enabled },
   ].filter((item) => item.show);
 
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname?.startsWith(href));
-
   return (
-    <header className="sticky top-0 z-30 -mx-2 mb-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2">
+    <header className="sticky top-0 z-30 mb-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex min-h-14 max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2">
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-80">
           {clusterLogo && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -91,8 +58,8 @@ export default function UnifiedHeader({ username, colorSchema: controlledSchema,
         <div className="flex-1" />
         <div className="flex items-center gap-1">
           <JobSearch />
-          <ColorSchemaSelector value={colorSchema} onChange={handleColorSchemaChange} />
-          <HeaderMenu username={displayUsername} />
+          <ColorSchemaSelector value={colorSchema} onChange={setColorSchema} />
+          <HeaderMenu username={username} />
         </div>
       </div>
     </header>

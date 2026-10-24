@@ -2,14 +2,12 @@
 
 import useSWR from "swr";
 import { useEffect, useMemo, useState } from "react";
-import Stats from "./stats";
 import { Skeleton } from "../ui/skeleton";
-import { LastUpdated } from "../last-updated";
 import { Node, NodeConfig } from "@/types/types";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
 import ChatIcon from "../llm/chat-icon";
-import UnifiedHeader from "@/components/unified-header";
+import { useColorSchema } from "@/components/use-color-schema";
 import { useFeature, useRuntimeConfig } from "@/components/runtime-config";
 import { LogicType } from "@/components/feature-selector";
 import { withBasePath } from "@/lib/base-path";
@@ -92,7 +90,7 @@ function save(key: string, value: string) {
 
 const GROUP_BYS: GroupBy[] = ["rack", "partition", "state", "none"];
 
-const Nodes = ({ username }: { username?: string }) => {
+const Nodes = () => {
   const aiEnabled = useFeature("ai");
   const prometheusEnabled = useFeature("prometheus");
   const nodeHistoryEnabled = useFeature("nodeHistory");
@@ -117,8 +115,7 @@ const Nodes = ({ username }: { username?: string }) => {
   const [cardSize, setCardSize] = useState<CardSize>(() =>
     stored("cardSize", (raw) => ([50, 100, 150].includes(Number(raw)) ? (Number(raw) as CardSize) : undefined), 100)
   );
-  const [showStats, setShowStats] = useState<boolean>(() => stored("showStats", (raw) => raw === "true", false));
-  const [colorSchema, setColorSchema] = useState<string>(() => stored("colorSchema", (raw) => raw, "default"));
+  const [colorSchema] = useColorSchema();
   // Before 3.0 there was a separate rack list view; carry that choice over
   const [groupBy, setGroupBy] = useState<GroupBy>(() =>
     stored(
@@ -141,8 +138,6 @@ const Nodes = ({ username }: { username?: string }) => {
   const [partition, setPartition] = useState("all");
 
   useEffect(() => save("cardSize", String(cardSize)), [cardSize]);
-  useEffect(() => save("showStats", String(showStats)), [showStats]);
-  useEffect(() => save("colorSchema", colorSchema), [colorSchema]);
   useEffect(() => save("groupBy", groupBy), [groupBy]);
   useEffect(() => save("selectedNodeFeatures", JSON.stringify(selectedNodeFeatures)), [selectedNodeFeatures]);
   useEffect(() => save("featureLogicType", featureLogicType), [featureLogicType]);
@@ -204,10 +199,6 @@ const Nodes = ({ username }: { username?: string }) => {
     });
   }, [systems, nodeType, partition, stateFilter, selectedNodeFeatures, featureLogicType]);
 
-  const header = (
-    <UnifiedHeader username={username} colorSchema={colorSchema} onColorSchemaChange={setColorSchema} />
-  );
-
   // Check if we have an error (using either nodeError or lastFetchError)
   const activeError = nodeError || lastFetchError;
   const isAuthError = (activeError as any)?.isAuthError === true;
@@ -230,7 +221,6 @@ const Nodes = ({ username }: { username?: string }) => {
 
     return (
       <div>
-        {header}
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{errorMessage}</AlertDescription>
@@ -242,8 +232,7 @@ const Nodes = ({ username }: { username?: string }) => {
   if (nodeIsLoading) {
     return (
       <div>
-        {header}
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-2">
+        <div className="flex flex-col gap-4">
           <Skeleton className="h-[104px] w-full rounded-xl" />
           <Skeleton className="h-8 w-full max-w-[720px]" />
           <div
@@ -261,12 +250,12 @@ const Nodes = ({ username }: { username?: string }) => {
 
   return (
     <div>
-      {header}
-      <div className="mx-auto mb-20 flex max-w-[1600px] flex-col gap-4 px-2">
+      <div className="mb-20 flex flex-col gap-4">
         <ClusterSummary
           nodes={systems}
           colorSchema={colorSchema}
           lastUpdate={nodeData?.last_update?.number}
+          connectionError={hasConnectionError}
           stateFilter={stateFilter}
           onStateFilter={setStateFilter}
         />
@@ -283,7 +272,6 @@ const Nodes = ({ username }: { username?: string }) => {
           size={cardSize}
           showing={filteredNodes.length}
           total={systems.length}
-          showDetails={showStats}
           onPartition={setPartition}
           onState={setStateFilter}
           onNodeType={setNodeType}
@@ -293,10 +281,7 @@ const Nodes = ({ username }: { username?: string }) => {
           }}
           onGroupBy={setGroupBy}
           onSize={setCardSize}
-          onShowDetails={setShowStats}
         />
-        {showStats && nodeData ? <Stats data={nodeData} colorSchema={colorSchema} /> : null}
-
         {filteredNodes.length === 0 ? (
           <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
             No nodes match these filters.
@@ -314,10 +299,6 @@ const Nodes = ({ username }: { username?: string }) => {
           />
         )}
       </div>
-      <LastUpdated
-        data={nodeData?.last_update?.number}
-        hasConnectionError={hasConnectionError}
-      />
       {aiEnabled && <ChatIcon />}
     </div>
   );

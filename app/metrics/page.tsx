@@ -22,7 +22,6 @@ import { MetricsFilter } from "@/components/metrics/metrics-filter";
 import { KPICards } from "@/components/metrics/kpi-cards";
 import { GPUKPICards } from "@/components/metrics/gpu-kpi-cards";
 import { MetricsDashboard } from "@/components/metrics/metrics-dashboard";
-import UnifiedHeader from "@/components/unified-header";
 import Footer from "@/components/footer/footer";
 import { redirect } from "next/navigation";
 import { addDays } from "date-fns";
@@ -120,11 +119,7 @@ export default async function MetricsPage({ searchParams }: PageProps) {
 
   return (
     <div className="mb-5">
-      <div className="flex-1 space-y-4 p-2 ml-2 mx-auto bg-background min-h-screen">
-        <UnifiedHeader
-          title="Job Metrics Dashboard"
-          description="Historical analysis of cluster usage, efficiency, and user activity."
-        />
+      <div className="mx-auto max-w-[1600px] space-y-4 px-4 pb-2">
 
         <MetricsFilter
           clusterOptions={filterOptions.clusters}

@@ -9,10 +9,6 @@ import {
   Sun,
   Moon,
   Menu,
-  Home,
-  Box,
-  History,
-  BarChart,
   ArrowUpCircle
 } from "lucide-react";
 import {
@@ -39,7 +35,7 @@ interface HeaderMenuProps {
 
 export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
   const { setTheme, theme } = useTheme();
-  const { features, supportUrl: configuredSupportUrl } = useRuntimeConfig();
+  const { supportUrl: configuredSupportUrl } = useRuntimeConfig();
   const [mounted, setMounted] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState("");
@@ -71,39 +67,6 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
             <p className="text-sm font-medium leading-none">Hello, {username}</p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/" className="w-full cursor-pointer">
-              <Home className="mr-2 h-4 w-4" />
-              <span>Home</span>
-            </Link>
-          </DropdownMenuItem>
-          {features.modules.enabled && (
-            <DropdownMenuItem asChild>
-              <Link href="/modules" className="w-full cursor-pointer">
-                <Box className="mr-2 h-4 w-4" />
-                <span>Modules</span>
-              </Link>
-            </DropdownMenuItem>
-          )}
-          {features.rewind.enabled && (
-            <DropdownMenuItem asChild>
-              <Link href="/rewind" className="w-full cursor-pointer">
-                <History className="mr-2 h-4 w-4" />
-                <span>Historical</span>
-              </Link>
-            </DropdownMenuItem>
-          )}
-          {features.jobMetrics.enabled && (
-            <DropdownMenuItem asChild>
-              <Link href="/metrics" className="w-full cursor-pointer">
-                <BarChart className="mr-2 h-4 w-4" />
-                <span>Job Metrics</span>
-              </Link>
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>

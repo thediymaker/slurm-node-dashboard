@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { connection } from "next/server";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,6 +9,8 @@ import { RuntimeConfigProvider } from "@/components/runtime-config";
 import { withBasePath } from "@/lib/base-path";
 import { getPublicConfig } from "@/lib/config";
 import { getFeatures, toClientFeatures } from "@/lib/features";
+import { getRandomGeekName } from "@/lib/utils";
+import AppHeader from "@/components/app-header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,6 +39,7 @@ export default async function RootLayout({
   // from whatever was set when the image was built
   await connection();
   const runtimeConfig = { ...getPublicConfig(), features: toClientFeatures(await getFeatures()) };
+  const username = (await cookies()).get("SSONAME")?.value || getRandomGeekName();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -47,6 +51,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <AppHeader username={username} />
             {children}
             <Toaster />
           </ThemeProvider>

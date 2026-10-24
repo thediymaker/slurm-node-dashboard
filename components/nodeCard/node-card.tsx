@@ -91,13 +91,13 @@ function loadTick(model: CardModel): number | undefined {
 }
 
 const SmallCardContent = memo(({ model }: { model: CardModel }) => (
-  <div className="flex h-full flex-col justify-between p-1.5">
-    <div className="truncate font-mono text-[10px] font-semibold leading-none" title={model.name}>
+  <div className="flex h-full flex-col justify-between p-[5px]">
+    <div className="truncate font-mono text-[9px] font-semibold leading-none tracking-tight" title={model.name}>
       {model.name}
     </div>
-    <div className="flex flex-col gap-[3px]">
+    <div className="flex flex-col gap-0.5">
       <Bar value={model.cpuPct} height={3} light={model.light} />
-      {model.gpuTotal > 0 && <GpuSegments model={model} height={3} />}
+      {model.gpuTotal > 0 && <GpuSegments model={model} height={2} />}
     </div>
   </div>
 ));
@@ -304,7 +304,7 @@ export const NodeCard = memo(({
   }, [model.state, colorSchema]);
 
   const background = model.state === "maintenance" ? "bg-stone-500" : bgColor;
-  const shape = cn("aspect-square w-full", size === 50 ? "rounded-md" : "rounded-[9px]");
+  const shape = cn("aspect-square w-full", size === 50 ? "rounded-[5px]" : "rounded-[9px]");
   const label = `${props.name}, ${STATE_LABELS[model.state]}, CPU ${model.cpuPct}% allocated${model.gpuTotal ? `, ${model.gpuUsed} of ${model.gpuTotal} GPUs` : ""}${model.overloaded ? ", overloaded" : ""}`;
 
   // Off-screen: render lightweight placeholder with same dimensions and color

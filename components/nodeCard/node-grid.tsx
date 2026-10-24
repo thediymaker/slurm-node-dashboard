@@ -35,7 +35,7 @@ export const NodeGrid = memo(({ nodes, size, colorSchema, extras, changed, tempW
     className="grid"
     style={{
       gridTemplateColumns: `repeat(auto-fill, minmax(${TILE_WIDTH[size]}px, 1fr))`,
-      gap: size === 50 ? 4 : 6,
+      gap: size === 50 ? 3 : 6,
     }}
   >
     {nodes.map((node) => (

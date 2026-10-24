@@ -54,14 +54,12 @@ interface NodeToolbarProps {
   size: CardSize;
   showing: number;
   total: number;
-  showDetails: boolean;
   onPartition: (value: string) => void;
   onState: (value: string) => void;
   onNodeType: (value: string) => void;
   onFeatures: (features: string[], logicType: LogicType) => void;
   onGroupBy: (value: GroupBy) => void;
   onSize: (value: CardSize) => void;
-  onShowDetails: (value: boolean) => void;
 }
 
 const trigger = "h-8 w-auto min-w-[120px] gap-2 text-[13px]";
@@ -117,14 +115,12 @@ const NodeToolbar = (p: NodeToolbarProps) => {
         </SelectContent>
       </Select>
 
-      {p.features.length > 0 && (
-        <FeatureSelector
-          features={p.features}
-          selectedFeatures={p.selectedFeatures}
-          onFeaturesChange={p.onFeatures}
-          logicType={p.featureLogicType}
-        />
-      )}
+      <FeatureSelector
+        features={p.features}
+        selectedFeatures={p.selectedFeatures}
+        onFeaturesChange={p.onFeatures}
+        logicType={p.featureLogicType}
+      />
 
       <div className="ml-2">
         <Segmented label="Group by" value={p.groupBy} options={groupOptions} onChange={p.onGroupBy} />
@@ -135,17 +131,6 @@ const NodeToolbar = (p: NodeToolbarProps) => {
       <span className="text-xs text-muted-foreground tabular-nums">
         {p.showing === p.total ? `${p.total} nodes` : `${p.showing} of ${p.total} nodes`}
       </span>
-      <button
-        type="button"
-        aria-pressed={p.showDetails}
-        onClick={() => p.onShowDetails(!p.showDetails)}
-        className={cn(
-          "h-8 rounded-lg border px-3 text-[13px] text-muted-foreground hover:text-foreground",
-          p.showDetails && "bg-muted text-foreground"
-        )}
-      >
-        Details
-      </button>
       <Segmented
         label="Size"
         value={p.size}

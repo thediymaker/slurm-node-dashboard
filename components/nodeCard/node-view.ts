@@ -7,7 +7,7 @@ import { getColorSchema } from "@/lib/color-schemas";
 export type CardSize = 50 | 100 | 150;
 
 // Minimum tile width per size; the grid stretches tiles to fill each row
-export const TILE_WIDTH: Record<CardSize, number> = { 50: 60, 100: 104, 150: 144 };
+export const TILE_WIDTH: Record<CardSize, number> = { 50: 44, 100: 104, 150: 144 };
 
 export const STATE_LABELS: Record<NodeState, string> = {
   allocated: "Full",

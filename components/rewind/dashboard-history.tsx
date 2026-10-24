@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NodeGrid } from "@/components/nodeCard/node-grid";
+import { useColorSchema } from "@/components/use-color-schema";
 import { RingLoader } from "react-spinners";
 import { DateTimePicker } from "@/components/date-time";
 import { HistoricalNode } from "@/types/types";
@@ -55,13 +56,7 @@ const DashboardHistory = () => {
   );
 
   const systems: HistoricalNode[] = historicalData?.nodes || [];
-  const [colorSchema] = useState(() => {
-    try {
-      return (typeof window !== "undefined" && localStorage.getItem("colorSchema")) || "default";
-    } catch {
-      return "default";
-    }
-  });
+  const [colorSchema] = useColorSchema();
 
   // Single-pass calculation for all node statistics
   const nodeStats: NodeStats = useMemo(() => {
