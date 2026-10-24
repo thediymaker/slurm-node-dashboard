@@ -104,7 +104,9 @@ export interface CaptureResult {
 
 // ─── Shared Query Helpers ────────────────────────────────────────────────────
 
-const RATE_LIMIT_SECONDS = 60;
+// Under the 60s capture interval: a capture saves its samples a moment after it
+// starts, so a 60s limit would reject every other scheduled run
+const RATE_LIMIT_SECONDS = 50;
 type MetricsPool = NonNullable<ReturnType<typeof getMetricsDb>>;
 type PrometheusValue = [number | string, string] | { value: string | number } | string | number | null | undefined;
 type PrometheusLabels = Record<string, string | undefined>;

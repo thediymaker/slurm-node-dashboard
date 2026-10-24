@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
 import { Job, JobDetails, NodeCardModalProps } from "@/types/types";
 import { NodeMetricsPanel } from "../nodeCard/node-metrics-panel";
+import { NodeHistoryPanel } from "../nodeCard/node-history-panel";
 import PromComboBox from "../prom-metric";
 import NodeUtilization from "../node-utilization";
 import { JobGPUStats } from "@/components/job-gpu-stats";
@@ -354,6 +355,10 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
               metricName={metricValue}
               isLoading={promIsLoading}
             />
+          </div>
+
+          <div className="flex-shrink-0">
+            <NodeHistoryPanel nodeName={nodename} />
           </div>
 
           {/* Jobs Section */}

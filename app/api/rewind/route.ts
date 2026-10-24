@@ -5,8 +5,14 @@ import fs from "fs/promises";
 import path from "path";
 import zlib from "zlib";
 import { promisify } from "util";
+import { getDb } from "@/lib/db";
+import { getDatabaseStatus, isFeatureEnabled } from "@/lib/features";
+import { getSlurmClusterName } from "@/lib/slurm-cluster";
+import { findSnapshot } from "@/lib/snapshots";
 
 const gunzip = promisify(zlib.gunzip);
+// Snapshot files written by the pre-3.0 cron script. Keep this a literal
+// path.join here: an imported path makes Next.js trace the whole project.
 const HISTORICAL_DATA_DIR = path.join(process.cwd(), "data");
 
 function errorToString(error: unknown) {
@@ -51,11 +57,23 @@ export async function GET(request: Request) {
       );
     }
 
-    const dataDir = HISTORICAL_DATA_DIR;
-    const files = await fs.readdir(dataDir);
+    if (!(await isFeatureEnabled("rewind"))) {
+      return NextResponse.json({ message: "Rewind is off" }, { status: 404 });
+    }
+
     const [hour] = time.split(":");
     const targetStartTime = new Date(`${date}T${hour}:00:00.000Z`);
     const targetEndTime = new Date(`${date}T${hour}:59:59.999Z`);
+
+    // Snapshots the dashboard saved itself come first
+    const pool = getDb();
+    if (pool && (await getDatabaseStatus()).tables.nodeSnapshots) {
+      const snapshot = await findSnapshot(pool, await getSlurmClusterName(), targetStartTime, targetEndTime);
+      if (snapshot) return NextResponse.json(snapshot, { status: 200 });
+    }
+
+    const dataDir = HISTORICAL_DATA_DIR;
+    const files = await fs.readdir(dataDir).catch(() => [] as string[]);
 
     let closestFile = null;
     let smallestDifference = Infinity;
