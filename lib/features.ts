@@ -51,10 +51,19 @@ export interface DatabaseStatus {
   configured: boolean;
   reachable: boolean;
   error?: string;
-  // The dashboard's own tables (node history, snapshots)
+  // The dashboard's own tables (node history, snapshots, cluster capacity)
   schema: "ready" | "failed" | "disabled";
   schemaError?: string;
-  tables: { jobHistory: boolean; gpuMetrics: boolean; nodeEvents: boolean; nodeStateTime: boolean; nodeSnapshots: boolean };
+  tables: {
+    jobHistory: boolean;
+    gpuMetrics: boolean;
+    nodeEvents: boolean;
+    nodeStateTime: boolean;
+    nodeSnapshots: boolean;
+    clusterCapacity: boolean;
+  };
+  // Optional job_history columns added by later ingestor releases
+  columns: { totalCpuSeconds: boolean };
 }
 
 const CACHE_MS = 30_000;
@@ -68,7 +77,11 @@ const TABLES_QUERY = `
          to_regclass('public.job_gpu_metrics') IS NOT NULL AS job_gpu_metrics,
          to_regclass('public.node_events') IS NOT NULL AS node_events,
          to_regclass('public.node_state_time') IS NOT NULL AS node_state_time,
-         to_regclass('public.node_snapshots') IS NOT NULL AS node_snapshots`;
+         to_regclass('public.node_snapshots') IS NOT NULL AS node_snapshots,
+         to_regclass('public.cluster_capacity') IS NOT NULL AS cluster_capacity,
+         EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public' AND table_name = 'job_history'
+                   AND column_name = 'total_cpu_seconds') AS total_cpu_seconds`;
 
 export async function getDatabaseStatus(): Promise<DatabaseStatus> {
   if (cached) {
@@ -80,7 +93,15 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     configured: Boolean(getDatabaseUrl()),
     reachable: false,
     schema: "disabled",
-    tables: { jobHistory: false, gpuMetrics: false, nodeEvents: false, nodeStateTime: false, nodeSnapshots: false },
+    tables: {
+      jobHistory: false,
+      gpuMetrics: false,
+      nodeEvents: false,
+      nodeStateTime: false,
+      nodeSnapshots: false,
+      clusterCapacity: false,
+    },
+    columns: { totalCpuSeconds: false },
   };
 
   const pool = getDb();
@@ -101,7 +122,9 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
         nodeEvents: rows[0].node_events,
         nodeStateTime: rows[0].node_state_time,
         nodeSnapshots: rows[0].node_snapshots,
+        clusterCapacity: rows[0].cluster_capacity,
       };
+      status.columns = { totalCpuSeconds: rows[0].total_cpu_seconds };
     } catch (err) {
       status.error = (err as Error).message;
     }
