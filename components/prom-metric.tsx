@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { PromComboBoxProps } from "@/types/types";
 
-const metricGroups = [
+export const metricGroups = [
   {
     label: "CPU & Load",
     metrics: [
@@ -55,7 +55,7 @@ const metricGroups = [
   },
 ];
 
-const dayArray = [
+export const dayArray = [
   {
     value: "1",
     label: "1 day",

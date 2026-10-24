@@ -6,7 +6,6 @@ import { Skeleton } from "../ui/skeleton";
 import { Node, NodeConfig } from "@/types/types";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
-import ChatIcon from "../llm/chat-icon";
 import { useColorSchema } from "@/components/use-color-schema";
 import { useFeature, useRuntimeConfig } from "@/components/runtime-config";
 import { LogicType } from "@/components/feature-selector";
@@ -91,7 +90,6 @@ function save(key: string, value: string) {
 const GROUP_BYS: GroupBy[] = ["rack", "partition", "state", "none"];
 
 const Nodes = () => {
-  const aiEnabled = useFeature("ai");
   const prometheusEnabled = useFeature("prometheus");
   const nodeHistoryEnabled = useFeature("nodeHistory");
   const { nodeTempWarn } = useRuntimeConfig();
@@ -299,7 +297,6 @@ const Nodes = () => {
           />
         )}
       </div>
-      {aiEnabled && <ChatIcon />}
     </div>
   );
 };

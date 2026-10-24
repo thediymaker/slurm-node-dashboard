@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Bot } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 interface EmptyStateProps {
     setInput: (value: string) => void;
@@ -30,29 +29,27 @@ export function EmptyState({ setInput }: EmptyStateProps) {
     ];
 
     return (
-        <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-primary/10 border border-primary/20 p-4 rounded-xl shadow-sm mb-6">
-                <Bot className="w-8 h-8 text-primary" />
+        <div className="flex h-full flex-col justify-end gap-4 px-4 pb-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Sparkles className="h-4 w-4" style={{ color: "hsl(var(--chart-1))" }} />
+                    How can I help?
+                </div>
+                <p className="text-sm text-muted-foreground">
+                    I can help you check job status, node details, or answer Slurm-related questions used on this cluster.
+                </p>
             </div>
-            <h3 className="text-lg font-semibold tracking-tight mb-2">How can I help you today?</h3>
-            <p className="text-muted-foreground mb-8 max-w-sm text-sm">
-                I can help you check job status, node details, or answer Slurm-related questions used on this cluster.
-            </p>
-            <div className="grid gap-3 w-full max-w-sm">
-                {starters.map((starter, i) => (
-                    <Button
-                        key={i}
-                        variant="outline"
-                        className="justify-start h-auto py-3 px-4 text-left border-muted hover:border-primary/20 hover:bg-muted/50 transition-all rounded-lg shadow-sm"
+            <div className="flex flex-wrap gap-1.5">
+                {starters.map((starter) => (
+                    <button
+                        key={starter.heading}
+                        type="button"
+                        title={starter.heading}
+                        className="rounded-full border bg-card px-3 py-1.5 text-left text-xs text-foreground/90 transition-colors hover:border-ring/40 hover:bg-muted/60"
                         onClick={() => setInput(starter.message)}
                     >
-                        <div className="flex flex-col items-start gap-1">
-                            <span className="font-medium text-[10px] text-primary/70 uppercase tracking-wider">
-                                {starter.heading}
-                            </span>
-                            <span className="text-sm font-normal text-foreground/90">{starter.message}</span>
-                        </div>
-                    </Button>
+                        {starter.message}
+                    </button>
                 ))}
             </div>
         </div>

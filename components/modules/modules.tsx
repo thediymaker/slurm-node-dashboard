@@ -1,33 +1,21 @@
 import { Suspense } from "react";
 import { Separator } from "../ui/separator";
-import ModuleGrid from "./module-grid";
+import ModuleBrowser from "./module-browser";
 import fs from "fs-extra";
 import { getModulesFile } from "@/lib/config";
 import { Package } from "lucide-react";
+import { buildPackages, type ModulePackage, type RawModule } from "./module-utils";
 
-type Version = {
-  versionName?: string;
-  help?: string;
-  full?: string;
-  path?: string;
-  markedDefault?: boolean;
-};
-
-type Module = {
-  package: string;
-  defaultVersionName?: string | boolean;
-  versions: Version | Version[];
-};
-
-async function fetchData(): Promise<Module[]> {
+async function fetchData(): Promise<ModulePackage[]> {
   const filePath = getModulesFile();
   try {
     const jsonData = await fs.readFile(/*turbopackIgnore: true*/ filePath, "utf-8");
-    const data: Module[] = JSON.parse(jsonData);
+    const data: RawModule[] = JSON.parse(jsonData);
     if (!Array.isArray(data) || data.length === 0) {
       throw new Error("No valid data");
     }
-    return data;
+    // Grouped here so the page ships one entry per package
+    return buildPackages(data);
   } catch (err) {
     console.error("Error reading or parsing modules.json:", err);
     return [];
@@ -59,18 +47,18 @@ function EmptyState() {
   );
 }
 
-function ModuleContent({ data }: { data: Module[] }) {
+function ModuleContent({ data }: { data: ModulePackage[] }) {
   if (data.length === 0) {
     return <EmptyState />;
   }
-  return <ModuleGrid modules={data} />;
+  return <ModuleBrowser packages={data} />;
 }
 
 export default async function Modules() {
   const data = await fetchData();
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="mx-auto max-w-[1600px] px-4 pb-6">
       <Separator className="my-4" />
       <Suspense fallback={<LoadingState />}>
         <ModuleContent data={data} />

@@ -1,8 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { loadLLMConfig, buildToolsAndPrompt } from "@/lib/llm-config";
-
-const env = process.env;
+import { getAssistantModel } from "@/lib/config";
 
 export const maxDuration = 30;
 
@@ -19,7 +18,7 @@ export async function POST(req: Request) {
   const { tools, systemPrompt } = buildToolsAndPrompt(config);
 
   const result = await streamText({
-    model: openai.chat(env.OPENAI_API_MODEL || "gpt-3.5-turbo"),
+    model: openai.chat(getAssistantModel()),
     messages: await convertToModelMessages(messages),
     system: systemPrompt,
     tools,

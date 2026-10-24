@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 import HeaderMenu from "@/components/header/header-menu";
 import ColorSchemaSelector from "@/components/color-schema-selector";
 import JobSearch from "@/components/job-search";
 import { useRuntimeConfig } from "@/components/runtime-config";
 import { useColorSchema } from "@/components/use-color-schema";
+import ChatModal from "@/components/modals/chat-modal";
+import { Button } from "@/components/ui/button";
 import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +23,7 @@ export default function AppHeader({ username }: { username?: string }) {
   const { clusterName, clusterLogo, features } = useRuntimeConfig();
   const pathname = usePathname() ?? "/";
   const [colorSchema, setColorSchema] = useColorSchema();
+  const [showChat, setShowChat] = useState(false);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
   if (!APP_PAGES.some(isActive)) return null;
@@ -58,10 +63,23 @@ export default function AppHeader({ username }: { username?: string }) {
         <div className="flex-1" />
         <div className="flex items-center gap-1">
           <JobSearch />
+          {features.ai.enabled && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              aria-label="Open assistant"
+              aria-pressed={showChat}
+              onClick={() => setShowChat(!showChat)}
+            >
+              <Sparkles className="h-5 w-5" />
+            </Button>
+          )}
           <ColorSchemaSelector value={colorSchema} onChange={setColorSchema} />
           <HeaderMenu username={username} />
         </div>
       </div>
+      {features.ai.enabled && <ChatModal showChat={showChat} setShowChat={setShowChat} />}
     </header>
   );
 }

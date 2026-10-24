@@ -44,6 +44,13 @@ export interface PublicConfig {
   hierarchyLabels: { level1: string; level2: string };
   // Node temperature (°C) at which large node cards highlight it
   nodeTempWarn: number;
+  // Shown in the assistant's header; only set when the assistant is on
+  assistantModel?: string;
+}
+
+// Model the assistant's chat endpoint asks for
+export function getAssistantModel(): string {
+  return readEnv("OPENAI_API_MODEL") ?? "gpt-3.5-turbo";
 }
 
 export function getPublicConfig(): PublicConfig {
@@ -61,5 +68,6 @@ export function getPublicConfig(): PublicConfig {
         readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL_2_LABEL") ?? readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL2_LABEL") ?? "Department",
     },
     nodeTempWarn: Number(readEnv("NODE_TEMP_WARN_C")) || 80,
+    assistantModel: readFlag("NEXT_PUBLIC_ENABLE_OPENAI_PLUGIN") === true ? getAssistantModel() : undefined,
   };
 }

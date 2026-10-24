@@ -38,12 +38,9 @@ export function FollowUpLoading() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-1 mt-2">
-      <div className="text-xs font-medium text-muted-foreground">Suggested Follow-ups</div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
-        <Loader2 className="w-3 h-3 animate-spin" />
-        <span>{message}</span>
-      </div>
+    <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+      <Loader2 className="w-3 h-3 animate-spin" />
+      <span>{message}</span>
     </div>
   );
 }
