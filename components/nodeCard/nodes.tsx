@@ -1,6 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import { useRouter, useSearchParams } from "next/navigation";
+import NodeCardModal from "@/components/modals/card-job-modal";
 import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 import { Node, NodeConfig } from "@/types/types";
@@ -114,6 +116,9 @@ const Nodes = () => {
     stored("cardSize", (raw) => ([50, 100, 150].includes(Number(raw)) ? (Number(raw) as CardSize) : undefined), 100)
   );
   const [colorSchema] = useColorSchema();
+  // /?node=<name> (linked from Job Metrics) opens that node's detail panel
+  const router = useRouter();
+  const linkedNode = useSearchParams().get("node");
   // Before 3.0 there was a separate rack list view; carry that choice over
   const [groupBy, setGroupBy] = useState<GroupBy>(() =>
     stored(
@@ -297,6 +302,15 @@ const Nodes = () => {
           />
         )}
       </div>
+      {linkedNode && (
+        <NodeCardModal
+          open
+          setOpen={(open) => {
+            if (!open) router.replace("/", { scroll: false });
+          }}
+          nodename={linkedNode}
+        />
+      )}
     </div>
   );
 };

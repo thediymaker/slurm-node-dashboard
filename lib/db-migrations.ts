@@ -99,4 +99,24 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_node_state_time_hour ON node_state_time (hour);
     `,
   },
+  {
+    // Core- and GPU-seconds each cluster had per hour: in total, on nodes that
+    // could run jobs, and allocated. The metrics page divides allocated core
+    // hours by available capacity for utilization.
+    version: "004_cluster_capacity",
+    sql: `
+      CREATE TABLE IF NOT EXISTS cluster_capacity (
+        cluster TEXT NOT NULL,
+        hour TIMESTAMPTZ NOT NULL,
+        cpu_seconds_total BIGINT NOT NULL DEFAULT 0,
+        cpu_seconds_available BIGINT NOT NULL DEFAULT 0,
+        cpu_seconds_allocated BIGINT NOT NULL DEFAULT 0,
+        gpu_seconds_total BIGINT NOT NULL DEFAULT 0,
+        gpu_seconds_available BIGINT NOT NULL DEFAULT 0,
+        gpu_seconds_allocated BIGINT NOT NULL DEFAULT 0,
+        PRIMARY KEY (cluster, hour)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cluster_capacity_hour ON cluster_capacity (hour);
+    `,
+  },
 ];

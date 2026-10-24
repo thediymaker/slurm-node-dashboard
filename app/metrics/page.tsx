@@ -1,166 +1,70 @@
-import {
-  getTimeSeriesData,
-  getGroupData,
-  getFilterOptions,
-  getDashboardStats,
-  getJobStateDistribution,
-  getTopUsers,
-  getWaitTimeData,
-  getPartitionUsage,
-  getJobDurationDistribution,
-  getHierarchyUsage,
-  getHierarchyTimeSeriesData,
-  getGpuTimeSeriesData,
-  getGpuByPartition,
-  getGpuTopUsers,
-  getGpuByHierarchy,
-  getGpuHeatmapData,
-  getGpuScatterData,
-  MetricsFilters
-} from "@/actions/metrics";
-import { MetricsFilter } from "@/components/metrics/metrics-filter";
-import { KPICards } from "@/components/metrics/kpi-cards";
-import { GPUKPICards } from "@/components/metrics/gpu-kpi-cards";
-import { MetricsDashboard } from "@/components/metrics/metrics-dashboard";
-import Footer from "@/components/footer/footer";
 import { redirect } from "next/navigation";
-import { addDays } from "date-fns";
+import { getFilterOptions } from "@/actions/metrics";
+import { MetricsShell } from "@/components/metrics/metrics-shell";
+import { MetricsNavProvider } from "@/components/metrics/metrics-nav";
+import { OverviewTab } from "@/components/metrics/overview-tab";
+import { ExplorerTab } from "@/components/metrics/explorer-tab";
+import { EfficiencyTab } from "@/components/metrics/efficiency-tab";
+import { JobsTab } from "@/components/metrics/jobs-tab";
+import Footer from "@/components/footer/footer";
 import { getPublicConfig } from "@/lib/config";
-import { getFeatures } from "@/lib/features";
+import { getDatabaseStatus, getFeatures } from "@/lib/features";
+import { getMetricsDb } from "@/lib/metrics-db";
+import { loadMetricsPage } from "@/lib/metrics/load";
+import { parseMetricsParams } from "@/lib/metrics/params";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{
-    from?: string;
-    to?: string;
-    clusters?: string;
-    accounts?: string;
-    users?: string;
-    metric?: string;
-    colleges?: string;
-    departments?: string;
-    search?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function MetricsPage({ searchParams }: PageProps) {
-  // Await searchParams (required in Next.js 15+)
-  const resolvedSearchParams = await searchParams;
-
-  const features = await getFeatures();
-  if (!features.jobMetrics.enabled) {
+  const [features, db] = await Promise.all([getFeatures(), getDatabaseStatus()]);
+  const pool = getMetricsDb();
+  if (!features.jobMetrics.enabled || !pool) {
     redirect("/");
   }
-  const gpuUtilizationEnabled = features.gpuHistory.enabled;
-  const { clusterName, clusterLogo } = getPublicConfig();
+  const { clusterName, clusterLogo, metricsTimeZone } = getPublicConfig();
 
-  const defaultEndDate = new Date();
-  const defaultStartDate = addDays(defaultEndDate, -30);
-  const startDate = resolvedSearchParams.from ? new Date(resolvedSearchParams.from) : defaultStartDate;
-  const endDate = resolvedSearchParams.to ? new Date(resolvedSearchParams.to) : defaultEndDate;
+  const params = parseMetricsParams(await searchParams);
+  const options = await getFilterOptions();
+  // Without a mapping the hierarchy filters can't match anything
+  if (!options.hierarchy) {
+    params.filters.colleges = [];
+    params.filters.departments = [];
+  }
+  const totalCpu = db.columns.totalCpuSeconds;
+  const page = await loadMetricsPage(pool, params, {
+    timeZone: metricsTimeZone,
+    totalCpu,
+    gpuHistory: features.gpuHistory.enabled,
+    capacity: db.tables.clusterCapacity,
+    hierarchy: options.hierarchy,
+  });
 
-  // Parse Filters
-  const filters: MetricsFilters = {
-    startDate,
-    endDate,
-    clusters: resolvedSearchParams.clusters ? resolvedSearchParams.clusters.split(',') : [],
-    accounts: resolvedSearchParams.accounts ? resolvedSearchParams.accounts.split(',') : [],
-    users: resolvedSearchParams.users ? resolvedSearchParams.users.split(',') : [],
-    colleges: resolvedSearchParams.colleges ? resolvedSearchParams.colleges.split(',') : [],
-    departments: resolvedSearchParams.departments ? resolvedSearchParams.departments.split(',') : [],
-    search: resolvedSearchParams.search,
-  };
-
-  const metric = (resolvedSearchParams.metric as 'coreHours' | 'jobCount') || 'coreHours';
-
-  // Fetch Data in Parallel
-  const [
-    timeSeriesData,
-    groupData,
-    filterOptions,
-    stats,
-    jobStateData,
-    topUsersData,
-    waitTimeData,
-    partitionData,
-    durationData,
-    collegeData,
-    deptData,
-    collegeTrendData,
-    gpuTimeSeriesData,
-    gpuPartitionData,
-    gpuTopUsersData,
-    gpuCollegeData,
-    gpuDeptData,
-    gpuHeatmapData,
-    gpuScatterData
-  ] = await Promise.all([
-    getTimeSeriesData(filters, metric),
-    getGroupData(filters, metric),
-    getFilterOptions(),
-    getDashboardStats(filters),
-    getJobStateDistribution(filters),
-    getTopUsers(filters, metric),
-    getWaitTimeData(filters),
-    getPartitionUsage(filters, metric),
-    getJobDurationDistribution(filters),
-    getHierarchyUsage(filters, metric, 'college'),
-    getHierarchyUsage(filters, metric, 'department'),
-    getHierarchyTimeSeriesData(filters, metric, 'college'),
-    getGpuTimeSeriesData(filters),
-    getGpuByPartition(filters),
-    getGpuTopUsers(filters),
-    getGpuByHierarchy(filters, 'college'),
-    getGpuByHierarchy(filters, 'department'),
-    getGpuHeatmapData(filters),
-    getGpuScatterData(filters)
-  ]);
-
+  const { data } = page;
   return (
     <div className="mb-5">
-      <div className="mx-auto max-w-[1600px] space-y-4 px-4 pb-2">
-
-        <MetricsFilter
-          clusterOptions={filterOptions.clusters}
-          accountOptions={filterOptions.accounts}
-          userOptions={filterOptions.users}
-          collegeOptions={filterOptions.colleges}
-          departmentOptions={filterOptions.departments}
-          initialDateRange={{
-            from: startDate.toISOString(),
-            to: endDate.toISOString(),
-          }}
-        />
-
-        <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-3 ${gpuUtilizationEnabled ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} mb-6`}>
-          <KPICards stats={stats} />
-          {gpuUtilizationEnabled && <GPUKPICards />}
+      <div className="mx-auto max-w-[1600px] px-4 pb-2">
+        <div className="pb-8">
+          <MetricsNavProvider
+            params={params}
+            period={page.period}
+            fromDate={page.range.fromDate}
+            toDate={page.range.toDate}
+            hierarchy={options.hierarchy}
+          >
+            <MetricsShell options={options}>
+              {data.tab === "overview" && <OverviewTab data={data.overview} />}
+              {data.tab === "explorer" && <ExplorerTab result={data.explorer} />}
+              {data.tab === "efficiency" && <EfficiencyTab data={data.efficiency} totalCpu={totalCpu} />}
+              {data.tab === "jobs" && <JobsTab data={data.jobs} totalCpu={totalCpu} />}
+            </MetricsShell>
+          </MetricsNavProvider>
         </div>
-
-        <MetricsDashboard
-          timeSeriesData={timeSeriesData}
-          groupData={groupData}
-          collegeData={collegeData}
-          deptData={deptData}
-          collegeTrendData={collegeTrendData}
-          jobStateData={jobStateData}
-          waitTimeData={waitTimeData}
-          topUsersData={topUsersData}
-          partitionData={partitionData}
-          durationData={durationData}
-          gpuTimeSeriesData={gpuTimeSeriesData}
-          gpuPartitionData={gpuPartitionData}
-          gpuTopUsersData={gpuTopUsersData}
-          gpuCollegeData={gpuCollegeData}
-          gpuDeptData={gpuDeptData}
-          gpuHeatmapData={gpuHeatmapData}
-          gpuScatterData={gpuScatterData}
-          metric={metric}
-        />
+        <Footer cluster={clusterName} logo={clusterLogo} />
       </div>
-      <Footer cluster={clusterName} logo={clusterLogo} />
     </div>
   );
 }
-

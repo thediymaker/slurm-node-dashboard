@@ -1,3 +1,4 @@
+import { pruneClusterCapacity, recordClusterCapacity } from "@/lib/cluster-capacity";
 import { readEnv } from "@/lib/config";
 import { ensureSchema, getDb } from "@/lib/db";
 import { getDatabaseStatus, getFeatures } from "@/lib/features";
@@ -39,6 +40,10 @@ export function startCollectors() {
 
   const nodeIntervalS = seconds("NODE_HISTORY_INTERVAL_SECONDS", 60);
   const nodeRetentionDays = seconds("NODE_HISTORY_RETENTION_DAYS", 30);
+  // Capacity is small (one row per cluster per hour) and utilization is
+  // reported over years, so it's kept longer, and never shorter than node history
+  const capacityDays = seconds("CAPACITY_RETENTION_DAYS", 400);
+  const capacityRetentionDays = capacityDays === 0 || nodeRetentionDays === 0 ? 0 : Math.max(capacityDays, nodeRetentionDays);
   const snapshotIntervalM = seconds("SNAPSHOT_INTERVAL_MINUTES", 60);
   const retentionDays = seconds("SNAPSHOT_RETENTION_DAYS", 30);
   const gpuIntervalS = seconds("GPU_CAPTURE_INTERVAL_SECONDS", 60);
@@ -79,11 +84,18 @@ export function startCollectors() {
         const elapsedS = lastStateAt === undefined ? nodeIntervalS : Math.min((now - lastStateAt) / 1000, nodeIntervalS * 2);
         lastStateAt = now;
         await recordNodeStates(pool, cluster, payload.nodes, elapsedS);
+        await recordClusterCapacity(pool, cluster, payload.nodes, elapsedS);
 
-        if (nodeRetentionDays > 0 && now - lastPruneAt > 3_600_000) {
+        if (now - lastPruneAt > 3_600_000) {
           lastPruneAt = now;
-          const pruned = await pruneNodeHistory(pool, cluster, nodeRetentionDays);
-          if (pruned) console.log(`[collectors] node history: pruned ${pruned} rows older than ${nodeRetentionDays} days`);
+          if (nodeRetentionDays > 0) {
+            const pruned = await pruneNodeHistory(pool, cluster, nodeRetentionDays);
+            if (pruned) console.log(`[collectors] node history: pruned ${pruned} rows older than ${nodeRetentionDays} days`);
+          }
+          if (capacityRetentionDays > 0) {
+            const pruned = await pruneClusterCapacity(pool, cluster, capacityRetentionDays);
+            if (pruned) console.log(`[collectors] cluster capacity: pruned ${pruned} hours older than ${capacityRetentionDays} days`);
+          }
         }
       },
     });

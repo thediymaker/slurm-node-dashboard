@@ -41,6 +41,7 @@ function databaseSummary(db: DatabaseStatus): { label: string; detail: string; o
     db.tables.gpuMetrics && "GPU metrics",
     db.tables.nodeEvents && db.tables.nodeStateTime && "node history",
     db.tables.nodeSnapshots && "node snapshots",
+    db.tables.clusterCapacity && "cluster capacity",
   ].filter(Boolean);
   return { label: "Connected", detail: `Tables: ${tables.join(", ") || "none"}.`, ok: true };
 }
