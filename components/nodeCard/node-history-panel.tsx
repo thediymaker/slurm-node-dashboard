@@ -34,17 +34,17 @@ const LABELS: Record<NodeState, string> = {
 const PROBLEM_STATES: NodeState[] = ["down", "maintenance", "drained", "draining"];
 const PROBLEM_SHARE = 0.1;
 
-// Full, partial and idle match the node cards' color scheme; the rest are
-// fixed because the schemes share one color for drain and down
+// Colors come from the node cards' color scheme. The schemes use one color
+// for drain and down, so down is hatched and draining striped with partial.
 function stateColors(schemaName: string): Record<NodeState, string> {
   const card = getColorSchema(schemaName).progressColors;
   return {
-    down: "#ef4444",
-    maintenance: "#a855f7",
-    drained: "#f59e0b",
-    draining: `repeating-linear-gradient(135deg, #f59e0b 0 3px, ${card.mixed} 3px 6px)`,
+    down: `repeating-linear-gradient(135deg, ${card.down} 0 3px, rgba(0,0,0,.55) 3px 6px)`,
+    maintenance: "#78716c",
+    drained: card.drain,
+    draining: `repeating-linear-gradient(135deg, ${card.drain} 0 3px, ${card.mixed} 3px 6px)`,
     powered_down: "#52525b",
-    reserved: "#06b6d4",
+    reserved: "#3730a3",
     allocated: card.allocated,
     mixed: card.mixed,
     idle: card.idle,
@@ -59,10 +59,10 @@ function hourState(seconds: NodeStateHour["seconds"]): NodeState {
   return (Object.entries(seconds) as [NodeState, number][]).reduce((a, b) => (b[1] > a[1] ? b : a))[0];
 }
 
-function eventColor(state: string) {
-  if (/DOWN|FAIL|ERROR|NOT_RESPONDING|INVALID_REG/.test(state)) return "bg-red-500";
-  if (state.includes("DRAIN")) return "bg-amber-500";
-  return "bg-purple-500";
+function eventState(state: string): NodeState {
+  if (/DOWN|FAIL|ERROR|NOT_RESPONDING|INVALID_REG/.test(state)) return "down";
+  if (state.includes("DRAIN")) return "drained";
+  return "maintenance";
 }
 
 function duration(seconds: number) {
@@ -174,7 +174,7 @@ export function NodeHistoryPanel({ nodeName }: { nodeName: string }) {
             return (
               <div key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5">
                 <Badge variant="outline" className="font-mono text-[10px]">
-                  <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${eventColor(e.state)}`} />
+                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ background: colors[eventState(e.state)] }} />
                   {e.state}
                 </Badge>
                 <span className="min-w-0 flex-1 truncate" title={e.reason ?? undefined}>
