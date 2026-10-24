@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
@@ -25,7 +25,14 @@ interface NodeMetricsPanelProps {
   } | null;
   metricName: string;
   isLoading?: boolean;
+  // Metric and range pickers, shown at the right of the header
+  controls?: React.ReactNode;
+  // Extra summary next to the title
+  aside?: React.ReactNode;
 }
+
+const formatValue = (value: number) =>
+  value.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
 // Map metric names to display info
 const metricDisplayInfo: Record<string, { 
@@ -149,65 +156,7 @@ const metricDisplayInfo: Record<string, {
   },
 };
 
-// Stat Card Component
-function StatCard({ 
-  label, 
-  value, 
-  unit, 
-  icon: Icon, 
-  description,
-  trend 
-}: { 
-  label: string; 
-  value: string | number; 
-  unit: string; 
-  icon: React.ElementType;
-  description: string;
-  trend?: { min: number; max: number; avg: number };
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{label}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold tabular-nums">
-          {typeof value === 'number' 
-            ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
-            : value}
-          {unit && <span className="text-lg font-normal text-muted-foreground ml-1">{unit}</span>}
-        </div>
-        {trend && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Min: {trend.min.toFixed(1)} / Avg: {trend.avg.toFixed(1)} / Max: {trend.max.toFixed(1)}
-          </p>
-        )}
-        {!trend && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Loading skeleton for stat card
-function StatCardSkeleton() {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <Skeleton className="h-4 w-20" />
-        <Skeleton className="h-4 w-4" />
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-3 w-32 mt-2" />
-      </CardContent>
-    </Card>
-  );
-}
-
-export function NodeMetricsPanel({ data, metricName, isLoading }: NodeMetricsPanelProps) {
+export function NodeMetricsPanel({ data, metricName, isLoading, controls, aside }: NodeMetricsPanelProps) {
   const displayInfo = metricDisplayInfo[metricName] || {
     label: metricName,
     unit: "",
@@ -260,109 +209,81 @@ export function NodeMetricsPanel({ data, metricName, isLoading }: NodeMetricsPan
     },
   } satisfies ChartConfig;
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <StatCardSkeleton />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-4 w-60" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-[200px] w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!hasData) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <displayInfo.icon className="h-5 w-5" />
-            {displayInfo.label}
-          </CardTitle>
-          <CardDescription>{displayInfo.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center h-[200px] text-muted-foreground">
-          {data?.message || "No data available for this metric on this node"}
-        </CardContent>
-      </Card>
-    );
-  }
+  const unit = displayInfo.unit ? ` ${displayInfo.unit}` : "";
 
   return (
-    <div className="space-y-4">
-      {/* Stat Card */}
-      <StatCard
-        label={`Current ${displayInfo.label}`}
-        value={stats!.current}
-        unit={displayInfo.unit}
-        icon={displayInfo.icon}
-        description={displayInfo.description}
-        trend={{ min: stats!.min, max: stats!.max, avg: stats!.avg }}
-      />
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h3 className="text-sm font-semibold">{displayInfo.label}</h3>
+        {isLoading ? (
+          <Skeleton className="h-3.5 w-36 self-center" />
+        ) : stats ? (
+          <span className="text-xs text-muted-foreground tabular-nums" title={displayInfo.description}>
+            now {formatValue(stats.current)}{unit} · avg {formatValue(stats.avg)} · min {formatValue(stats.min)} · peak {formatValue(stats.max)}
+          </span>
+        ) : null}
+        <div className="flex-1" />
+        {aside}
+      </div>
+      {controls && <div className="flex flex-wrap items-center gap-2">{controls}</div>}
 
-      {/* Chart */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">{displayInfo.label} Over Time</CardTitle>
-          <CardDescription>{displayInfo.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[180px] w-full">
-            <AreaChart
-              accessibilityLayer
-              data={chartData}
-              margin={{ left: 0, right: 0, top: 10, bottom: 0 }}
-            >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="time"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={(value) => {
-                  // Show shorter format for x-axis
-                  const parts = value.split(', ');
-                  return parts[0] || value;
-                }}
-                interval="preserveStartEnd"
-                minTickGap={50}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                width={45}
-                tickFormatter={(value) => 
-                  value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toFixed(1)
-                }
-              />
-              <ChartTooltip
-                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
-                content={<ChartTooltipContent indicator="line" />}
-              />
-              <defs>
-                <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <Area
-                dataKey="value"
-                type="monotone"
-                fill="url(#fillValue)"
-                stroke="var(--color-value)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-    </div>
+      {isLoading ? (
+        <Skeleton className="h-[170px] w-full" />
+      ) : !hasData ? (
+        <div className="flex h-[170px] flex-col items-center justify-center gap-1 text-sm text-muted-foreground">
+          <displayInfo.icon className="h-5 w-5" />
+          {data?.message || "No data available for this metric on this node"}
+        </div>
+      ) : (
+        <ChartContainer config={chartConfig} className="h-[170px] w-full">
+          <AreaChart
+            accessibilityLayer
+            data={chartData}
+            margin={{ left: 0, right: 0, top: 10, bottom: 0 }}
+          >
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="time"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => {
+                // Show shorter format for x-axis
+                const parts = value.split(', ');
+                return parts[0] || value;
+              }}
+              interval="preserveStartEnd"
+              minTickGap={50}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              width={45}
+              tickFormatter={(value) => 
+                value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toFixed(1)
+              }
+            />
+            <ChartTooltip
+              cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <defs>
+              <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <Area
+              dataKey="value"
+              type="monotone"
+              fill="url(#fillValue)"
+              stroke="var(--color-value)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+      )}
+    </Card>
   );
 }
