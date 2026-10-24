@@ -13,6 +13,7 @@ import { Home, LogOut, RefreshCw } from "lucide-react";
 import { AdminKPICards } from "./admin-kpi-cards";
 import ClusterStats from "./cluster-stats";
 import AdminPlugins from "./plugins";
+import type { DatabaseStatus, Features } from "@/lib/features";
 import { PartitionsPanel } from "./partitions-panel";
 import { ReservationsPanel } from "./reservations-panel";
 import { QoSPanel } from "./qos-panel";
@@ -21,14 +22,17 @@ import { GPUAnalysisPanel } from "./gpu-analysis-panel";
 import { HierarchyManager } from "@/components/admin/hierarchy/hierarchy-manager";
 import { LLMConfigPanel } from "./llm-config-panel";
 import { Organization, Account } from "@/actions/hierarchy";
-import { gpuUtilizationPluginMetadata, jobMetricsPluginMetadata } from "@/actions/plugins";
+import { useFeature } from "@/components/runtime-config";
 
 interface AdminDashboardProps {
   initialOrgs?: Organization[];
   accounts?: Account[];
+  features: Features;
+  database: DatabaseStatus;
 }
 
-export default function AdminDashboard({ initialOrgs = [], accounts = [] }: AdminDashboardProps) {
+export default function AdminDashboard({ initialOrgs = [], accounts = [], features, database }: AdminDashboardProps) {
+  const gpuEnabled = useFeature("gpu");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -59,7 +63,7 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
     { id: "partitions", label: "Partitions" },
     { id: "reservations", label: "Reservations" },
     { id: "qos", label: "QoS" },
-    ...(gpuUtilizationPluginMetadata.isEnabled && jobMetricsPluginMetadata.isEnabled ? [{ id: "gpu", label: "GPU Analysis" }] : []),
+    ...(gpuEnabled ? [{ id: "gpu", label: "GPU Analysis" }] : []),
     { id: "plugins", label: "Plugins" },
     { id: "hierarchy", label: "Hierarchy" },
     { id: "llm", label: "LLM Config" },
@@ -162,7 +166,7 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
           </TabsContent>
 
           {/* GPU Analysis Tab */}
-          {gpuUtilizationPluginMetadata.isEnabled && jobMetricsPluginMetadata.isEnabled && (
+          {gpuEnabled && (
             <TabsContent value="gpu" className="space-y-6 mt-6">
               <GPUAnalysisPanel />
             </TabsContent>
@@ -170,7 +174,7 @@ export default function AdminDashboard({ initialOrgs = [], accounts = [] }: Admi
 
           {/* Plugins Tab */}
           <TabsContent value="plugins" className="space-y-6 mt-6">
-            <AdminPlugins />
+            <AdminPlugins features={features} database={database} />
           </TabsContent>
 
           {/* Hierarchy Tab */}

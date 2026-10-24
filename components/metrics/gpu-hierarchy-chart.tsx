@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { getHierarchyLabels } from "@/lib/utils"
+import { useHierarchyLabels } from "@/components/runtime-config";
 
 interface GpuHierarchyData {
     name: string;
@@ -26,7 +26,7 @@ const COLORS = [
 ];
 
 export function GpuHierarchyChart({ data, level }: GpuHierarchyChartProps) {
-    const { level1, level2 } = getHierarchyLabels();
+    const { level1, level2 } = useHierarchyLabels();
     const levelLabel = level === 'college' ? level1 : level2;
 
     const chartConfig = {

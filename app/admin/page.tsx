@@ -2,6 +2,7 @@ import { getSession } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminDashboard from "@/components/admin/dashboard";
 import { getFlatHierarchy, getAccounts } from "@/actions/hierarchy";
+import { getDatabaseStatus, getFeatures } from "@/lib/features";
 
 export default async function AdminPage() {
   const session = await getSession();
@@ -10,10 +11,12 @@ export default async function AdminPage() {
     redirect("/login");
   }
 
-  const [orgs, accounts] = await Promise.all([
+  const [orgs, accounts, features, database] = await Promise.all([
     getFlatHierarchy(),
-    getAccounts()
+    getAccounts(),
+    getFeatures(),
+    getDatabaseStatus(),
   ]);
 
-  return <AdminDashboard initialOrgs={orgs} accounts={accounts} />;
+  return <AdminDashboard initialOrgs={orgs} accounts={accounts} features={features} database={database} />;
 }

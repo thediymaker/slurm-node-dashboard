@@ -44,7 +44,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings2 } from "lucide-react";
-import { getHierarchyLabels } from "@/lib/utils";
+import { useHierarchyLabels } from "@/components/runtime-config";
 
 interface MetricsDashboardProps {
   timeSeriesData: any;
@@ -188,7 +188,7 @@ export function MetricsDashboard({
   ]);
 
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
-  const { level1, level2 } = getHierarchyLabels();
+  const { level1, level2 } = useHierarchyLabels();
 
   const sensors = useSensors(
     useSensor(PointerSensor),

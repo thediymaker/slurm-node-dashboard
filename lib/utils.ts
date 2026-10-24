@@ -17,11 +17,3 @@ export function getRandomGeekName() {
   ];
   return names[Math.floor(Math.random() * names.length)];
 }
-
-export function getHierarchyLabels() {
-  return {
-    level1: process.env.NEXT_PUBLIC_HIERARCHY_LEVEL_1_LABEL || "College",
-    level2: process.env.NEXT_PUBLIC_HIERARCHY_LEVEL_2_LABEL || "Department",
-  };
-}
-

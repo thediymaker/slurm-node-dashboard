@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
 import NodeCount from "./node-counts";
 import ChatIcon from "../llm/chat-icon";
-import { openaiPluginMetadata } from "@/actions/plugins";
+import { useFeature } from "@/components/runtime-config";
 import { LogicType } from "@/components/feature-selector";
 import { withBasePath } from "@/lib/base-path";
 
@@ -72,6 +72,7 @@ const nodeFetcher = async () => {
 };
 
 const Nodes = ({ username }: { username?: string }) => {
+  const aiEnabled = useFeature("ai");
   // Track connection errors that occur during revalidation
   const [lastFetchError, setLastFetchError] = useState<Error | null>(null);
 
@@ -442,7 +443,7 @@ const Nodes = ({ username }: { username?: string }) => {
         data={nodeData?.last_update?.number} 
         hasConnectionError={hasConnectionError}
       />
-      {openaiPluginMetadata.isEnabled && <ChatIcon />}
+      {aiEnabled && <ChatIcon />}
     </div>
   );
 };

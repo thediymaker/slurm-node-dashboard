@@ -26,10 +26,8 @@ import UnifiedHeader from "@/components/unified-header";
 import Footer from "@/components/footer/footer";
 import { redirect } from "next/navigation";
 import { addDays } from "date-fns";
-
-const env = process.env;
-
-const gpuUtilizationEnabled = process.env.NEXT_PUBLIC_ENABLE_GPU_UTILIZATION === "true";
+import { getPublicConfig } from "@/lib/config";
+import { getFeatures } from "@/lib/features";
 
 export const dynamic = 'force-dynamic';
 
@@ -51,10 +49,12 @@ export default async function MetricsPage({ searchParams }: PageProps) {
   // Await searchParams (required in Next.js 15+)
   const resolvedSearchParams = await searchParams;
 
-  // Feature Flag Check
-  if (process.env.NEXT_PUBLIC_ENABLE_JOB_METRICS_PLUGIN !== 'true') {
+  const features = await getFeatures();
+  if (!features.jobMetrics.enabled) {
     redirect("/");
   }
+  const gpuUtilizationEnabled = features.gpuHistory.enabled;
+  const { clusterName, clusterLogo } = getPublicConfig();
 
   const defaultEndDate = new Date();
   const defaultStartDate = addDays(defaultEndDate, -30);
@@ -164,7 +164,7 @@ export default async function MetricsPage({ searchParams }: PageProps) {
           metric={metric}
         />
       </div>
-      <Footer cluster={env.CLUSTER_NAME} logo={env.CLUSTER_LOGO} />
+      <Footer cluster={clusterName} logo={clusterLogo} />
     </div>
   );
 }

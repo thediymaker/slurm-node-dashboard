@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useRuntimeConfig } from "@/components/runtime-config"
 
 interface DatePickerWithRangeProps {
   className?: string
@@ -19,17 +20,13 @@ interface DatePickerWithRangeProps {
   setDate: (date: DateRange | undefined) => void
 }
 
-const metricsTimeZone = process.env.NEXT_PUBLIC_METRICS_TIME_ZONE || "America/Phoenix"
-
-const metricsDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "2-digit",
-  year: "numeric",
-  timeZone: metricsTimeZone,
-})
-
-function formatMetricDate(date: Date) {
-  return metricsDateFormatter.format(date)
+function formatMetricDate(date: Date, timeZone: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    timeZone,
+  }).format(date)
 }
 
 export function DatePickerWithRange({
@@ -37,6 +34,7 @@ export function DatePickerWithRange({
   date,
   setDate,
 }: DatePickerWithRangeProps) {
+  const { metricsTimeZone } = useRuntimeConfig()
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -53,11 +51,11 @@ export function DatePickerWithRange({
             {date?.from ? (
               date.to ? (
                 <>
-                  {formatMetricDate(date.from)} -{" "}
-                  {formatMetricDate(date.to)}
+                  {formatMetricDate(date.from, metricsTimeZone)} -{" "}
+                  {formatMetricDate(date.to, metricsTimeZone)}
                 </>
               ) : (
-                formatMetricDate(date.from)
+                formatMetricDate(date.from, metricsTimeZone)
               )
             ) : (
               <span>Pick a date</span>

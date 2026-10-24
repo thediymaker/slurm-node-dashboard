@@ -1,6 +1,10 @@
 import { PrometheusDriver } from "prometheus-query";
+import { readEnv, readFlag } from "@/lib/config";
 
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
+// NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN=false turns Prometheus off even when
+// PROMETHEUS_URL is set
+const PROMETHEUS_URL =
+  readFlag("NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN") === false ? undefined : readEnv("PROMETHEUS_URL");
 
 /**
  * Shared Prometheus driver instance.

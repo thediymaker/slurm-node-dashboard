@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import packageJson from "@/package.json";
 import { checkUpdate } from "@/actions/check-update";
+import { useRuntimeConfig } from "@/components/runtime-config";
 
 interface HeaderMenuProps {
   username?: string;
@@ -38,6 +39,7 @@ interface HeaderMenuProps {
 
 export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
   const { setTheme, theme } = useTheme();
+  const { features, supportUrl: configuredSupportUrl } = useRuntimeConfig();
   const [mounted, setMounted] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState("");
@@ -54,7 +56,7 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
     });
   }, []);
 
-  const supportUrl = process.env.NEXT_PUBLIC_SUPPORT_URL || "#";
+  const supportUrl = configuredSupportUrl || "#";
 
   return (
     <DropdownMenu>
@@ -77,7 +79,7 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
               <span>Home</span>
             </Link>
           </DropdownMenuItem>
-          {process.env.NEXT_PUBLIC_ENABLE_MODULES_PLUGIN === 'true' && (
+          {features.modules.enabled && (
             <DropdownMenuItem asChild>
               <Link href="/modules" className="w-full cursor-pointer">
                 <Box className="mr-2 h-4 w-4" />
@@ -85,7 +87,7 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
               </Link>
             </DropdownMenuItem>
           )}
-          {process.env.NEXT_PUBLIC_ENABLE_HISTORY_PLUGIN === 'true' && (
+          {features.rewind.enabled && (
             <DropdownMenuItem asChild>
               <Link href="/rewind" className="w-full cursor-pointer">
                 <History className="mr-2 h-4 w-4" />
@@ -93,7 +95,7 @@ export default function HeaderMenu({ username = "RC User" }: HeaderMenuProps) {
               </Link>
             </DropdownMenuItem>
           )}
-          {process.env.NEXT_PUBLIC_ENABLE_JOB_METRICS_PLUGIN === 'true' && (
+          {features.jobMetrics.enabled && (
             <DropdownMenuItem asChild>
               <Link href="/metrics" className="w-full cursor-pointer">
                 <BarChart className="mr-2 h-4 w-4" />

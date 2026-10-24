@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 import { CopyButton } from "@/components/llm/llm-shared-utils";
 import { GPUUtilizationBadge } from "@/components/job-gpu-stats";
-import { gpuUtilizationPluginMetadata } from "@/actions/plugins";
+import { useFeature } from "@/components/runtime-config";
 import { withBasePath } from "@/lib/base-path";
 
 type TresUsageMetric = {
@@ -180,16 +180,17 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   setOpen,
   searchID,
 }) => {
+  const gpuHistoryEnabled = useFeature("gpuHistory");
   const [expandedSteps, setExpandedSteps] = React.useState<Set<number>>(new Set());
   
   const jobURL = useMemo(() => withBasePath(`/api/slurm/job/completed/${searchID}`), [searchID]);
   
   // Check if GPU data is available (for historical jobs, need metrics plugin too)
   const gpuDataURL = useMemo(() => 
-    gpuUtilizationPluginMetadata.isEnabled
+    gpuHistoryEnabled
       ? withBasePath(`/api/gpu?job_id=${encodeURIComponent(searchID)}&source=database`)
       : null,
-    [searchID]
+    [searchID, gpuHistoryEnabled]
   );
   
   const { data: gpuData, isLoading: gpuDataLoading } = useSWR<{ status: number; data?: unknown }>(
@@ -200,10 +201,10 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
   
   // Determine if GPU badge will actually render
   const gpuBadgeWillRender = React.useMemo(() => {
-    if (!gpuUtilizationPluginMetadata.isEnabled) return false;
+    if (!gpuHistoryEnabled) return false;
     if (gpuDataLoading) return true; // Show skeleton, so use 3 columns
     return gpuData?.status === 200 && gpuData?.data !== undefined;
-  }, [gpuData, gpuDataLoading]);
+  }, [gpuHistoryEnabled, gpuData, gpuDataLoading]);
 
   const {
     data: jobData,

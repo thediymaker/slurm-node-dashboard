@@ -13,7 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { getHierarchyLabels } from "@/lib/utils"
+import { useHierarchyLabels } from "@/components/runtime-config";
 
 interface MetricsFilterProps {
   clusterOptions: string[]
@@ -66,7 +66,7 @@ export function MetricsFilter({
     searchParams.get("search") || ""
   )
 
-  const { level1, level2 } = getHierarchyLabels();
+  const { level1, level2 } = useHierarchyLabels();
 
   // Auto-apply helper for immediate refresh (metric, date preset)
   const autoApply = React.useCallback((overrides: { metric?: string; date?: DateRange }) => {

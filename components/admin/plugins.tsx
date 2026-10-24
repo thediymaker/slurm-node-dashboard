@@ -2,160 +2,91 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  openaiPluginMetadata,
-  prometheusPluginMetadata,
-  influxDBPluginMetadata,
-  gpuUtilizationPluginMetadata,
-  modulesPluginMetadata,
-  historyPluginMetadata,
-  jobMetricsPluginMetadata,
-  maintenanceNotificationsMetadata,
-} from "@/actions/plugins";
+import type { DatabaseStatus, FeatureState, Features } from "@/lib/features";
 
-interface PluginItemProps {
-  name: string;
-  description: string;
-  isEnabled: boolean;
-  envVar?: string;
-}
-
-const PluginItem = ({ name, description, isEnabled, envVar }: PluginItemProps) => {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-md border">
-      <div>
-        <div className="font-medium text-sm">{name}</div>
-        <div className="text-xs text-muted-foreground">{description}</div>
-        {envVar && (
-          <code className="text-[10px] text-muted-foreground/70 font-mono mt-1 block">
-            {envVar}
-          </code>
-        )}
-      </div>
-      <Badge variant={isEnabled ? "default" : "secondary"}>
-        {isEnabled ? "Enabled" : "Disabled"}
-      </Badge>
-    </div>
-  );
+const DESCRIPTIONS: Record<FeatureState["id"], string> = {
+  modules: "Browse and search the cluster's software modules",
+  prometheus: "Per-node CPU, memory and power charts",
+  gpu: "Live GPU utilization for running jobs and the GPU Analysis tab",
+  ai: "AI assistant for cluster questions",
+  rewind: "Replay the cluster's state at an earlier time",
+  nodeHistory: "When nodes were drained or down, and why",
+  gpuHistory: "GPU utilization of finished jobs",
+  jobMetrics: "Job statistics and analytics from the history ingestor",
 };
 
-const AdminPlugins = () => {
-  const pagePlugins = [modulesPluginMetadata, historyPluginMetadata, jobMetricsPluginMetadata];
-  const integrationPlugins = [openaiPluginMetadata, prometheusPluginMetadata, gpuUtilizationPluginMetadata, influxDBPluginMetadata];
-  const featureFlags = [maintenanceNotificationsMetadata];
-  
-  const totalEnabled = [...pagePlugins, ...integrationPlugins, ...featureFlags].filter(p => p.isEnabled).length;
-  const totalPlugins = pagePlugins.length + integrationPlugins.length + featureFlags.length;
+const FeatureItem = ({ feature }: { feature: FeatureState }) => (
+  <div className="flex items-start justify-between gap-4 p-3 rounded-md border">
+    <div className="min-w-0">
+      <div className="font-medium text-sm">{feature.name}</div>
+      <div className="text-xs text-muted-foreground">{DESCRIPTIONS[feature.id]}</div>
+      <div className="text-xs mt-1 break-words">{feature.reason}</div>
+      {feature.flag && (
+        <code className="text-[10px] text-muted-foreground/70 font-mono mt-1 block">{feature.flag}</code>
+      )}
+    </div>
+    <Badge variant={feature.enabled ? "default" : "secondary"} className="shrink-0">
+      {feature.enabled ? "On" : "Off"}
+    </Badge>
+  </div>
+);
+
+function databaseSummary(db: DatabaseStatus): { label: string; detail: string; ok: boolean } {
+  if (!db.configured) return { label: "Not configured", detail: "Set DATABASE_URL to a PostgreSQL database to turn on the features below.", ok: false };
+  if (!db.reachable) return { label: "Unreachable", detail: db.error ?? "Unknown error", ok: false };
+  if (db.schema === "failed")
+    return { label: "Connected, tables missing", detail: `Couldn't create the dashboard's tables: ${db.schemaError}`, ok: false };
+  const tables = [
+    db.tables.jobHistory && "job history (ingestor)",
+    db.tables.gpuMetrics && "GPU metrics",
+    db.tables.nodeEvents && "node events",
+    db.tables.nodeSnapshots && "node snapshots",
+  ].filter(Boolean);
+  return { label: "Connected", detail: `Tables: ${tables.join(", ") || "none"}.`, ok: true };
+}
+
+const AdminPlugins = ({ features, database }: { features: Features; database: DatabaseStatus }) => {
+  const all = Object.values(features);
+  const withoutDb = all.filter((f) => !f.needsDatabase);
+  const withDb = all.filter((f) => f.needsDatabase);
+  const db = databaseSummary(database);
 
   return (
     <div className="space-y-6">
-      {/* Summary */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-medium">Plugins & Features</CardTitle>
+          <CardTitle className="text-lg font-medium">Features</CardTitle>
           <CardDescription>
-            {totalEnabled} of {totalPlugins} plugins enabled
+            {all.filter((f) => f.enabled).length} of {all.length} optional features on. A feature turns on when what it
+            needs is configured; set its flag to false to turn it off.
           </CardDescription>
         </CardHeader>
       </Card>
 
-      {/* Page Plugins */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-medium">Page Plugins</CardTitle>
-          <CardDescription>Additional pages and functionality</CardDescription>
+          <CardTitle className="text-lg font-medium">Without a database</CardTitle>
+          <CardDescription>Need only Slurm, plus the service each one names</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          <PluginItem
-            name="Modules Browser"
-            description="Browse and search available software modules"
-            isEnabled={modulesPluginMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_ENABLE_MODULES_PLUGIN"
-          />
-          <PluginItem
-            name="History / Rewind"
-            description="View and replay historical cluster state"
-            isEnabled={historyPluginMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_ENABLE_HISTORY_PLUGIN"
-          />
-          <PluginItem
-            name="Job Metrics"
-            description="Job statistics and analytics dashboard"
-            isEnabled={jobMetricsPluginMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_ENABLE_JOB_METRICS_PLUGIN"
-          />
+          {withoutDb.map((f) => (
+            <FeatureItem key={f.id} feature={f} />
+          ))}
         </CardContent>
       </Card>
 
-      {/* Integration Plugins */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-medium">Integration Plugins</CardTitle>
-          <CardDescription>External service connections</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <PluginItem
-            name="OpenAI Chat"
-            description="AI-powered assistant for cluster queries"
-            isEnabled={openaiPluginMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_ENABLE_OPENAI_PLUGIN"
-          />
-          <PluginItem
-            name="Prometheus"
-            description="Metrics collection and monitoring"
-            isEnabled={prometheusPluginMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN"
-          />
-          <PluginItem
-            name="GPU Utilization"
-            description="GPU metrics from Prometheus DCGM recording rules"
-            isEnabled={gpuUtilizationPluginMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_ENABLE_GPU_UTILIZATION"
-          />
-          <PluginItem
-            name="InfluxDB"
-            description="Time-series data storage"
-            isEnabled={influxDBPluginMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_ENABLE_INFLUXDB_PLUGIN"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Feature Flags */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-medium">Feature Flags</CardTitle>
-          <CardDescription>Toggle individual features</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <PluginItem
-            name="Maintenance Notifications"
-            description="Show maintenance reservation alerts and banners"
-            isEnabled={maintenanceNotificationsMetadata.isEnabled}
-            envVar="NEXT_PUBLIC_MAINT_NOTIFICATIONS_ENABLED"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Configuration Help */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-medium">Configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            Plugins are configured via environment variables. Set the variable to{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">&quot;true&quot;</code>{" "}
-            to enable.
-          </p>
-          <div className="bg-muted p-3 rounded-md">
-            <pre className="text-xs font-mono text-muted-foreground">
-{`NEXT_PUBLIC_ENABLE_MODULES_PLUGIN=true
-NEXT_PUBLIC_ENABLE_HISTORY_PLUGIN=true
-NEXT_PUBLIC_ENABLE_OPENAI_PLUGIN=true
-NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN=true`}
-            </pre>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="text-lg font-medium">With a database</CardTitle>
+            <Badge variant={db.ok ? "default" : "secondary"}>{db.label}</Badge>
           </div>
+          <CardDescription className="break-words">{db.detail}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {withDb.map((f) => (
+            <FeatureItem key={f.id} feature={f} />
+          ))}
         </CardContent>
       </Card>
     </div>

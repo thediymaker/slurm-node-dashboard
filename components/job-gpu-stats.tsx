@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gauge, AlertTriangle } from "lucide-react";
-import { gpuUtilizationPluginMetadata } from "@/actions/plugins";
+import { useFeature } from "@/components/runtime-config";
 import { withBasePath } from "@/lib/base-path";
 
 interface GPUJobData {
@@ -70,9 +70,10 @@ interface JobGPUStatsProps {
 }
 
 export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
+  const gpuEnabled = useFeature("gpu");
   const gpuUrl = withBasePath(`/api/gpu?job_id=${encodeURIComponent(jobId)}`);
   const { data, isLoading } = useSWR<GPUJobResponse>(
-    gpuUtilizationPluginMetadata.isEnabled ? gpuUrl : null,
+    gpuEnabled ? gpuUrl : null,
     fetcher,
     { 
       refreshInterval: (latestData) => {
@@ -85,7 +86,7 @@ export function JobGPUStats({ jobId, variant = "compact" }: JobGPUStatsProps) {
     }
   );
 
-  if (!gpuUtilizationPluginMetadata.isEnabled) return null;
+  if (!gpuEnabled) return null;
 
   if (isLoading) {
     if (variant === "badge") {
@@ -220,15 +221,16 @@ interface GPUUtilizationBadgeProps {
 }
 
 export function GPUUtilizationBadge({ jobId, source = "auto" }: GPUUtilizationBadgeProps) {
+  const gpuEnabled = useFeature("gpu");
   const sourceQuery = source === "database" ? "&source=database" : "";
   const gpuUrl = withBasePath(`/api/gpu?job_id=${encodeURIComponent(jobId)}${sourceQuery}`);
   const { data, isLoading } = useSWR<GPUJobResponse>(
-    gpuUtilizationPluginMetadata.isEnabled ? gpuUrl : null,
+    gpuEnabled ? gpuUrl : null,
     fetcher,
     { revalidateOnFocus: false }
   );
 
-  if (!gpuUtilizationPluginMetadata.isEnabled) return null;
+  if (!gpuEnabled) return null;
 
   if (isLoading) {
     return (

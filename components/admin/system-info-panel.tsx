@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import packageJson from "@/package.json";
 import { JWTInfoCard } from "./jwt-info-card";
+import { useRuntimeConfig } from "@/components/runtime-config";
 
 interface UpdateInfo {
     hasUpdate: boolean;
@@ -23,6 +24,7 @@ export function SystemInfoPanel() {
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const { data: diagData, isLoading: diagLoading, error: diagError, hasConnectionError, mutate: mutateDiag } = useAdminDiag();
+    const runtimeConfig = useRuntimeConfig();
 
     useEffect(() => {
         async function checkForUpdate() {
@@ -54,7 +56,7 @@ export function SystemInfoPanel() {
 
     // The API version slurmrestd actually answered with, e.g. "data_parser/v0.0.42"
     const apiVersion = diagData?.meta?.plugin?.data_parser?.replace("data_parser/", "") ?? "Unknown";
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "localhost:3000";
+    const baseUrl = runtimeConfig.baseUrl ?? "localhost:3000";
     const nodeEnv = process.env.NODE_ENV ?? "development";
 
     return (

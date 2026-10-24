@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Trash2, Plus, Save, Upload, Download, RefreshCw } from "lucide-react";
-import { getHierarchyLabels } from "@/lib/utils";
+import { useHierarchyLabels } from "@/components/runtime-config";
 
 interface HierarchyManagerProps {
   initialOrgs: Organization[];
@@ -29,7 +29,7 @@ export function HierarchyManager({ initialOrgs, accounts }: HierarchyManagerProp
   const [mappedAccounts, setMappedAccounts] = useState<{account_id: number, account_name: string}[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const labels = getHierarchyLabels();
+  const labels = useHierarchyLabels();
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true);

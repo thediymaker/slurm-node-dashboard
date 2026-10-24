@@ -2,14 +2,14 @@ import Footer from "@/components/footer/footer";
 import Rewind from "@/components/rewind/rewind";
 import UnifiedHeader from "@/components/unified-header";
 import { redirect } from "next/navigation";
+import { getPublicConfig } from "@/lib/config";
+import { isFeatureEnabled } from "@/lib/features";
 
-const env = process.env;
-
-export default function RewindPage() {
-  // Plugin Feature Flag Check
-  if (process.env.NEXT_PUBLIC_ENABLE_HISTORY_PLUGIN !== 'true') {
+export default async function RewindPage() {
+  if (!(await isFeatureEnabled("rewind"))) {
     redirect("/");
   }
+  const { clusterName, clusterLogo } = getPublicConfig();
 
   return (
     <div className="mb-5">
@@ -19,7 +19,7 @@ export default function RewindPage() {
           description="Replay historical cluster state and utilization."
         />
         <Rewind />
-        <Footer cluster={env.CLUSTER_NAME} logo={env.CLUSTER_LOGO} />
+        <Footer cluster={clusterName} logo={clusterLogo} />
       </div>
     </div>
   );

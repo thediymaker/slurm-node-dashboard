@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { jobMetricsPluginMetadata, gpuUtilizationPluginMetadata } from "@/actions/plugins";
+import { useFeature } from "@/components/runtime-config";
 import {
   Table,
   TableBody,
@@ -67,12 +67,10 @@ type SortKey = "jobId" | "userName" | "avgUtilization" | "gpuCount";
 type SortDirection = "asc" | "desc";
 
 export function GPUAnalysisPanel() {
-  if (!jobMetricsPluginMetadata.isEnabled || !gpuUtilizationPluginMetadata.isEnabled) {
-    return null;
-  }
+  const gpuEnabled = useFeature("gpu");
 
   const { data, error, isLoading, mutate } = useSWR<GPUReportResponse>(
-    withBasePath("/api/gpu/report?timeRange=24h"),
+    gpuEnabled ? withBasePath("/api/gpu/report?timeRange=24h") : null,
     fetcher,
     { refreshInterval: 60000 }
   );
@@ -152,6 +150,8 @@ export function GPUAnalysisPanel() {
     if (util >= 40) return "text-amber-900";
     return "text-red-900";
   };
+
+  if (!gpuEnabled) return null;
 
   if (isLoading) {
     return (

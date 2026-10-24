@@ -1,14 +1,16 @@
 import Footer from "@/components/footer/footer";
 import UnifiedHeader from "@/components/unified-header";
 import { redirect } from "next/navigation";
+import { getPublicConfig } from "@/lib/config";
+import { isFeatureEnabled } from "@/lib/features";
 
 import Modules from "@/components/modules/modules";
 
-export default function ModulesPage() {
-  // Plugin Feature Flag Check
-  if (process.env.NEXT_PUBLIC_ENABLE_MODULES_PLUGIN !== 'true') {
+export default async function ModulesPage() {
+  if (!(await isFeatureEnabled("modules"))) {
     redirect("/");
   }
+  const { clusterName, clusterLogo } = getPublicConfig();
 
   return (
     <div className="mb-5">
@@ -18,10 +20,7 @@ export default function ModulesPage() {
           description="Browse available software modules on the cluster."
         />
         <Modules />
-        <Footer
-          cluster={process.env.CLUSTER_NAME}
-          logo={process.env.CLUSTER_LOGO}
-        />
+        <Footer cluster={clusterName} logo={clusterLogo} />
       </div>
     </div>
   );

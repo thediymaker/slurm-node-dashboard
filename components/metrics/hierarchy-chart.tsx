@@ -5,7 +5,7 @@ import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { GroupData } from "@/actions/metrics"
-import { getHierarchyLabels } from "@/lib/utils"
+import { useHierarchyLabels } from "@/components/runtime-config";
 
 interface HierarchyChartProps {
   data: GroupData[];
@@ -21,7 +21,7 @@ export function HierarchyChart({ data, metric, level }: HierarchyChartProps) {
     },
   } satisfies ChartConfig
 
-  const { level1, level2 } = getHierarchyLabels();
+  const { level1, level2 } = useHierarchyLabels();
   const title = level === 'college' ? `Usage by ${level1}` : `Usage by ${level2}`;
   const description = metric === 'coreHours' 
     ? `Top ${level === 'college' ? level1 : level2}s by core hours` 
