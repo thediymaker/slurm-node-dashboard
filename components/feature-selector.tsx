@@ -117,7 +117,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-[150px] justify-between whitespace-nowrap overflow-hidden"
+            className="h-8 w-[150px] justify-between whitespace-nowrap overflow-hidden text-[13px] font-normal"
           >
             <span className="truncate">{getFeatureDisplayValue()}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

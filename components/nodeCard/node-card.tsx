@@ -1,5 +1,6 @@
 import { useState, memo, useMemo } from "react";
 import { useInView } from "react-intersection-observer";
+import { CircleAlert, Gauge, Lock, Pause, RotateCw, Wrench, type LucideIcon } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
@@ -8,123 +9,141 @@ import {
 import NodeCardModal from "@/components/modals/card-job-modal";
 import { getStatusDef } from "@/utils/nodes";
 import CardHover from "./card-hover";
-import GPUUsageDisplay from "./gpu-progress";
 import { parseGPUResources } from "@/utils/gpu-parse";
-import { GPUUsageData, NodeCardProps } from "@/types/types";
-import { getStatusColor } from "@/lib/color-schemas";
+import { NodeCardProps } from "@/types/types";
+import { getColorSchema, getStatusColor } from "@/lib/color-schemas";
 import { ShineBorder } from "@/components/ui/shine-border";
+import { cn } from "@/lib/utils";
+import type { NodeExtras } from "@/app/api/nodes/extras/route";
+import type { NodeState } from "@/lib/node-history";
+import { STATE_LABELS, formatPower, loadRatio, OVERLOAD_RATIO, stateOf, usedGpuIndexes } from "./node-view";
 
-const calculateTotalGPUUsage = (
-  gres: string,
-  gresUsed: string
-): GPUUsageData => {
-  return parseGPUResources(gres, gresUsed);
+// Corner icons for states the color alone doesn't tell apart
+const STATE_ICONS: Partial<Record<NodeState, LucideIcon>> = {
+  drained: Pause,
+  down: CircleAlert,
+  maintenance: Wrench,
+  reserved: Lock,
 };
 
-// Compact progress bar component - memoized to prevent re-renders
-const MiniProgressBar = memo(({
+interface CardModel {
+  name: string;
+  state: NodeState;
+  reboot: boolean;
+  cpuPct: number;
+  memPct: number;
+  loadPct: number;
+  overloaded: boolean;
+  gpuTotal: number;
+  gpuUsed: number;
+  gpuInUse: boolean[];
+  // Dark text on the light drain/down colors
+  light: boolean;
+}
+
+const pct = (used: number, total: number) => (total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0);
+
+function Bar({
   value,
-  max,
-  colorClass = "bg-white/80",
+  height,
+  light,
+  tick,
 }: {
   value: number;
-  max: number;
-  colorClass?: string;
-}) => {
-  const percentage = Math.min((value / max) * 100, 100);
+  height: number;
+  light: boolean;
+  tick?: number;
+}) {
   return (
-    <div className="h-1 w-full bg-black/20 rounded-[1px] overflow-hidden">
-      <div
-        className={`h-full ${colorClass} transition-all duration-300`}
-        style={{ width: `${percentage}%` }}
-      />
+    <div
+      className={cn("relative flex-1 rounded-[3px]", light ? "bg-slate-900/20" : "bg-black/30")}
+      style={{ height }}
+    >
+      <div className="h-full rounded-[3px] bg-current transition-[width] duration-300" style={{ width: `${value}%` }} />
+      {tick !== undefined && (
+        <div
+          className="absolute -top-0.5 -bottom-0.5 w-0.5 rounded-sm bg-yellow-300"
+          style={{ left: `calc(${Math.min(99, tick)}% - 1px)` }}
+        />
+      )}
     </div>
   );
-});
-MiniProgressBar.displayName = "MiniProgressBar";
+}
 
-// Dynamic name sizing based on length - memoized lookup
-const nameSizeClasses = {
-  short: "text-[12px]",
-  medium: "text-[11px]",
-  long: "text-[10px]",
-  veryLong: "text-[9px]",
-} as const;
+// Allocated GPUs as one segmented bar
+function GpuSegments({ model, height }: { model: CardModel; height: number }) {
+  return (
+    <div className="flex flex-1 gap-0.5">
+      {model.gpuInUse.map((used, i) => (
+        <div
+          key={i}
+          className={cn("flex-1 rounded-[2px]", used ? "bg-current" : model.light ? "bg-slate-900/20" : "bg-white/20")}
+          style={{ height }}
+        />
+      ))}
+    </div>
+  );
+}
 
-const getNameSizeClass = (name: string) => {
-  const len = name.length;
-  if (len <= 6) return nameSizeClasses.short;
-  if (len <= 10) return nameSizeClasses.medium;
-  if (len <= 14) return nameSizeClasses.long;
-  return nameSizeClasses.veryLong;
-};
+// Show where load sits against allocation when they're far apart
+function loadTick(model: CardModel): number | undefined {
+  return model.overloaded || Math.abs(model.loadPct - model.cpuPct) >= 25 ? model.loadPct : undefined;
+}
 
-const SmallCardContent = memo<{ name: string }>(({ name }) => (
-  <div className="flex items-center justify-center w-full h-full">
-    <div className="font-bold text-[10px] tracking-wide truncate text-center">
-      {name}
+const SmallCardContent = memo(({ model }: { model: CardModel }) => (
+  <div className="flex h-full flex-col justify-between p-1.5">
+    <div className="truncate font-mono text-[10px] font-semibold leading-none" title={model.name}>
+      {model.name}
+    </div>
+    <div className="flex flex-col gap-[3px]">
+      <Bar value={model.cpuPct} height={3} light={model.light} />
+      {model.gpuTotal > 0 && <GpuSegments model={model} height={3} />}
     </div>
   </div>
 ));
 SmallCardContent.displayName = "SmallCardContent";
 
-const MediumCardContent = memo(({
-  name,
-  coresUsed,
-  coresTotal,
-  memoryUsed,
-  memoryTotal,
-  nodeData,
-  compact = false,
-}: NodeCardProps & { compact?: boolean }) => {
-  const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
-    nodeData.gres,
-    nodeData.gres_used
+function CornerIcon({ model, size }: { model: CardModel; size: number }) {
+  if (model.overloaded) return <Gauge aria-label="Overloaded" className="flex-none text-yellow-300" style={{ width: size, height: size }} strokeWidth={2.6} />;
+  const Icon = model.reboot ? RotateCw : STATE_ICONS[model.state];
+  return Icon ? <Icon aria-hidden className="flex-none" style={{ width: size, height: size }} strokeWidth={2.4} /> : null;
+}
+
+const MediumCardContent = memo(({ model }: { model: CardModel }) => {
+  const sub = model.light ? "text-slate-900/70" : "text-white/80";
+  const row = (label: string, value: number, text: string, tick?: number, warn = false) => (
+    <div className="flex items-center gap-[5px]">
+      <span className={cn("w-6 flex-none text-[9px] tracking-wide", sub)}>{label}</span>
+      <Bar value={value} height={4} light={model.light} tick={tick} />
+      <span className={cn("w-[26px] flex-none text-right text-[9px] tabular-nums", warn ? "font-bold text-yellow-300" : sub)}>
+        {text}
+      </span>
+    </div>
   );
-  const cpuPercent = Math.round((coresUsed / coresTotal) * 100);
-  const memPercent = Math.round((memoryUsed / memoryTotal) * 100);
-  // cpu_load from Slurm API is scaled by 100 (3025 = 30.25)
-  const actualLoad = nodeData.cpu_load / 100;
-  const loadPercent = Math.round((actualLoad / coresTotal) * 100);
-
   return (
-    <div className="flex flex-col h-full p-2 gap-1">
-      {/* Header - dynamic sizing for long names */}
-      <div 
-        className={`font-bold leading-tight uppercase ${getNameSizeClass(name)}`}
-        title={name}
-      >
-        {name}
+    <div className="flex h-full flex-col justify-between p-[9px]">
+      <div className="flex min-w-0 items-start justify-between gap-1">
+        <span className="truncate font-mono text-[12px] font-semibold leading-tight" title={model.name}>
+          {model.name}
+        </span>
+        <CornerIcon model={model} size={12} />
       </div>
-
-      {/* Stats - align top with consistent spacing */}
-      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0 leading-tight">
-        <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
-            <span>CPU</span>
-            <span>{cpuPercent}%</span>
-          </div>
-          <MiniProgressBar value={coresUsed} max={coresTotal} />
-        </div>
-
-        <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
-            <span>MEM</span>
-            <span>{memPercent}%</span>
-          </div>
-          <MiniProgressBar value={memoryUsed} max={memoryTotal} />
-        </div>
-
-        {/* Show LOAD on CPU-only nodes, GPU on GPU nodes */}
-        {gpuTotal > 0 ? (
-          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
-        ) : (
-          <div className="space-y-0.5">
-            <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
-              <span>LOAD</span>
-              <span>{loadPercent}%</span>
-            </div>
-            <MiniProgressBar value={actualLoad} max={coresTotal} />
+      <div className="flex flex-col gap-[5px]">
+        {row(
+          "CPU",
+          model.cpuPct,
+          model.overloaded ? `${(model.loadPct / 100).toFixed(1)}×` : `${model.cpuPct}%`,
+          loadTick(model),
+          model.overloaded
+        )}
+        {row("MEM", model.memPct, `${model.memPct}%`)}
+        {model.gpuTotal > 0 && (
+          <div className="flex items-center gap-[5px]">
+            <span className={cn("w-6 flex-none text-[9px] tracking-wide", sub)}>GPU</span>
+            <GpuSegments model={model} height={4} />
+            <span className={cn("w-[26px] flex-none text-right text-[9px] tabular-nums", sub)}>
+              {model.gpuUsed}/{model.gpuTotal}
+            </span>
           </div>
         )}
       </div>
@@ -133,160 +152,212 @@ const MediumCardContent = memo(({
 });
 MediumCardContent.displayName = "MediumCardContent";
 
-const LargeCardContent = memo(({
-  name,
-  coresUsed,
-  coresTotal,
-  memoryUsed,
-  memoryTotal,
-  nodeData,
-  compact = false,
-}: NodeCardProps & { compact?: boolean }) => {
-  const { gpuUsed, gpuTotal } = calculateTotalGPUUsage(
-    nodeData.gres,
-    nodeData.gres_used
-  );
-  const cpuPercent = Math.round((coresUsed / coresTotal) * 100);
-  const memPercent = Math.round((memoryUsed / memoryTotal) * 100);
-  // cpu_load from Slurm API is scaled by 100 (3025 = 30.25)
-  const actualLoad = nodeData.cpu_load / 100;
-  const loadPercent = Math.round((actualLoad / coresTotal) * 100);
+const LargeCardContent = memo(
+  ({ model, extras, watts, tempWarn, cores }: { model: CardModel; extras?: NodeExtras; watts?: number; tempWarn: number; cores: number }) => {
+    const sub = model.light ? "text-slate-900/85" : "text-white/85";
+    const power = watts ?? extras?.power;
+    const temp = extras?.temp;
+    const hot = temp !== undefined && temp >= tempWarn;
 
-  return (
-    <div className="flex flex-col h-full p-2 gap-1">
-      {/* Header - dynamic sizing for long names */}
-      <div 
-        className={`font-bold leading-tight uppercase ${getNameSizeClass(name)}`}
-        title={name}
-      >
-        {name}
+    // Last hour of load as a faint area behind the card, scaled to the core count
+    const trend = useMemo(() => {
+      const load = extras?.load;
+      if (!load || load.length < 2 || !cores) return null;
+      const pts = load.map((v, i) => [(i * 120) / (load.length - 1), 40 - Math.min(1, v / cores) * 36]);
+      const line = "M" + pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L");
+      return { line, area: `${line}L120 40L0 40Z` };
+    }, [extras?.load, cores]);
+
+    const many = model.gpuTotal > 4;
+    const util = extras?.gpuUtil;
+
+    const row = (label: string, value: number, text: string, tick?: number, warn = false) => (
+      <div className="flex items-center gap-1.5">
+        <span className={cn("w-[30px] flex-none text-[11px] font-medium", sub)}>{label}</span>
+        <Bar value={value} height={6} light={model.light} tick={tick} />
+        <span className={cn("w-[34px] flex-none text-right text-[11px] tabular-nums", warn ? "font-bold text-yellow-300" : sub)}>
+          {text}
+        </span>
       </div>
+    );
 
-      {/* Stats - align top with consistent spacing */}
-      <div className="flex-1 flex flex-col justify-start gap-0.5 min-h-0 leading-tight">
-        <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
-            <span>CPU</span>
-            <span>{cpuPercent}%</span>
-          </div>
-          <MiniProgressBar value={coresUsed} max={coresTotal} />
-        </div>
-
-        <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
-            <span>MEM</span>
-            <span>{memPercent}%</span>
-          </div>
-          <MiniProgressBar value={memoryUsed} max={memoryTotal} />
-        </div>
-
-        <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] leading-tight opacity-90">
-            <span>LOAD</span>
-            <span>{loadPercent}%</span>
-          </div>
-          <MiniProgressBar value={actualLoad} max={coresTotal} />
-        </div>
-
-        {/* GPU Display - integrated into stats flow */}
-        {gpuTotal > 0 && (
-          <GPUUsageDisplay gpuUsed={gpuUsed} gpuTotal={gpuTotal} />
+    return (
+      <div className="relative flex h-full flex-col justify-between p-[11px]">
+        {trend && (
+          <svg
+            viewBox="0 0 120 40"
+            preserveAspectRatio="none"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full"
+            aria-hidden
+          >
+            <path d={trend.area} fill="currentColor" fillOpacity={0.13} />
+            <path d={trend.line} fill="none" stroke="currentColor" strokeOpacity={0.45} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          </svg>
         )}
+        <div className="relative flex items-baseline justify-between gap-1">
+          <span className="inline-flex min-w-0 items-center gap-[5px]">
+            <span className="truncate font-mono text-[16px] font-semibold leading-tight" title={model.name}>
+              {model.name}
+            </span>
+            <CornerIcon model={model} size={14} />
+          </span>
+          {(power !== undefined || temp !== undefined) && (
+            <span className={cn("whitespace-nowrap text-[11px] tabular-nums", sub)}>
+              {power !== undefined && formatPower(power)}
+              {power !== undefined && temp !== undefined && " · "}
+              {temp !== undefined && <span className={hot ? "font-semibold text-yellow-300" : undefined}>{temp}°</span>}
+            </span>
+          )}
+        </div>
+        <div className="relative flex flex-col gap-2">
+          {row(
+            "CPU",
+            model.cpuPct,
+            model.overloaded ? `${(model.loadPct / 100).toFixed(1)}×` : `${model.cpuPct}%`,
+            loadTick(model),
+            model.overloaded
+          )}
+          {row("MEM", model.memPct, `${model.memPct}%`)}
+          {model.gpuTotal > 0 && (
+            <div
+              className="grid gap-[3px]"
+              style={{
+                gridTemplateColumns: `repeat(${Math.min(4, model.gpuTotal)}, minmax(0, 1fr))`,
+                gridAutoRows: many ? (model.gpuTotal > 8 ? 8 : 15) : 26,
+              }}
+            >
+              {model.gpuInUse.map((used, i) => {
+                // Fill shows utilization; an allocated GPU without DCGM data shows full
+                const fill = used ? (util?.[i] ?? 100) : 0;
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "relative overflow-hidden rounded",
+                      used ? (model.light ? "bg-slate-900/25" : "bg-black/30") : model.light ? "ring-1 ring-inset ring-slate-900/30" : "ring-1 ring-inset ring-white/30"
+                    )}
+                    title={used ? `GPU ${i}: ${util?.[i] !== undefined ? `${util[i]}% busy` : "allocated"}` : `GPU ${i}: free`}
+                  >
+                    <div className="absolute inset-x-0 bottom-0 bg-current opacity-85" style={{ height: `${fill}%` }} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 LargeCardContent.displayName = "LargeCardContent";
 
 export const NodeCard = memo(({
   colorSchema = "default",
+  extras,
+  changed = false,
+  tempWarn = 80,
   ...props
-}: NodeCardProps & { colorSchema?: string }) => {
+}: NodeCardProps & { colorSchema?: string; extras?: NodeExtras; changed?: boolean; tempWarn?: number }) => {
   const [open, setOpen] = useState(false);
   const { ref, inView } = useInView({
     rootMargin: "200px", // pre-render 200px before entering viewport
   });
-  
-  // Memoize expensive calculations
+
   const { bgColor, textColor } = useMemo(
     () => getStatusColor(props.status, colorSchema),
     [props.status, colorSchema]
   );
   const statusDef = useMemo(() => getStatusDef(props.status), [props.status]);
-  
-  // cpu_load from Slurm API is scaled by 100 (3025 = 30.25)
-  const cpuLoad = useMemo(
-    () => parseFloat(((props.nodeData.cpu_load / 100) / props.coresTotal).toFixed(2)),
-    [props.nodeData.cpu_load, props.coresTotal]
-  );
+  const size = props.size === 50 || props.size === 150 ? props.size : 100;
 
-  const openModal = () => {
-    setOpen(!open);
-  };
+  const model = useMemo<CardModel>(() => {
+    const node = props.nodeData;
+    const state = stateOf({ ...node, state: props.status });
+    const flags = (Array.isArray(props.status) ? props.status : String(props.status).split(/[+\s]+/)).map((s) => s.toUpperCase());
+    const { gpuUsed = 0, gpuTotal = 0 } = parseGPUResources(node.gres, node.gres_used) ?? {};
+    const indexes = usedGpuIndexes(node.gres_used);
+    const gpuInUse = Array.from({ length: gpuTotal }, (_, i) => (indexes ? indexes.has(i) : i < gpuUsed));
+    const ratio = loadRatio({ ...node, cpus: props.coresTotal });
+    return {
+      name: props.name,
+      state,
+      reboot: flags.some((f) => f.includes("REBOOT")),
+      cpuPct: pct(props.coresUsed, props.coresTotal),
+      memPct: pct(props.memoryUsed, props.memoryTotal),
+      loadPct: Math.round(ratio * 100),
+      overloaded: ratio > OVERLOAD_RATIO,
+      gpuTotal,
+      gpuUsed,
+      gpuInUse,
+      light: /text-(black|slate-9)/.test(textColor),
+    };
+  }, [props.nodeData, props.status, props.name, props.coresUsed, props.coresTotal, props.memoryUsed, props.memoryTotal, textColor]);
 
-  const cardContent = useMemo(() => {
-    switch (props.size) {
-      case 50:
-        return <SmallCardContent name={props.name} />;
-      case 100:
-        return <MediumCardContent {...props} />;
-      case 150:
-        return <LargeCardContent {...props} />;
-      default:
-        return <MediumCardContent {...props} />;
+  // Draining runs jobs on its way to drained: stripes of the partial color.
+  // Down gets a hatch so it reads differently from drained at a glance.
+  const pattern = useMemo(() => {
+    if (model.state === "draining") {
+      return `repeating-linear-gradient(135deg, ${getColorSchema(colorSchema).progressColors.mixed}bf 0 5px, transparent 5px 11px)`;
     }
-  }, [props]);
+    if (model.state === "down") return "repeating-linear-gradient(135deg, rgba(15,23,42,.35) 0 2px, transparent 2px 7px)";
+    return "linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,0) 45%, rgba(0,0,0,.12))";
+  }, [model.state, colorSchema]);
 
-  const sizeClasses = useMemo(() => 
-    props.size === 50
-      ? "w-[85px] h-[25px]"
-      : props.size === 100
-        ? "w-[100px] h-[100px]"
-        : props.size === 150
-          ? "w-[100px] h-[120px]"
-          : "w-[100px] h-[100px]",
-    [props.size]
-  );
+  const background = model.state === "maintenance" ? "bg-stone-500" : bgColor;
+  const shape = cn("aspect-square w-full", size === 50 ? "rounded-md" : "rounded-[9px]");
+  const label = `${props.name}, ${STATE_LABELS[model.state]}, CPU ${model.cpuPct}% allocated${model.gpuTotal ? `, ${model.gpuUsed} of ${model.gpuTotal} GPUs` : ""}${model.overloaded ? ", overloaded" : ""}`;
 
   // Off-screen: render lightweight placeholder with same dimensions and color
   // Avoids mounting HoverCard, Modal, gradients, shadows for invisible cards
   if (!inView) {
-    return (
-      <div
-        ref={ref}
-        className={`m-0.5 rounded-lg ${bgColor} ${sizeClasses} border border-black/15 dark:border-white/10`}
-      />
-    );
+    return <div ref={ref} className={cn(shape, background, "border border-white/10")} />;
   }
 
-  const isOverloaded = cpuLoad > 1.25;
+  const watts = props.nodeData.energy?.current_watts?.set !== false && props.nodeData.energy?.current_watts?.number > 0
+    ? props.nodeData.energy.current_watts.number
+    : undefined;
 
   return (
     <HoverCard openDelay={300}>
       <HoverCardTrigger asChild>
         <div
           ref={ref}
+          role={props.historical ? undefined : "button"}
+          tabIndex={props.historical ? undefined : 0}
+          aria-label={label}
           data-node-id={props.nodeData.hostname || props.name}
-          className={`
-            relative overflow-hidden cursor-pointer m-0.5 rounded-lg
-            ${bgColor} ${textColor} ${sizeClasses}
-            shadow-md hover:shadow-lg
-            border border-black/15 dark:border-white/10
-            transition-all duration-200 ease-out
-            hover:scale-[1.02] hover:brightness-110
-          `}
-          style={{ contain: 'layout style paint' }}
-          onClick={props.historical ? undefined : openModal}
+          className={cn(
+            shape,
+            background,
+            model.light ? "text-slate-900" : "text-white",
+            "relative cursor-pointer overflow-hidden border border-white/10 shadow-sm",
+            "transition-[transform,filter] duration-150 ease-out hover:-translate-y-px hover:brightness-110",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            changed && "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+          )}
+          style={{ contain: "layout style", backgroundImage: pattern }}
+          onClick={props.historical ? undefined : () => setOpen(true)}
+          onKeyDown={
+            props.historical
+              ? undefined
+              : (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setOpen(true);
+                  }
+                }
+          }
         >
-          {/* Subtle gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none" />
+          {size === 50 ? (
+            <SmallCardContent model={model} />
+          ) : size === 100 ? (
+            <MediumCardContent model={model} />
+          ) : (
+            <LargeCardContent model={model} extras={extras} watts={watts} tempWarn={tempWarn} cores={props.coresTotal} />
+          )}
 
-          {/* Content */}
-          <div className="relative h-full w-full">{cardContent}</div>
-
-          {/* Shine border for overloaded nodes */}
-          {isOverloaded && (
-            <ShineBorder 
+          {model.overloaded && (
+            <ShineBorder
               duration={4}
               shineColor={["#ffffff", "#ffffffcc", "#ffffff80"]}
             />
@@ -296,7 +367,7 @@ export const NodeCard = memo(({
       <HoverCardContent className="w-96 m-5 font-extralight text-sm">
         <CardHover
           nodeData={props.nodeData}
-          cpuLoad={cpuLoad}
+          cpuLoad={parseFloat((model.loadPct / 100).toFixed(2))}
           statusDef={statusDef}
         />
       </HoverCardContent>

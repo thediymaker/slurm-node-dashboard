@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NodeCard } from "@/components/nodeCard/node-card";
+import { NodeGrid } from "@/components/nodeCard/node-grid";
 import { RingLoader } from "react-spinners";
 import { DateTimePicker } from "@/components/date-time";
 import { HistoricalNode } from "@/types/types";
@@ -55,6 +55,13 @@ const DashboardHistory = () => {
   );
 
   const systems: HistoricalNode[] = historicalData?.nodes || [];
+  const [colorSchema] = useState(() => {
+    try {
+      return (typeof window !== "undefined" && localStorage.getItem("colorSchema")) || "default";
+    } catch {
+      return "default";
+    }
+  });
 
   // Single-pass calculation for all node statistics
   const nodeStats: NodeStats = useMemo(() => {
@@ -180,24 +187,8 @@ const DashboardHistory = () => {
           </CardHeader>
           <CardContent>
             {systems.length > 0 ? (
-              <div className="flex flex-wrap" role="list" aria-label="Node cards">
-                {systems.map((node: HistoricalNode, index: number) => (
-                  <NodeCard
-                    key={node.hostname}
-                    size={100}
-                    name={node.hostname}
-                    load={node.cpu_load}
-                    partitions={node.partitions}
-                    features={node.features || []}
-                    coresTotal={node.cpus}
-                    coresUsed={node.alloc_cpus}
-                    memoryTotal={node.real_memory}
-                    memoryUsed={node.alloc_memory}
-                    status={node.state}
-                    nodeData={node}
-                    historical={true}
-                  />
-                ))}
+              <div role="list" aria-label="Node cards">
+                <NodeGrid nodes={systems} size={100} colorSchema={colorSchema} historical />
               </div>
             ) : (
               <p>No node data available in the historical data.</p>

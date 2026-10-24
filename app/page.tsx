@@ -12,7 +12,7 @@ export default async function Dashboard() {
 
   return (
     <div className="mb-5">
-      <div className="p-2 ml-2 mx-auto">
+      <div className="px-2 pb-2">
         <Nodes username={username} />
         <Footer cluster={clusterName} logo={clusterLogo} />
       </div>
