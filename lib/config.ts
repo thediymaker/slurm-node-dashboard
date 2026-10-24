@@ -51,9 +51,12 @@ export function getPublicConfig(): PublicConfig {
     supportUrl: readEnv("NEXT_PUBLIC_SUPPORT_URL"),
     baseUrl: readEnv("NEXT_PUBLIC_BASE_URL"),
     metricsTimeZone: readEnv("NEXT_PUBLIC_METRICS_TIME_ZONE") ?? "America/Phoenix",
+    // The pre-3.0 .env template spelled these LEVEL1/LEVEL2
     hierarchyLabels: {
-      level1: readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL_1_LABEL") ?? "College",
-      level2: readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL_2_LABEL") ?? "Department",
+      level1:
+        readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL_1_LABEL") ?? readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL1_LABEL") ?? "College",
+      level2:
+        readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL_2_LABEL") ?? readEnv("NEXT_PUBLIC_HIERARCHY_LEVEL2_LABEL") ?? "Department",
     },
   };
 }

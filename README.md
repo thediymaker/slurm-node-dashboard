@@ -13,7 +13,7 @@ Slurm Node Dashboard combines a live node view with optional historical analytic
 ## Highlights
 
 - Live cluster view with CPU/GPU node status, filtering, rack/group layouts, and 15 second refresh polling
-- Optional feature-flagged pages for software modules, cluster rewind, and job metrics
+- Optional pages for software modules, cluster rewind, node history and job metrics, which turn on when what they need is configured
 - GPU analytics from Prometheus/DCGM recording rules, including job-level utilization views
 - AI assistant with streaming chat, built-in Slurm workflow tools, documentation search, and structured tool result cards
 - Admin-managed assistant configuration with YAML overrides, custom tools, restricted topics, and prompt preview/testing
@@ -24,7 +24,7 @@ Slurm Node Dashboard combines a live node view with optional historical analytic
 - Node.js 20.9.0 or newer
 - npm
 - Access to a Slurm REST API (`slurmrestd`)
-- Optional: PostgreSQL for historical metrics, rewind, and hierarchy features
+- Optional: PostgreSQL 13+ for Rewind, node history, GPU history and job metrics (see [Features](#features))
 - Optional: Prometheus/DCGM metrics for GPU utilization features
 - Optional: OpenAI-compatible API credentials for the assistant
 
@@ -50,9 +50,6 @@ CLUSTER_NAME=My Cluster
 SLURM_SERVER=slurmrestd.example.edu
 SLURM_SERVER_PORT=6820
 SLURM_PROTOCOL=http
-# Match a version your slurmrestd serves (Slurm 26.05 serves v0.0.42-v0.0.45;
-# list them with: slurmrestd -d list)
-SLURM_API_VERSION=v0.0.42
 SLURM_API_ACCOUNT=dashboard
 SLURM_API_TOKEN=replace-with-your-token
 ```
@@ -63,7 +60,42 @@ Then start the app:
 npm run dev
 ```
 
-Open `http://localhost:3020`.
+Open `http://localhost:3020`. The dashboard uses the newest API version your slurmrestd serves; set `SLURM_API_VERSION` (for example `v0.0.42`) to pin one.
+
+Settings are read when the server starts, so changing one needs a restart, not a rebuild. `infra/.env.production` lists them all.
+
+## Features
+
+Features turn on when what they need is configured; set a feature's flag to `false` to turn it off. **Admin → Plugins** shows what's on and why.
+
+| Feature | Needs | Database |
+|---|---|---|
+| Nodes, jobs, partitions, reservations, QoS, admin | slurmrestd | No |
+| Modules | `public/modules.json` or `MODULES_FILE` | No |
+| Node charts | `PROMETHEUS_URL` | No |
+| GPU utilization | Prometheus with DCGM metrics, `NEXT_PUBLIC_ENABLE_GPU_UTILIZATION=true` | No |
+| AI assistant | `NEXT_PUBLIC_ENABLE_OPENAI_PLUGIN=true` and a model endpoint | No |
+| Rewind | Hourly snapshots the dashboard saves | Yes |
+| Node history | Drain and down periods the dashboard records | Yes |
+| GPU history | GPU utilization | Yes |
+| Job metrics | [slurm-history-ingestor](https://github.com/thediymaker/slurm-history-ingestor) writing to the same database | Yes |
+
+For the database features, set `DATABASE_URL` to a PostgreSQL database the dashboard's user can create tables in. The dashboard creates its tables on startup and collects in the background; with several instances on one database, one of them collects.
+
+## Docker
+
+```bash
+docker build -f infra/Dockerfile -t slurm-node-dashboard .
+docker run -p 3000:3000 --env-file .env slurm-node-dashboard
+```
+
+Docker's `--env-file` keeps quotes as part of the value, so write `CLUSTER_NAME=Sol`, not `CLUSTER_NAME="Sol"` as in `infra/.env.production`.
+
+Images built from `main` are published as `ghcr.io/thediymaker/slurm-node-dashboard:main`, and releases as `:<version>` and `:latest`. To serve under a sub-path, build your own image with `--build-arg NEXT_PUBLIC_BASE_PATH=...`.
+
+## Upgrading
+
+Upgrading from 2.x? See [UPGRADING.md](UPGRADING.md) for what changed and what you can remove.
 
 ### Serving under a sub-path
 
@@ -73,7 +105,7 @@ To serve the dashboard at a path such as `https://example.edu/slurm/cluster1` (f
 
 For full deployment, feature flag, AI assistant, GPU metrics, and historical data setup details, see [slurmdash.com](https://slurmdash.com).
 
-The optional historical ingestor is documented in `slurm-history-ingestor/README.md` and `slurm-history-ingestor/DOCUMENTATION.md`.
+The job history ingestor lives in [thediymaker/slurm-history-ingestor](https://github.com/thediymaker/slurm-history-ingestor).
 
 ## Contributing
 

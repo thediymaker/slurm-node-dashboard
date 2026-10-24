@@ -143,7 +143,9 @@ export async function getFeatures(): Promise<Features> {
     return { id, name, flag, needsDatabase, ...check() };
   };
 
-  const prometheus = feature("prometheus", "Prometheus metrics", "NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN", false, () =>
+  // No flag: before 3.0 NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN didn't control
+  // Prometheus, and the shipped .env template sets it to "false"
+  const prometheus = feature("prometheus", "Prometheus metrics", undefined, false, () =>
     prometheusUrl
       ? { enabled: true, reason: `Using ${prometheusUrl}.` }
       : { enabled: false, reason: "Set PROMETHEUS_URL to turn this on." }

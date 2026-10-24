@@ -1,10 +1,10 @@
 import { PrometheusDriver } from "prometheus-query";
-import { readEnv, readFlag } from "@/lib/config";
+import { readEnv } from "@/lib/config";
 
-// NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN=false turns Prometheus off even when
-// PROMETHEUS_URL is set
-const PROMETHEUS_URL =
-  readFlag("NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN") === false ? undefined : readEnv("PROMETHEUS_URL");
+// Prometheus is on whenever PROMETHEUS_URL is set. NEXT_PUBLIC_ENABLE_PROMETHEUS_PLUGIN
+// never controlled this, and the shipped .env template sets it to "false", so
+// it's ignored rather than allowed to switch off working charts.
+const PROMETHEUS_URL = readEnv("PROMETHEUS_URL");
 
 /**
  * Shared Prometheus driver instance.
