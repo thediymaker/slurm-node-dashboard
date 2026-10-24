@@ -5,6 +5,7 @@ import { betterAuth, type BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthEndpoint, formCsrfMiddleware } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { nextCookies } from "better-auth/next-js";
+import { BASE_PATH } from "@/lib/base-path";
 
 const AUTH_URL =
   process.env.BETTER_AUTH_URL ||
@@ -132,7 +133,9 @@ function adminCredentials() {
 
 export const auth = betterAuth({
   appName: "Slurm Node Dashboard",
-  baseURL: AUTH_URL,
+  // Origin only: Next.js strips basePath before route handlers run, so auth must
+  // route at the default /api/auth, and a path here would replace that
+  baseURL: new URL(AUTH_URL).origin,
   secret: AUTH_SECRET,
   trustedOrigins: TRUSTED_ORIGINS,
   session: {
@@ -147,6 +150,8 @@ export const auth = betterAuth({
   },
   advanced: {
     cookiePrefix: "slurm-dashboard",
+    // Scope cookies to the sub-path so dashboards on one host don't share sessions
+    defaultCookieAttributes: { path: BASE_PATH || "/" },
   },
   plugins: [adminCredentials(), nextCookies()],
 });

@@ -34,6 +34,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 
 interface GPUJob {
   jobId: string;
@@ -71,7 +72,7 @@ export function GPUAnalysisPanel() {
   }
 
   const { data, error, isLoading, mutate } = useSWR<GPUReportResponse>(
-    "/api/gpu/report?timeRange=24h",
+    withBasePath("/api/gpu/report?timeRange=24h"),
     fetcher,
     { refreshInterval: 60000 }
   );

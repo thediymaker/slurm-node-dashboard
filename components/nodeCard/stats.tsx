@@ -6,6 +6,7 @@ import { parseGPUResources } from "@/utils/gpu-parse";
 import { CustomTooltip } from "./stats-power-tooltip";
 import useSWR from "swr";
 import SystemActivityBanner from "./stats-activity";
+import { withBasePath } from "@/lib/base-path";
 
 // SWR fetcher function
 const fetcher = async (url: string) => {
@@ -34,7 +35,7 @@ const Stats = memo(
       error,
       isValidating,
       mutate,
-    } = useSWR(shouldFetch ? "/api/prometheus/ipmi" : null, fetcher, {
+    } = useSWR(shouldFetch ? withBasePath("/api/prometheus/ipmi") : null, fetcher, {
       fallbackData: { status: 404, data: [], summary: null },
       onError: (err) => {
         console.error("Prometheus endpoint error:", err);

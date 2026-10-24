@@ -7,6 +7,7 @@ import { NodeCard } from "@/components/nodeCard/node-card";
 import { RingLoader } from "react-spinners";
 import { DateTimePicker } from "@/components/date-time";
 import { HistoricalNode } from "@/types/types";
+import { withBasePath } from "@/lib/base-path";
 
 interface NodeStats {
   total: number;
@@ -45,10 +46,10 @@ const DashboardHistory = () => {
 
   const { data: historicalData, error, isValidating } = useSWR(
     isMounted && selectedDate && selectedTime
-      ? `/api/rewind?date=${format(
+      ? withBasePath(`/api/rewind?date=${format(
           selectedDate,
           "yyyy-MM-dd"
-        )}&time=${selectedTime}`
+        )}&time=${selectedTime}`)
       : null,
     fetcher
   );

@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { RunningJob, JobDetailModalProps } from "@/types/types";
 import { CopyButton, formatDuration, formatMemory } from "@/components/llm/llm-shared-utils";
 import { JobGPUStats } from "@/components/job-gpu-stats";
+import { withBasePath } from "@/lib/base-path";
 
 // Utility function moved outside component
 const convertUnixToHumanReadable = (unixTimestamp: number): string => {
@@ -72,7 +73,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
   setOpen,
   searchID,
 }) => {
-  const jobURL = useMemo(() => `/api/slurm/job/${searchID}`, [searchID]);
+  const jobURL = useMemo(() => withBasePath(`/api/slurm/job/${searchID}`), [searchID]);
 
   const {
     data: jobData,

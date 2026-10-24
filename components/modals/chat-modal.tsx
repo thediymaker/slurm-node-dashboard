@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/llm/empty-state";
 import { ChatFeedback } from "@/components/llm/chat-feedback";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { withBasePath } from "@/lib/base-path";
 
 export interface ChatInput {
   message: string;
@@ -26,10 +28,13 @@ function createChatId() {
   return `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+const chatTransport = new DefaultChatTransport({ api: withBasePath("/api/chat") });
+
 function ChatModal({ showChat, setShowChat }: ChatModalProps) {
   const [chatId, setChatId] = useState(createChatId);
   const { messages, sendMessage, status, setMessages, stop } = useChat({
     id: chatId,
+    transport: chatTransport,
     onError: (error) => {
       console.error('Chat error:', error);
     }

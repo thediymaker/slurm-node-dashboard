@@ -23,6 +23,7 @@ import { HistoricalJobDetailModalProps, HistoricalJob } from "@/types/types";
 import { CopyButton } from "@/components/llm/llm-shared-utils";
 import { GPUUtilizationBadge } from "@/components/job-gpu-stats";
 import { gpuUtilizationPluginMetadata } from "@/actions/plugins";
+import { withBasePath } from "@/lib/base-path";
 
 type TresUsageMetric = {
   type?: string;
@@ -181,12 +182,12 @@ const HistoricalJobDetailModal: React.FC<HistoricalJobDetailModalProps> = ({
 }) => {
   const [expandedSteps, setExpandedSteps] = React.useState<Set<number>>(new Set());
   
-  const jobURL = useMemo(() => `/api/slurm/job/completed/${searchID}`, [searchID]);
+  const jobURL = useMemo(() => withBasePath(`/api/slurm/job/completed/${searchID}`), [searchID]);
   
   // Check if GPU data is available (for historical jobs, need metrics plugin too)
   const gpuDataURL = useMemo(() => 
     gpuUtilizationPluginMetadata.isEnabled
-      ? `/api/gpu?job_id=${encodeURIComponent(searchID)}&source=database`
+      ? withBasePath(`/api/gpu?job_id=${encodeURIComponent(searchID)}&source=database`)
       : null,
     [searchID]
   );

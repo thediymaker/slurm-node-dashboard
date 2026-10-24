@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Job, JobDetails } from "@/types/types";
+import { withBasePath } from "@/lib/base-path";
 
 // Utility function moved outside component
 const convertUnixToHumanReadable = (unixTimestamp: number): string => {
@@ -56,11 +57,11 @@ const UserJobModal: React.FC<UserJobModalProps> = ({
 
   // Memoize URLs
   const userJobsURL = useMemo(
-    () => `/api/slurm/jobs/user/${searchID}`,
+    () => withBasePath(`/api/slurm/jobs/user/${searchID}`),
     [searchID]
   );
   const jobDetailsURL = useMemo(
-    () => (expandedJobId ? `/api/slurm/job/${expandedJobId}` : null),
+    () => (expandedJobId ? withBasePath(`/api/slurm/job/${expandedJobId}`) : null),
     [expandedJobId]
   );
 

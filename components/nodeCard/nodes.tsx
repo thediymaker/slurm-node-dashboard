@@ -19,8 +19,9 @@ import NodeCount from "./node-counts";
 import ChatIcon from "../llm/chat-icon";
 import { openaiPluginMetadata } from "@/actions/plugins";
 import { LogicType } from "@/components/feature-selector";
+import { withBasePath } from "@/lib/base-path";
 
-const nodeURL = "/api/slurm/nodes";
+const nodeURL = withBasePath("/api/slurm/nodes");
 const nodeFetcher = async () => {
   try {
     const res = await fetch(nodeURL, {

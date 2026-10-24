@@ -1,4 +1,5 @@
 import { NodeConfig } from "@/types/types";
+import { withBasePath } from "@/lib/base-path";
 
 // utils/node-range.ts
 export const expandNodeRange = (range: string): string[] => {
@@ -18,7 +19,7 @@ export const expandNodeRange = (range: string): string[] => {
 
 export const parseNodeConfig = async (): Promise<NodeConfig> => {
   try {
-    const response = await fetch("/api/node-config");
+    const response = await fetch(withBasePath("/api/node-config"));
     const config = await response.json();
 
     // Process each group's nodes to expand ranges

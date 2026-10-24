@@ -47,6 +47,7 @@ import {
   Pencil,
   Eye,
 } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ export function LLMConfigPanel() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/llm-config");
+      const res = await fetch(withBasePath("/api/llm-config"));
       if (!res.ok) throw new Error("Failed to load configuration");
       const data = await res.json();
       setConfig(data.config || null);
@@ -205,7 +206,7 @@ export function LLMConfigPanel() {
     setSuccess(null);
     try {
       const body = viewMode === "yaml" ? { raw } : { config };
-      const res = await fetch("/api/llm-config", {
+      const res = await fetch(withBasePath("/api/llm-config"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

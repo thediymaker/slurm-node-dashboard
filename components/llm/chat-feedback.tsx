@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 
 interface ChatFeedbackProps {
   messages: UIMessage[];
@@ -68,7 +69,7 @@ export function ChatFeedback({
     setError(null);
 
     try {
-      const response = await fetch("/api/chat/feedback", {
+      const response = await fetch(withBasePath("/api/chat/feedback"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
