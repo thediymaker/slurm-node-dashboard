@@ -19,7 +19,10 @@ const searchSchema = z.object({
   searchID: z
     .string()
     .regex(/^\s*[a-zA-Z0-9]+\s*$/, "Username or Job ID only")
-    .min(2, "Username or Job ID must be at least 2 characters long"),
+    // Job IDs can be a single digit; usernames need at least 2 characters
+    .refine((value) => /^\s*\d+\s*$/.test(value) || value.trim().length >= 2, {
+      message: "Username must be at least 2 characters long",
+    }),
 });
 
 type SearchFormData = z.infer<typeof searchSchema>;
