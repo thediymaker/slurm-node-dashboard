@@ -43,15 +43,16 @@ export default function AppHeader({
 
   return (
     <header className="sticky top-0 z-30 mb-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex min-h-14 max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2">
-        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80">
+      <div className="mx-auto flex min-h-14 max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5 hover:opacity-80">
           {clusterLogo && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={withBasePath(clusterLogo)} alt="" className="h-6 w-6 object-contain" />
           )}
-          <span className="text-[15px] font-semibold tracking-tight">{clusterName || "Cluster"}</span>
+          <span className="truncate text-[15px] font-semibold tracking-tight">{clusterName || "Cluster"}</span>
         </Link>
-        <nav aria-label="Main" className="-mx-1 flex gap-0.5 overflow-x-auto">
+        {/* On phones the tabs drop to their own row below the name and buttons */}
+        <nav aria-label="Main" className="order-last -mx-1 flex w-full gap-0.5 overflow-x-auto sm:order-none sm:w-auto">
           {nav.map((item) => (
             <Link
               key={item.href}
@@ -67,7 +68,7 @@ export default function AppHeader({
           ))}
         </nav>
         <div className="flex-1" />
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           <JobSearch />
           {assistant.enabled && (
             <Button
@@ -83,10 +84,10 @@ export default function AppHeader({
           )}
           <ColorSchemaSelector value={colorSchema} onChange={setColorSchema} />
           {!admin.signedIn && admin.canSignIn && pathname !== "/login" && (
-            <Button asChild variant="ghost" size="sm" className="h-9 gap-1.5 text-[13px]">
-              <Link href="/login">
+            <Button asChild variant="ghost" size="sm" className="h-9 gap-1.5 px-2 text-[13px] sm:px-3">
+              <Link href="/login" aria-label="Log in">
                 <LogIn className="h-4 w-4" />
-                Log in
+                <span className="hidden sm:inline">Log in</span>
               </Link>
             </Button>
           )}

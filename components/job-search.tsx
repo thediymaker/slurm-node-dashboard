@@ -11,9 +11,10 @@ import UserJobModal from "./modals/user-job-modal";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import MaintModal from "./modals/maint-modal";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { withBasePath } from "@/lib/base-path";
+import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
   searchID: z
@@ -49,6 +50,8 @@ const JobSearch = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [maintenanceData, setMaintenanceData] = useState<MaintenanceData>({});
   const [searchID, setSearchID] = useState("");
+  // Phones show only the search button; it opens the field below the header
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { errors } = form.formState;
 
   const handleSearch = useCallback(
@@ -57,6 +60,7 @@ const JobSearch = () => {
       if (searchLoading) return;
 
       setSearchLoading(true);
+      setMobileOpen(false);
       const trimmedSearchID = data.searchID.trim();
       setSearchID(trimmedSearchID);
 
@@ -168,8 +172,9 @@ const JobSearch = () => {
   }, []);
 
   useEffect(() => {
-    fetchMaintenanceData();
-  }, []);
+    const timer = setTimeout(() => void fetchMaintenanceData(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchMaintenanceData]);
 
   const handleMaintClose = () => {
     setMaintOpen(false);
@@ -179,20 +184,36 @@ const JobSearch = () => {
 
   return (
     <div>
+      <Button
+        className="h-9 w-9 sm:hidden"
+        variant="ghost"
+        size="icon"
+        type="button"
+        aria-label={mobileOpen ? "Close search" : "Search"}
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen((open) => !open)}
+      >
+        {mobileOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+      </Button>
       <Form {...form}>
         <form
-          className="flex items-center"
+          className={cn(
+            "items-center sm:flex",
+            mobileOpen ? "absolute inset-x-0 top-full flex border-b bg-background px-4 py-2" : "hidden"
+          )}
           onSubmit={form.handleSubmit(handleSearch)}
         >
           <FormField
             control={form.control}
             name="searchID"
             render={({ field }) => (
-              <FormItem>
-                <div className="flex pr-2 w-[180px]">
+              <FormItem className="flex-1 sm:flex-none">
+                <div className="flex pr-2 sm:w-[180px]">
                   <Input
                     type="text"
-                    placeholder="Search by username or job ID"
+                    placeholder="Username or job ID"
+                    aria-label="Search by username or job ID"
+                    autoFocus={mobileOpen}
                     {...field}
                     value={field.value ?? ""}
                     className={`w-full px-2 py-1 text-sm ${errors.searchID ? "border-red-500" : ""
