@@ -1,352 +1,241 @@
 "use client"
 
 import * as React from "react"
-import { useRouter, useSearchParams } from "next/navigation"
 import { DateRange } from "react-day-picker"
-import { addDays } from "date-fns"
-import { DatePickerWithRange } from "./date-range-picker"
-import { MultiSelect } from "./multi-select"
+import { Calendar as CalendarIcon, Check, ChevronDown, Link2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Filter, Calendar, RotateCcw, Check, Search, Bookmark } from "lucide-react"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { useHierarchyLabels } from "@/components/runtime-config";
+import { Calendar } from "@/components/ui/calendar"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useHierarchyLabels } from "@/components/runtime-config"
+import { cn } from "@/lib/utils"
+import { RANGE_PRESETS, type ListFilter, type MetricsFilters } from "@/lib/metrics/params"
+import { useMetricsNav } from "@/components/metrics/metrics-nav"
 
-interface MetricsFilterProps {
-  clusterOptions: string[]
-  accountOptions: string[]
-  userOptions: string[]
-  collegeOptions: string[]
-  departmentOptions: string[]
-  initialDateRange: {
-    from: string
-    to: string
-  }
+// The filter bar every metrics tab shares: date range, then one chip per
+// dimension. A chip's changes apply when its menu closes.
+
+export interface FilterOptions {
+  clusters: string[]
+  colleges: string[]
+  departments: string[]
+  accounts: string[]
+  users: string[]
+  partitions: string[]
+  qos: string[]
 }
 
-export function MetricsFilter({
-  clusterOptions,
-  accountOptions,
-  userOptions,
-  collegeOptions,
-  departmentOptions,
-  initialDateRange,
-}: MetricsFilterProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+const chip =
+  "inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border bg-card text-[13px] text-foreground/90 hover:border-foreground/30 hover:bg-muted/40 transition-colors"
 
-  // Initialize state from URL params
-  const [date, setDate] = React.useState<DateRange | undefined>(() => ({
-    from: new Date(searchParams.get("from") || initialDateRange.from),
-    to: new Date(searchParams.get("to") || initialDateRange.to),
-  }))
+function shortDate(date: string, withYear = false) {
+  const [y, m, d] = date.split("-").map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: withYear ? "numeric" : undefined,
+    timeZone: "UTC",
+  })
+}
 
-  const [selectedClusters, setSelectedClusters] = React.useState<string[]>(
-    searchParams.get("clusters")?.split(",") || []
-  )
-  const [selectedAccounts, setSelectedAccounts] = React.useState<string[]>(
-    searchParams.get("accounts")?.split(",") || []
-  )
-  const [selectedUsers, setSelectedUsers] = React.useState<string[]>(
-    searchParams.get("users")?.split(",") || []
-  )
-  const [selectedColleges, setSelectedColleges] = React.useState<string[]>(
-    searchParams.get("colleges")?.split(",") || []
-  )
-  const [selectedDepartments, setSelectedDepartments] = React.useState<string[]>(
-    searchParams.get("departments")?.split(",") || []
-  )
-  const [metric, setMetric] = React.useState<string>(
-    searchParams.get("metric") || "coreHours"
-  )
-  const [searchQuery, setSearchQuery] = React.useState<string>(
-    searchParams.get("search") || ""
-  )
+function toDateString(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
 
-  const { level1, level2 } = useHierarchyLabels();
+function fromDateString(s: string) {
+  const [y, m, d] = s.split("-").map(Number)
+  return new Date(y, m - 1, d)
+}
 
-  // Auto-apply helper for immediate refresh (metric, date preset)
-  const autoApply = React.useCallback((overrides: { metric?: string; date?: DateRange }) => {
-    const params = new URLSearchParams()
-    const effectiveDate = overrides.date || date
-    const effectiveMetric = overrides.metric || metric
+function DateChip() {
+  const { params, fromDate, toDate, navigate } = useMetricsNav()
+  const [open, setOpen] = React.useState(false)
+  const [draft, setDraft] = React.useState<DateRange | undefined>()
+  const preset = RANGE_PRESETS.find((p) => p.value === params.filters.range)
+  const sameYear = fromDate.slice(0, 4) === toDate.slice(0, 4)
 
-    if (effectiveDate?.from) params.set("from", effectiveDate.from.toISOString())
-    if (effectiveDate?.to) params.set("to", effectiveDate.to.toISOString())
-    if (selectedClusters.length) params.set("clusters", selectedClusters.join(","))
-    if (selectedAccounts.length) params.set("accounts", selectedAccounts.join(","))
-    if (selectedUsers.length) params.set("users", selectedUsers.join(","))
-    if (selectedColleges.length) params.set("colleges", selectedColleges.join(","))
-    if (selectedDepartments.length) params.set("departments", selectedDepartments.join(","))
-    if (searchQuery) params.set("search", searchQuery)
-    params.set("metric", effectiveMetric)
-
-    router.push(`/metrics?${params.toString()}`)
-  }, [date, metric, selectedClusters, selectedAccounts, selectedUsers, selectedColleges, selectedDepartments, searchQuery, router])
-
-  const handleApply = () => {
-    const params = new URLSearchParams()
-    if (date?.from) params.set("from", date.from.toISOString())
-    if (date?.to) params.set("to", date.to.toISOString())
-    if (selectedClusters.length) params.set("clusters", selectedClusters.join(","))
-    if (selectedAccounts.length) params.set("accounts", selectedAccounts.join(","))
-    if (selectedUsers.length) params.set("users", selectedUsers.join(","))
-    if (selectedColleges.length) params.set("colleges", selectedColleges.join(","))
-    if (selectedDepartments.length) params.set("departments", selectedDepartments.join(","))
-    if (searchQuery) params.set("search", searchQuery)
-    params.set("metric", metric)
-
-    router.push(`/metrics?${params.toString()}`)
+  const apply = (filters: Partial<MetricsFilters>) => {
+    setOpen(false)
+    navigate((p) => ({ ...p, jobs: { ...p.jobs, page: 1 }, filters: { ...p.filters, ...filters } }))
   }
-
-  const handleReset = () => {
-    setDate({ from: addDays(new Date(), -30), to: new Date() })
-    setSelectedClusters([])
-    setSelectedAccounts([])
-    setSelectedUsers([])
-    setSelectedColleges([])
-    setSelectedDepartments([])
-    setMetric("coreHours")
-    setSearchQuery("")
-    router.push("/metrics")
-  }
-
-  const handlePresetChange = (value: string) => {
-    const now = new Date();
-    let newDate: DateRange | undefined;
-    switch (value) {
-      case "24h":
-        newDate = { from: addDays(now, -1), to: now };
-        break;
-      case "7d":
-        newDate = { from: addDays(now, -7), to: now };
-        break;
-      case "30d":
-        newDate = { from: addDays(now, -30), to: now };
-        break;
-      case "90d":
-        newDate = { from: addDays(now, -90), to: now };
-        break;
-      case "1y":
-        newDate = { from: addDays(now, -365), to: now };
-        break;
-    }
-    if (newDate) {
-      setDate(newDate);
-      autoApply({ date: newDate });
-    }
-  };
-
-  const handleMetricChange = (value: string) => {
-    if (value) {
-      setMetric(value);
-      autoApply({ metric: value });
-    }
-  };
-
-  // Dashboard preset views
-  const handlePresetViewChange = (preset: string) => {
-    const now = new Date();
-
-    switch (preset) {
-      case "executive":
-        // Executive Summary: 30 days, Core Hours
-        setDate({ from: addDays(now, -30), to: now });
-        setMetric("coreHours");
-        setSelectedClusters([]);
-        setSelectedAccounts([]);
-        setSelectedUsers([]);
-        autoApply({
-          date: { from: addDays(now, -30), to: now },
-          metric: "coreHours"
-        });
-        break;
-      case "gpu":
-        // GPU Focus: 7 days
-        setDate({ from: addDays(now, -7), to: now });
-        setMetric("coreHours");
-        autoApply({
-          date: { from: addDays(now, -7), to: now },
-          metric: "coreHours"
-        });
-        break;
-      case "queue":
-        // Queue Health: 24 hours
-        setDate({ from: addDays(now, -1), to: now });
-        setMetric("jobCount");
-        autoApply({
-          date: { from: addDays(now, -1), to: now },
-          metric: "jobCount"
-        });
-        break;
-      case "quarterly":
-        // Quarterly Report: 90 days
-        setDate({ from: addDays(now, -90), to: now });
-        setMetric("coreHours");
-        autoApply({
-          date: { from: addDays(now, -90), to: now },
-          metric: "coreHours"
-        });
-        break;
-    }
-  };
 
   return (
-    <Card className="mb-6 shadow-md">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-full">
-              <Filter className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-xl">Filters</CardTitle>
-              <p className="text-sm text-muted-foreground">Refine your metrics view</p>
-            </div>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (o) setDraft({ from: fromDateString(fromDate), to: fromDateString(toDate) })
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button type="button" className={chip}>
+          <CalendarIcon className="h-3.5 w-3.5" />
+          {preset ? preset.label : "Custom range"}
+          <span className="text-muted-foreground">
+            {shortDate(fromDate, !sameYear)} – {shortDate(toDate, !sameYear)}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <div className="flex flex-col sm:flex-row">
+          <div className="flex sm:flex-col gap-1 p-2 sm:border-r border-b sm:border-b-0 flex-wrap">
+            {RANGE_PRESETS.map((p) => (
+              <Button
+                key={p.value}
+                variant={params.filters.range === p.value ? "secondary" : "ghost"}
+                size="sm"
+                className="justify-start"
+                onClick={() => apply({ range: p.value, fromDate: undefined, toDate: undefined })}
+              >
+                {p.label}
+              </Button>
+            ))}
           </div>
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1 justify-end">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users, groups, departments..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleApply()}
-              />
-            </div>
-
-            <Select onValueChange={handlePresetViewChange}>
-              <SelectTrigger className="w-[150px]">
-                <Bookmark className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Presets" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="executive">Executive Summary</SelectItem>
-                <SelectItem value="gpu">GPU Focus</SelectItem>
-                <SelectItem value="queue">Queue Health</SelectItem>
-                <SelectItem value="quarterly">Quarterly Report</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select onValueChange={handlePresetChange}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Quick Date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24h">Last 24 Hours</SelectItem>
-                <SelectItem value="7d">Last 7 Days</SelectItem>
-                <SelectItem value="30d">Last 30 Days</SelectItem>
-                <SelectItem value="90d">Last 3 Months</SelectItem>
-                <SelectItem value="1y">Last Year</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="h-8 w-[1px] bg-border hidden sm:block" />
-
-            <ToggleGroup type="single" value={metric} onValueChange={handleMetricChange} className="border rounded-md p-1 bg-background">
-              <ToggleGroupItem value="coreHours" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Core Hours</ToggleGroupItem>
-              <ToggleGroupItem value="jobCount" size="sm" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Job Count</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Time & Location */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              <Calendar className="w-4 h-4" />
-              Time & Location
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Date Range</Label>
-                <DatePickerWithRange date={date} setDate={setDate} className="w-full" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Clusters</Label>
-                <MultiSelect
-                  options={clusterOptions.map(c => ({ label: c, value: c }))}
-                  selected={selectedClusters}
-                  onChange={setSelectedClusters}
-                  placeholder="Select clusters"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Organization */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              <div className="w-4 h-4 rounded-full border-2 border-current" />
-              Organization
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>{level1}s</Label>
-                <MultiSelect
-                  options={collegeOptions.map(c => ({ label: c, value: c }))}
-                  selected={selectedColleges}
-                  onChange={setSelectedColleges}
-                  placeholder={`Select ${level1.toLowerCase()}s`}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{level2}s</Label>
-                <MultiSelect
-                  options={departmentOptions.map(d => ({ label: d, value: d }))}
-                  selected={selectedDepartments}
-                  onChange={setSelectedDepartments}
-                  placeholder={`Select ${level2.toLowerCase()}s`}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Identity */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              <div className="w-4 h-4 rounded-sm border-2 border-current" />
-              Identity
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Accounts / Groups</Label>
-                <MultiSelect
-                  options={accountOptions.map(a => ({ label: a, value: a }))}
-                  selected={selectedAccounts}
-                  onChange={setSelectedAccounts}
-                  placeholder="Select accounts"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Users</Label>
-                <MultiSelect
-                  options={userOptions.map(u => ({ label: u, value: u }))}
-                  selected={selectedUsers}
-                  onChange={setSelectedUsers}
-                  placeholder="Select users"
-                />
-              </div>
+          <div className="flex flex-col">
+            <Calendar mode="range" defaultMonth={draft?.from} selected={draft} onSelect={setDraft} numberOfMonths={2} />
+            <div className="flex justify-end gap-2 px-3 pb-3">
+              <Button
+                size="sm"
+                disabled={!draft?.from}
+                onClick={() =>
+                  draft?.from &&
+                  apply({ range: "custom", fromDate: toDateString(draft.from), toDate: toDateString(draft.to ?? draft.from) })
+                }
+              >
+                Apply
+              </Button>
             </div>
           </div>
         </div>
-      </CardContent>
-      <CardFooter className="flex justify-end gap-3 bg-muted/10 py-4">
-        <Button variant="ghost" onClick={handleReset} className="gap-2 hover:bg-destructive/10 hover:text-destructive">
-          <RotateCcw className="w-4 h-4" />
-          Reset
-        </Button>
-        <Button onClick={handleApply} className="gap-2 min-w-[140px] shadow-sm">
-          <Check className="w-4 h-4" />
-          Apply Filters
-        </Button>
-      </CardFooter>
-    </Card>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function FilterChip({ name, filter, options }: { name: string; filter: ListFilter; options: string[] }) {
+  const { params, navigate } = useMetricsNav()
+  const selected = params.filters[filter]
+  const [open, setOpen] = React.useState(false)
+  const [draft, setDraft] = React.useState<string[]>(selected)
+
+  const commit = (values: string[]) => {
+    const same = values.length === selected.length && values.every((v) => selected.includes(v))
+    if (!same) navigate((p) => ({ ...p, jobs: { ...p.jobs, page: 1 }, filters: { ...p.filters, [filter]: values } }))
+  }
+
+  // Values in the URL that aren't in the option list still show and can be removed
+  const all = [...selected.filter((s) => !options.includes(s)), ...options]
+  const label =
+    selected.length === 0 ? name : selected.length === 1 ? `${name}: ${selected[0]}` : `${name}: ${selected.length} selected`
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (o) setDraft(selected)
+        else commit(draft)
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button type="button" className={cn(chip, selected.length > 0 && "border-foreground/40 bg-muted/50")}>
+          <span className="max-w-[14rem] truncate">{label}</span>
+          {selected.length > 0 ? (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={`Clear ${name}`}
+              className="rounded-sm text-muted-foreground hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+                commit([])
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  commit([])
+                }
+              }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </span>
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder={`Search ${name.toLowerCase()}…`} />
+          <CommandList>
+            <CommandEmpty>No matches.</CommandEmpty>
+            <CommandGroup className="max-h-64 overflow-auto">
+              {all.map((option) => (
+                <CommandItem
+                  key={option}
+                  value={option}
+                  onSelect={() => setDraft((d) => (d.includes(option) ? d.filter((v) => v !== option) : [...d, option]))}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", draft.includes(option) ? "opacity-100" : "opacity-0")} />
+                  <span className="truncate">{option}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+        {draft.length > 0 && (
+          <div className="border-t p-1">
+            <Button variant="ghost" size="sm" className="w-full" onClick={() => setDraft([])}>
+              Clear selection
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+export function CopyLinkButton() {
+  const { params, linkFor } = useMetricsNav()
+  const [copied, setCopied] = React.useState(false)
+  return (
+    <button
+      type="button"
+      className={chip}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(linkFor(params))
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch {
+          // Clipboard blocked (e.g. plain http): fall back to the address bar
+          window.prompt("Copy this link", linkFor(params))
+        }
+      }}
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+      {copied ? "Copied" : "Copy link"}
+    </button>
+  )
+}
+
+export function MetricsFilter({ options, children }: { options: FilterOptions; children?: React.ReactNode }) {
+  const { hierarchy } = useMetricsNav()
+  const { level1, level2 } = useHierarchyLabels()
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <DateChip />
+      <FilterChip name="Cluster" filter="clusters" options={options.clusters} />
+      {hierarchy && <FilterChip name={level1} filter="colleges" options={options.colleges} />}
+      {hierarchy && <FilterChip name={level2} filter="departments" options={options.departments} />}
+      <FilterChip name="Account" filter="accounts" options={options.accounts} />
+      <FilterChip name="User" filter="users" options={options.users} />
+      <FilterChip name="Partition" filter="partitions" options={options.partitions} />
+      <FilterChip name="QoS" filter="qos" options={options.qos} />
+      <div className="flex-1" />
+      {children}
+      <CopyLinkButton />
+    </div>
   )
 }
