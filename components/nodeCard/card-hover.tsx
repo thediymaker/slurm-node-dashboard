@@ -1,15 +1,6 @@
-import React, { memo, useMemo } from "react";
-import {
-  ServerIcon,
-  CpuIcon,
-  MemoryStick,
-  Activity,
-  LayersIcon,
-  OctagonIcon,
-  BoltIcon,
-  AlertCircle,
-} from "lucide-react";
+import { memo, useMemo } from "react";
 import { CardHoverProps, GPUResources } from "@/types/types";
+import { cn } from "@/lib/utils";
 import GPUResourcesDisplay from "./gpu-resource";
 
 const parseGPUResources = (gres: string, gresUsed: string): GPUResources => {
@@ -64,99 +55,76 @@ const parseGPUResources = (gres: string, gresUsed: string): GPUResources => {
   return resources;
 };
 
-const CardHover = memo(({ nodeData, cpuLoad, statusDef }: CardHoverProps) => {
-  // Memoize expensive calculations
+interface HoverProps {
+  nodeData: CardHoverProps["nodeData"];
+  cpuLoad: number;
+  // State label and the card's background class, for the dot
+  stateLabel: string;
+  stateClass: string;
+}
+
+const CardHover = memo(({ nodeData, cpuLoad, stateLabel, stateClass }: HoverProps) => {
   const gpuResources = useMemo(
     () => parseGPUResources(nodeData.gres, nodeData.gres_used),
     [nodeData.gres, nodeData.gres_used]
   );
-  const memUsedGB = useMemo(() => (nodeData.alloc_memory / 1024).toFixed(1), [nodeData.alloc_memory]);
-  const memTotalGB = useMemo(() => (nodeData.real_memory / 1024).toFixed(1), [nodeData.real_memory]);
-  const memPercent = useMemo(
-    () => Math.round((nodeData.alloc_memory / nodeData.real_memory) * 100),
-    [nodeData.alloc_memory, nodeData.real_memory]
-  );
+  const memUsedGB = (nodeData.alloc_memory / 1024).toFixed(1);
+  const memTotalGB = (nodeData.real_memory / 1024).toFixed(1);
+  const watts = nodeData.energy?.current_watts?.number ?? 0;
+  const chips = [...(nodeData.partitions ?? []), ...(nodeData.features ?? [])];
 
   return (
-    <div className="space-y-2">
-      {/* Header */}
-      <div className="flex items-center gap-1.5">
-        <ServerIcon className="h-4 w-4" />
-        <span className="text-base font-bold">{nodeData.hostname}</span>
+    <div className="flex flex-col gap-2.5 text-xs">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-mono text-sm font-semibold">{nodeData.hostname}</span>
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <span className={cn("h-2 w-2 rounded-full", stateClass)} />
+          {stateLabel}
+        </span>
       </div>
 
-      {/* Resource Stats - Inline */}
-      <div className="flex gap-3 text-xs">
-        <div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 tabular-nums">
+        <span>
           <span className="text-muted-foreground">CPU </span>
-          <span className="font-medium">{nodeData.alloc_cpus}/{nodeData.cpus}</span>
-        </div>
-        <div>
+          {nodeData.alloc_cpus}/{nodeData.cpus}
+        </span>
+        <span>
           <span className="text-muted-foreground">Mem </span>
-          <span className="font-medium">{memUsedGB}/{memTotalGB}G</span>
-        </div>
-        <div>
+          {memUsedGB}/{memTotalGB} GB
+        </span>
+        <span>
           <span className="text-muted-foreground">Load </span>
-          <span className="font-medium">{Math.round(cpuLoad * 100)}%</span>
-        </div>
-      </div>
-
-      {/* Power Usage */}
-      {nodeData.energy && nodeData.energy.current_watts.number > 0 && (
-        <div className="text-xs flex gap-3">
-          <div>
+          {Math.round(cpuLoad * 100)}%
+        </span>
+        {watts > 0 && (
+          <span>
             <span className="text-muted-foreground">Power </span>
-            <span className="font-medium">{nodeData.energy.current_watts.number}W</span>
-          </div>
-          {nodeData.energy.average_watts > 0 && (
-            <div>
-              <span className="text-muted-foreground">Avg </span>
-              <span className="font-medium">{nodeData.energy.average_watts}W</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Features & Partitions - Combined row */}
-      <div className="flex flex-wrap gap-1">
-        {nodeData.features?.map((feature, index) => (
-          <span key={`f-${index}`} className="px-1.5 py-0.5 bg-muted dark:bg-zinc-800 text-muted-foreground dark:text-zinc-200 rounded text-[10px]">
-            {feature}
+            {watts} W
           </span>
-        ))}
-        {nodeData.partitions?.map((partition, index) => (
-          <span key={`p-${index}`} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded text-[10px]">
-            {partition}
-          </span>
-        ))}
-      </div>
-
-      {/* GPU Resources */}
-      {nodeData.gres && (
-        <div className="border-t border-border pt-2">
-          <div className="text-[10px] text-muted-foreground font-mono mb-1">
-            <div>GRES: {nodeData.gres}</div>
-            <div>GRES Used: {nodeData.gres_used}</div>
-          </div>
-          <GPUResourcesDisplay
-            gpuResources={gpuResources}
-            hostname={nodeData.hostname}
-            nodeData={nodeData}
-          />
-        </div>
-      )}
-
-      {/* Status */}
-      <div className="border-t border-border pt-2">
-        <div className="px-2 py-1.5 bg-muted dark:bg-zinc-800 text-foreground rounded text-xs">
-          {statusDef}
-        </div>
-        {nodeData.reason && (
-          <div className="mt-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/50 rounded text-[10px] text-yellow-800 dark:text-yellow-200">
-            {nodeData.reason}
-          </div>
         )}
       </div>
+
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {chips.map((chip, i) => (
+            <span key={`${chip}-${i}`} className="rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {nodeData.gres && (
+        <div className="border-t pt-2">
+          <GPUResourcesDisplay gpuResources={gpuResources} hostname={nodeData.hostname} nodeData={nodeData} />
+        </div>
+      )}
+
+      {nodeData.reason && (
+        <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-2 py-1.5 text-yellow-800 dark:text-yellow-200">
+          {nodeData.reason}
+        </div>
+      )}
     </div>
   );
 });

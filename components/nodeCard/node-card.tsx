@@ -7,7 +7,6 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import NodeCardModal from "@/components/modals/card-job-modal";
-import { getStatusDef } from "@/utils/nodes";
 import CardHover from "./card-hover";
 import { parseGPUResources } from "@/utils/gpu-parse";
 import { NodeCardProps } from "@/types/types";
@@ -70,8 +69,8 @@ function GpuSegments({ model, height }: { model: CardModel; height: number }) {
 }
 
 const SmallCardContent = memo(({ model }: { model: CardModel }) => (
-  <div className="flex h-full flex-col justify-between p-[5px]">
-    <div className="truncate text-[9px] font-bold uppercase leading-none" title={model.name}>
+  <div className="flex h-full flex-col justify-between p-1">
+    <div className="truncate text-[9px] font-bold uppercase leading-none tracking-tight" title={model.name}>
       {model.name}
     </div>
     <div className="flex flex-col gap-0.5">
@@ -165,7 +164,8 @@ const LargeCardContent = memo(
             <path d={trend.line} fill="none" stroke="currentColor" strokeOpacity={0.45} strokeWidth={1} vectorEffect="non-scaling-stroke" />
           </svg>
         )}
-        <div className="relative flex items-baseline justify-between gap-1">
+        {/* Power and temperature get their own line so long names aren't cut off */}
+        <div className="relative flex min-w-0 flex-col gap-0.5">
           <span className="inline-flex min-w-0 items-center gap-[5px]">
             <span className="truncate text-[16px] font-bold uppercase leading-tight" title={model.name}>
               {model.name}
@@ -241,7 +241,6 @@ export const NodeCard = memo(({
     () => getStatusColor(props.status, colorSchema),
     [props.status, colorSchema]
   );
-  const statusDef = useMemo(() => getStatusDef(props.status), [props.status]);
   const size = props.size === 50 || props.size === 150 ? props.size : 100;
 
   const model = useMemo<CardModel>(() => {
@@ -340,11 +339,12 @@ export const NodeCard = memo(({
           )}
         </div>
       </HoverCardTrigger>
-      <HoverCardContent className="w-96 m-5 font-extralight text-sm">
+      <HoverCardContent className="m-5 w-80">
         <CardHover
           nodeData={props.nodeData}
           cpuLoad={parseFloat((model.loadPct / 100).toFixed(2))}
-          statusDef={statusDef}
+          stateLabel={STATE_LABELS[model.state]}
+          stateClass={background}
         />
       </HoverCardContent>
       {open && <NodeCardModal open={open} setOpen={setOpen} nodename={props.name} />}
