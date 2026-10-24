@@ -52,7 +52,8 @@ export function SystemInfoPanel() {
         ? formatUptime(Math.floor(Date.now() / 1000) - serverStartTime)
         : "Unknown";
 
-    const apiVersion = process.env.NEXT_PUBLIC_SLURM_API_VERSION ?? "v0.0.40";
+    // The API version slurmrestd actually answered with, e.g. "data_parser/v0.0.42"
+    const apiVersion = diagData?.meta?.plugin?.data_parser?.replace("data_parser/", "") ?? "Unknown";
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "localhost:3000";
     const nodeEnv = process.env.NODE_ENV ?? "development";
 
