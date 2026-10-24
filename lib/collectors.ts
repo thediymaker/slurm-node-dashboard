@@ -124,7 +124,9 @@ async function lead(jobs: Job[]) {
       client = await pool.connect();
       const { rows } = await client.query("SELECT pg_try_advisory_lock($1) AS locked", [LEADER_LOCK_KEY]);
       if (rows[0]?.locked) {
-        console.log(`[collectors] collecting: ${jobs.map((j) => j.name).join(", ") || "nothing enabled"}`);
+        console.log(
+          `[collectors] this process collects; scheduled: ${jobs.map((j) => j.name).join(", ") || "nothing"} (each runs while its feature is on)`
+        );
         await runWhileConnected(client, jobs);
         console.warn("[collectors] lost the database connection holding the leader lock");
       }
