@@ -25,9 +25,9 @@ interface NodeMetricsPanelProps {
   } | null;
   metricName: string;
   isLoading?: boolean;
-  // Metric and range pickers, shown at the right of the header
+  // Pickers on their own row under the title
   controls?: React.ReactNode;
-  // Extra summary next to the title
+  // Shown at the right of the title row
   aside?: React.ReactNode;
 }
 
@@ -213,10 +213,10 @@ export function NodeMetricsPanel({ data, metricName, isLoading, controls, aside 
 
   return (
     <Card className="p-4 space-y-3">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <h3 className="text-sm font-semibold">{displayInfo.label}</h3>
         {isLoading ? (
-          <Skeleton className="h-3.5 w-36 self-center" />
+          <Skeleton className="h-3.5 w-36" />
         ) : stats ? (
           <span className="text-xs text-muted-foreground tabular-nums" title={displayInfo.description}>
             now {formatValue(stats.current)}{unit} · avg {formatValue(stats.avg)} · min {formatValue(stats.min)} · peak {formatValue(stats.max)}

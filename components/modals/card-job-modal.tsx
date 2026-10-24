@@ -441,8 +441,8 @@ const RunningJobsTable = ({
   onSelect: (jobId: string) => void;
 }) => {
   const columns = showGpu
-    ? "grid-cols-[84px_minmax(0,1.4fr)_minmax(0,1fr)_76px_100px_76px]"
-    : "grid-cols-[84px_minmax(0,1.4fr)_minmax(0,1fr)_76px_76px]";
+    ? "grid-cols-[84px_minmax(0,1.4fr)_minmax(0,1fr)_92px_100px_76px]"
+    : "grid-cols-[84px_minmax(0,1.4fr)_minmax(0,1fr)_60px_76px]";
 
   return (
     <div className="overflow-x-auto rounded-lg border bg-card">
@@ -533,9 +533,11 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
   );
 
   // SWR hooks with stable fetcher reference
+  // The grid already refreshes the node list, so cached data isn't refetched
   const { data: nodesData, isLoading: nodesIsLoading } = useSWR<{ nodes: NodeInfo[] }>(
     open ? nodesURL : null,
-    nodesFetcher
+    nodesFetcher,
+    { revalidateIfStale: false }
   );
 
   const {
@@ -675,7 +677,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
       />
       {activeGroup && activeGroup.metrics.length > 1 && (
         <Select value={metricValue} onValueChange={setMetricValue}>
-          <SelectTrigger className="h-8 w-[190px] text-xs" aria-label="Metric">
+          <SelectTrigger className="h-8 w-[180px] text-xs" aria-label="Metric">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -688,13 +690,17 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
         </Select>
       )}
       <div className="flex-1" />
-      <SegmentedControl
-        aria-label="Time range"
-        value={daysValue}
-        onValueChange={setDaysValue}
-        options={dayArray.map((d) => ({ value: d.value, label: RANGE_LABELS[d.value] ?? d.label }))}
-      />
+      <NodeUtilization nodeName={nodename} className="text-xs" />
     </>
+  );
+
+  const rangeControl = (
+    <SegmentedControl
+      aria-label="Time range"
+      value={daysValue}
+      onValueChange={setDaysValue}
+      options={dayArray.map((d) => ({ value: d.value, label: RANGE_LABELS[d.value] ?? d.label }))}
+    />
   );
 
   const errorBanner = jobError ? (
@@ -711,7 +717,12 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
         hideClose
         aria-describedby={undefined}
         overlayClassName="bg-black/50"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-[760px]"
+        onOpenAutoFocus={(e) => {
+          // Focus the sheet itself rather than its first button
+          e.preventDefault();
+          (e.currentTarget as HTMLElement).focus();
+        }}
+        className="flex w-full flex-col gap-0 p-0 focus:outline-none sm:max-w-[760px]"
       >
         <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
           {/* Header */}
@@ -819,7 +830,7 @@ const NodeCardModal: React.FC<NodeCardModalProps> = ({
                   metricName={metricValue}
                   isLoading={promIsLoading}
                   controls={metricControls}
-                  aside={<NodeUtilization nodeName={nodename} className="text-xs" />}
+                  aside={rangeControl}
                 />
               )}
 
