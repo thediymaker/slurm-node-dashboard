@@ -112,7 +112,7 @@ export function OverviewTab({ data }: { data: OverviewData }) {
           })}
         >
           <div className="overflow-x-auto">
-            <table className="w-full text-sm tabular-nums">
+            <table className="w-full text-sm tabular-nums whitespace-nowrap">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   <th className="text-left font-normal pb-1.5">Account</th>
