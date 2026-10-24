@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { GroupBy } from "./node-grid";
 import { type CardSize, STATE_LABELS, STATE_ORDER } from "./node-view";
 
-function Segmented<T extends string | number>({
+export function Segmented<T extends string | number>({
   label,
   value,
   options,

@@ -1,195 +1,325 @@
 "use client";
-import React, { useMemo, useState, useEffect } from "react";
-import { format } from "date-fns";
-import useSWR from "swr";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NodeGrid } from "@/components/nodeCard/node-grid";
-import { useColorSchema } from "@/components/use-color-schema";
-import { RingLoader } from "react-spinners";
-import { DateTimePicker } from "@/components/date-time";
-import { HistoricalNode } from "@/types/types";
-import { withBasePath } from "@/lib/base-path";
 
-interface NodeStats {
-  total: number;
-  cpu: number;
-  gpu: number;
-  idle: number;
-  allocated: number;
-  down: number;
+import { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
+import { format, formatDistanceToNow } from "date-fns";
+import { CalendarDays, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
+import { NodeGroups, type GroupBy } from "@/components/nodeCard/node-grid";
+import { Segmented } from "@/components/nodeCard/node-toolbar";
+import { STATE_LABELS, STATE_ORDER, stateColors, stateOf, type CardSize } from "@/components/nodeCard/node-view";
+import { useColorSchema } from "@/components/use-color-schema";
+import type { NodeState } from "@/lib/node-history";
+import type { HistoricalNode } from "@/types/types";
+import { withBasePath } from "@/lib/base-path";
+import { cn } from "@/lib/utils";
+
+const DAYS = 7;
+const BUSY: NodeState[] = ["allocated", "mixed", "draining"];
+
+interface TimelineHour {
+  hour: string;
+  snapshot: boolean;
+  seconds: Partial<Record<NodeState, number>> | null;
 }
 
-const fetcher = async (url: string): Promise<{ nodes: HistoricalNode[] }> => {
+const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(
-      errorData.message || "An error occurred while fetching the data."
-    );
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || "Couldn't load Rewind data.");
   }
   return res.json();
 };
 
+// Share of node time spent busy in an hour, from node history
+function busyShare(seconds: TimelineHour["seconds"]): number | null {
+  if (!seconds) return null;
+  let busy = 0;
+  let total = 0;
+  for (const [state, s] of Object.entries(seconds)) {
+    total += s ?? 0;
+    if (BUSY.includes(state as NodeState)) busy += s ?? 0;
+  }
+  return total > 0 ? busy / total : null;
+}
+
+function endOfDay(day: Date): Date {
+  const end = new Date(day);
+  end.setHours(23, 59, 59, 999);
+  return end.getTime() > Date.now() ? new Date() : end;
+}
+
 const DashboardHistory = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedTime, setSelectedTime] = useState<string | undefined>(
-    undefined
-  );
-  const [isMounted, setIsMounted] = useState(false);
-  const [retrying, setRetrying] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    const now = new Date();
-    setSelectedDate(now);
-    setSelectedTime(format(now, "HH:00"));
-  }, []);
-
-  const { data: historicalData, error, isValidating } = useSWR(
-    isMounted && selectedDate && selectedTime
-      ? withBasePath(`/api/rewind?date=${format(
-          selectedDate,
-          "yyyy-MM-dd"
-        )}&time=${selectedTime}`)
-      : null,
-    fetcher
-  );
-
-  const systems: HistoricalNode[] = historicalData?.nodes || [];
   const [colorSchema] = useColorSchema();
+  // The timeline shows the week ending here; undefined follows "now"
+  const [windowEnd, setWindowEnd] = useState<Date | undefined>(undefined);
+  // The chosen hour; undefined means the latest snapshot in the window
+  const [picked, setPicked] = useState<number | undefined>(undefined);
+  const [playing, setPlaying] = useState(false);
+  const [size, setSize] = useState<CardSize>(100);
+  const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Single-pass calculation for all node statistics
-  const nodeStats: NodeStats = useMemo(() => {
-    const stats: NodeStats = {
-      total: 0,
-      cpu: 0,
-      gpu: 0,
-      idle: 0,
-      allocated: 0,
-      down: 0,
-    };
+  const timelineUrl = withBasePath(
+    `/api/rewind/timeline?days=${DAYS}${windowEnd ? `&end=${encodeURIComponent(windowEnd.toISOString())}` : ""}`
+  );
+  const { data: timeline, error: timelineError } = useSWR<{ hours: TimelineHour[] }>(timelineUrl, fetcher, {
+    refreshInterval: windowEnd ? 0 : 5 * 60 * 1000,
+  });
+  const hours = useMemo(() => timeline?.hours ?? [], [timeline]);
+  const snapshotTimes = useMemo(() => hours.filter((h) => h.snapshot).map((h) => Date.parse(h.hour)), [hours]);
 
-    for (const node of systems) {
-      stats.total++;
-      if (node.gres) stats.gpu++;
-      else stats.cpu++;
+  const selected = picked ?? snapshotTimes[snapshotTimes.length - 1];
+  const index = selected === undefined ? -1 : snapshotTimes.indexOf(selected);
 
-      const state = node.state?.[0] || "";
-      if (state === "IDLE") stats.idle++;
-      else if (state === "ALLOCATED") stats.allocated++;
-      else if (state === "DOWN") stats.down++;
-    }
+  const { data: snapshot, error: snapshotError, isLoading: snapshotLoading } = useSWR<{ nodes: HistoricalNode[] }>(
+    selected !== undefined ? withBasePath(`/api/rewind?at=${encodeURIComponent(new Date(selected).toISOString())}`) : null,
+    fetcher,
+    { keepPreviousData: true }
+  );
+  const nodes = useMemo(() => snapshot?.nodes ?? [], [snapshot]);
 
-    return stats;
-  }, [systems]);
-
-  const handleRetry = () => {
-    setRetrying(true);
-    // SWR will automatically retry the fetch
-    setTimeout(() => setRetrying(false), 1000);
+  const step = (delta: number) => {
+    const next = snapshotTimes[index + delta];
+    if (next !== undefined) setPicked(next);
   };
 
-  if (!isMounted) {
-    return (
-      <div className="flex justify-center items-center w-full h-full">
-        <RingLoader color="white" size={64} />
-      </div>
-    );
-  }
+  // Play steps forward through the snapshots and stops at the newest
+  useEffect(() => {
+    if (!playing) return;
+    const timer = setInterval(() => {
+      setPicked((current) => {
+        const at = snapshotTimes.indexOf(current ?? snapshotTimes[snapshotTimes.length - 1]);
+        if (at < 0 || at >= snapshotTimes.length - 1) {
+          setPlaying(false);
+          return current;
+        }
+        return snapshotTimes[at + 1];
+      });
+    }, 1200);
+    return () => clearInterval(timer);
+  }, [playing, snapshotTimes]);
+
+  const counts = useMemo(() => {
+    const map = new Map<NodeState, number>();
+    for (const node of nodes) map.set(stateOf(node), (map.get(stateOf(node)) ?? 0) + 1);
+    return map;
+  }, [nodes]);
+  const colors = stateColors(colorSchema);
+
+  // Day labels under the timeline, one per local day
+  const dayLabels = useMemo(() => {
+    const seen = new Map<string, number>();
+    hours.forEach((h, i) => {
+      const label = format(new Date(h.hour), "EEE d");
+      if (!seen.has(label)) seen.set(label, i);
+    });
+    return [...seen.entries()];
+  }, [hours]);
+
+  const noSnapshots = timeline && snapshotTimes.length === 0;
 
   return (
-    <div className="py-6 w-[90%] mx-auto" role="main" aria-label="Historical Dashboard">
-      <div className="mb-6">
-        <DateTimePicker
-          date={selectedDate}
-          setDate={setSelectedDate}
-          time={selectedTime}
-          setTime={setSelectedTime}
-        />
-      </div>
-      {error && (
-        <div className="text-red-500 mb-4 p-4 bg-red-500/10 rounded-lg border border-red-500/20" role="alert" aria-live="assertive">
-          <p className="font-semibold">Error loading historical data</p>
-          <p className="text-sm mt-1">{error.message}</p>
-          <button
-            onClick={handleRetry}
-            className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
-            disabled={retrying}
+    <div className="mb-20 flex flex-col gap-4" aria-label="Rewind">
+      <section aria-label="Timeline" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-xl font-semibold tabular-nums">
+              {selected !== undefined ? format(new Date(selected), "EEE MMM d, HH:mm") : "No snapshot selected"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {selected !== undefined
+                ? `${formatDistanceToNow(new Date(selected), { addSuffix: true })} · hourly snapshot`
+                : noSnapshots
+                  ? "No snapshots in this week"
+                  : "Loading snapshots…"}
+            </span>
+          </div>
+          <div className="flex-1" />
+          <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Previous snapshot" disabled={index <= 0} onClick={() => step(-1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            aria-label={playing ? "Pause" : "Play"}
+            disabled={snapshotTimes.length < 2}
+            onClick={() => {
+              // Playing from the newest snapshot starts at the beginning of the week
+              if (!playing && index === snapshotTimes.length - 1) setPicked(snapshotTimes[0]);
+              setPlaying(!playing);
+            }}
           >
-            {retrying ? "Retrying..." : "Retry"}
-          </button>
+            {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            aria-label="Next snapshot"
+            disabled={index < 0 || index >= snapshotTimes.length - 1}
+            onClick={() => step(1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-2 text-[13px] font-normal">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Pick a date
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selected !== undefined ? new Date(selected) : undefined}
+                disabled={{ after: new Date() }}
+                onSelect={(day) => {
+                  if (!day) return;
+                  setPlaying(false);
+                  setWindowEnd(endOfDay(day));
+                  setPicked(undefined);
+                  setCalendarOpen(false);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-[13px] font-normal"
+            onClick={() => {
+              setPlaying(false);
+              setWindowEnd(undefined);
+              setPicked(undefined);
+            }}
+          >
+            Now
+          </Button>
+        </div>
+
+        {timeline ? (
+          <>
+            <div
+              className="flex h-16 items-end gap-px border-b"
+              role="group"
+              aria-label={`Busy node time per hour over ${DAYS} days; pick an hour with a snapshot`}
+            >
+              {hours.map((h) => {
+                const t = Date.parse(h.hour);
+                const share = busyShare(h.seconds);
+                const isSelected = t === selected;
+                const label = `${format(new Date(t), "EEE MMM d, HH:mm")}${share !== null ? `, ${Math.round(share * 100)}% busy` : ""}${h.snapshot ? "" : ", no snapshot"}`;
+                return (
+                  <button
+                    key={h.hour}
+                    type="button"
+                    title={label}
+                    aria-label={label}
+                    aria-pressed={isSelected}
+                    disabled={!h.snapshot}
+                    onClick={() => {
+                      setPlaying(false);
+                      setPicked(t);
+                    }}
+                    className="group flex h-full min-w-0 flex-1 items-end disabled:cursor-default"
+                  >
+                    <span
+                      className={cn(
+                        "w-full rounded-t-[1px] transition-colors",
+                        isSelected
+                          ? "bg-foreground"
+                          : h.snapshot
+                            ? "bg-muted-foreground/50 group-hover:bg-muted-foreground"
+                            : "bg-muted-foreground/15"
+                      )}
+                      style={{ height: `${Math.max(6, Math.round((share ?? (h.snapshot ? 0.5 : 0.1)) * 100))}%` }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="relative h-3 font-mono text-[10px] text-muted-foreground">
+              {dayLabels.map(([label, i]) => (
+                <span key={label} className="absolute whitespace-nowrap" style={{ left: `${(i / hours.length) * 100}%` }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : timelineError ? (
+          <p className="text-sm text-destructive">{timelineError.message}</p>
+        ) : (
+          <Skeleton className="h-20 w-full" />
+        )}
+      </section>
+
+      {nodes.length > 0 && (
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="flex flex-col gap-1 rounded-lg border bg-card px-3.5 py-3">
+            <span className="text-xs text-muted-foreground">Nodes</span>
+            <span className="text-xl font-semibold tabular-nums">{nodes.length}</span>
+          </div>
+          {STATE_ORDER.filter((s) => counts.has(s)).map((s) => (
+            <div key={s} className="flex flex-col gap-1 rounded-lg border bg-card px-3.5 py-3">
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="h-2 w-2 rounded-full" style={{ background: colors[s] }} />
+                {STATE_LABELS[s]}
+              </span>
+              <span className="text-xl font-semibold tabular-nums">{counts.get(s)}</span>
+            </div>
+          ))}
         </div>
       )}
-      {isValidating && !historicalData && (
-        <div className="flex justify-center items-center py-12">
-          <RingLoader color="white" size={48} />
+
+      {nodes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented
+            label="Group by"
+            value={groupBy}
+            options={[
+              { value: "partition" as GroupBy, label: "Partition" },
+              { value: "state" as GroupBy, label: "State" },
+              { value: "none" as GroupBy, label: "None" },
+            ]}
+            onChange={setGroupBy}
+          />
+          <div className="flex-1" />
+          <Segmented
+            label="Size"
+            value={size}
+            options={[
+              { value: 50 as CardSize, label: "S" },
+              { value: 100 as CardSize, label: "M" },
+            ]}
+            onChange={setSize}
+          />
         </div>
       )}
-      {historicalData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Historical Data:{" "}
-              {selectedDate && format(selectedDate, "yyyy-MM-dd")} at{" "}
-              {selectedTime}
-              <div className="text-sm mt-2" role="status" aria-label="Node statistics">
-                <div className="flex flex-wrap justify-start gap-4">
-                  <div className="flex items-center gap-2 font-extralight" title="GPU Nodes">
-                    <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" aria-hidden="true"></span>
-                    GPU Nodes
-                    <span className="text-blue-400 font-medium" aria-label={`GPU Nodes: ${nodeStats.gpu}`}>
-                      {nodeStats.gpu}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight" title="CPU Nodes">
-                    <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" aria-hidden="true"></span>
-                    CPU Nodes
-                    <span className="text-blue-400 font-medium" aria-label={`CPU Nodes: ${nodeStats.cpu}`}>
-                      {nodeStats.cpu}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight" title="IDLE Nodes">
-                    <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" aria-hidden="true"></span>
-                    IDLE Nodes
-                    <span className="text-blue-400 font-medium" aria-label={`IDLE Nodes: ${nodeStats.idle}`}>
-                      {nodeStats.idle}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight" title="DOWN Nodes">
-                    <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" aria-hidden="true"></span>
-                    DOWN Nodes
-                    <span className="text-blue-400 font-medium" aria-label={`DOWN Nodes: ${nodeStats.down}`}>
-                      {nodeStats.down}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight" title="ALLOCATED Nodes">
-                    <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" aria-hidden="true"></span>
-                    ALLOCATED Nodes
-                    <span className="text-blue-400 font-medium" aria-label={`ALLOCATED Nodes: ${nodeStats.allocated}`}>
-                      {nodeStats.allocated}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 font-extralight" title="TOTAL Nodes">
-                    <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" aria-hidden="true"></span>
-                    TOTAL Nodes
-                    <span className="text-blue-400 font-medium" aria-label={`TOTAL Nodes: ${nodeStats.total}`}>
-                      {nodeStats.total}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {systems.length > 0 ? (
-              <div role="list" aria-label="Node cards">
-                <NodeGrid nodes={systems} size={100} colorSchema={colorSchema} historical />
-              </div>
-            ) : (
-              <p>No node data available in the historical data.</p>
-            )}
-          </CardContent>
-        </Card>
+
+      {snapshotError ? (
+        <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {snapshotError.message}
+        </div>
+      ) : nodes.length > 0 ? (
+        <div className={cn("transition-opacity", snapshotLoading && "opacity-60")}>
+          <NodeGroups nodes={nodes} groupBy={groupBy} size={size} colorSchema={colorSchema} historical />
+        </div>
+      ) : noSnapshots ? (
+        <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+          No snapshots were saved in this week. Pick another date, or check that Rewind is collecting under Admin → Plugins.
+        </div>
+      ) : (
+        <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(104px, 1fr))" }}>
+          {Array.from({ length: 24 }, (_, i) => (
+            <Skeleton key={i} className="aspect-square w-full rounded-[9px]" />
+          ))}
+        </div>
       )}
     </div>
   );

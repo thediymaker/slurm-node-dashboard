@@ -40,3 +40,41 @@ export async function findSnapshot(pool: DbPool, cluster: string, from: Date, to
   if (rows.length === 0) return null;
   return JSON.parse((await gunzip(rows[0].data)).toString("utf-8"));
 }
+
+// Hours in [from, to] that have a snapshot, oldest first
+export async function listSnapshotHours(pool: DbPool, cluster: string, from: Date, to: Date): Promise<Date[]> {
+  const { rows } = await pool.query(
+    `SELECT DISTINCT date_trunc('hour', taken_at) AS hour FROM node_snapshots
+     WHERE cluster = $1 AND taken_at BETWEEN $2 AND $3
+     ORDER BY hour`,
+    [cluster, from, to]
+  );
+  return rows.map((r: { hour: Date }) => new Date(r.hour));
+}
+
+// Snapshot files from the pre-3.0 cron script are named for their UTC time,
+// e.g. 2025-01-31T14-00-02.123.json.gz
+export function parseSnapshotFilename(filename: string): Date | null {
+  try {
+    const [datePart, timePart] = filename.replace(".json.gz", "").split("T");
+    const [year, month, day] = datePart.split("-");
+    const [hour, minute, secondAndMillis] = timePart.split("-");
+    const [second, millis] = secondAndMillis.split(".");
+
+    const date = new Date(
+      Date.UTC(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        parseInt(second),
+        parseInt(millis)
+      )
+    );
+
+    return isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
+}

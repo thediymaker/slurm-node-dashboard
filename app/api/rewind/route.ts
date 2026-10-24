@@ -8,7 +8,7 @@ import { promisify } from "util";
 import { getDb } from "@/lib/db";
 import { getDatabaseStatus, isFeatureEnabled } from "@/lib/features";
 import { getSlurmClusterName } from "@/lib/slurm-cluster";
-import { findSnapshot } from "@/lib/snapshots";
+import { findSnapshot, parseSnapshotFilename } from "@/lib/snapshots";
 
 const gunzip = promisify(zlib.gunzip);
 // Snapshot files written by the pre-3.0 cron script. Keep this a literal
@@ -19,40 +19,16 @@ function errorToString(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-function parseFilename(filename: string): Date | null {
-  try {
-    const [datePart, timePart] = filename.replace(".json.gz", "").split("T");
-    const [year, month, day] = datePart.split("-");
-    const [hour, minute, secondAndMillis] = timePart.split("-");
-    const [second, millis] = secondAndMillis.split(".");
-
-    const date = new Date(
-      Date.UTC(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hour),
-        parseInt(minute),
-        parseInt(second),
-        parseInt(millis)
-      )
-    );
-
-    return isNaN(date.getTime()) ? null : date;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const at = searchParams.get("at");
     const date = searchParams.get("date");
     const time = searchParams.get("time");
 
-    if (!date || !time) {
+    if (!(at && !isNaN(Date.parse(at))) && !(date && time)) {
       return NextResponse.json(
-        { message: "Date and time are required" },
+        { message: "Give a time as at=<ISO timestamp>, or date and time" },
         { status: 400 }
       );
     }
@@ -61,9 +37,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Rewind is off" }, { status: 404 });
     }
 
-    const [hour] = time.split(":");
-    const targetStartTime = new Date(`${date}T${hour}:00:00.000Z`);
-    const targetEndTime = new Date(`${date}T${hour}:59:59.999Z`);
+    // The hour starting at `at`; date and time (read as UTC) are the older form
+    let targetStartTime: Date;
+    if (at && !isNaN(Date.parse(at))) {
+      targetStartTime = new Date(at);
+    } else {
+      const [hour] = time!.split(":");
+      targetStartTime = new Date(`${date}T${hour}:00:00.000Z`);
+    }
+    const targetEndTime = new Date(targetStartTime.getTime() + 60 * 60 * 1000 - 1);
 
     // Snapshots the dashboard saved itself come first
     const pool = getDb();
@@ -80,7 +62,7 @@ export async function GET(request: Request) {
 
     for (const file of files) {
       if (file.endsWith(".json.gz")) {
-        const fileDate = parseFilename(file);
+        const fileDate = parseSnapshotFilename(file);
         if (
           fileDate &&
           fileDate >= targetStartTime &&
