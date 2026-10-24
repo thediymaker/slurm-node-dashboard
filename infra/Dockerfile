@@ -85,7 +85,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-USER nextjs
+# Numeric so Kubernetes runAsNonRoot can verify it (nextjs:nodejs)
+USER 1001:1001
 
 EXPOSE 3000
 
