@@ -9,6 +9,7 @@ import { Node, NodeConfig } from "@/types/types";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useColorSchema } from "@/components/use-color-schema";
+import { clearRefresh, markRefreshed } from "@/components/footer/refresh-clock";
 import { useFeature, useRuntimeConfig } from "@/components/runtime-config";
 import { LogicType } from "@/components/feature-selector";
 import { withBasePath } from "@/lib/base-path";
@@ -22,6 +23,7 @@ import { Button } from "../ui/button";
 import { LocateFixed, X } from "lucide-react";
 
 const nodeURL = withBasePath("/api/slurm/nodes");
+const NODE_REFRESH_MS = 15000;
 const nodeFetcher = async () => {
   try {
     const res = await fetch(nodeURL, {
@@ -106,11 +108,16 @@ const Nodes = () => {
     error: nodeError,
     isLoading: nodeIsLoading,
   } = useSWR(nodeURL, nodeFetcher, {
-    refreshInterval: 15000,
-    onSuccess: () => setLastFetchError(null),
+    refreshInterval: NODE_REFRESH_MS,
+    onSuccess: () => {
+      setLastFetchError(null);
+      markRefreshed(NODE_REFRESH_MS);
+    },
     // Track errors even when we have cached data
     onError: (err) => setLastFetchError(err),
   });
+
+  useEffect(() => clearRefresh, []);
 
   // Determine if we have a connection issue (either initial error or revalidation error)
   const hasConnectionError = !!(nodeError || (lastFetchError && nodeData));

@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { Separator } from "../ui/separator";
 import ModuleBrowser from "./module-browser";
 import fs from "fs-extra";
 import { getModulesFile } from "@/lib/config";
@@ -58,8 +57,8 @@ export default async function Modules() {
   const data = await fetchData();
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 pb-6">
-      <Separator className="my-4" />
+    // The page supplies the frame and side padding, as on the other pages
+    <div className="pb-6">
       <Suspense fallback={<LoadingState />}>
         <ModuleContent data={data} />
       </Suspense>

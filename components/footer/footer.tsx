@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { HealthIndicator } from "./health-indicator";
+import { RefreshCountdown } from "./refresh-clock";
 import { SlurmDiag } from "@/types/types";
 import { Box } from "lucide-react";
 import { withBasePath } from "@/lib/base-path";
@@ -105,6 +106,7 @@ const Footer = ({ cluster = "Cluster", logo }: FooterProps) => {
 
         {/* Right Side: Metrics & Info */}
         <div className="flex items-center gap-4 sm:gap-6">
+          <RefreshCountdown stale={hasConnectionError} />
           <div className="flex items-center gap-4 text-muted-foreground">
             {isLoading ? (
               <>
