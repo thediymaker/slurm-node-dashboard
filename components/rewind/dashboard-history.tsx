@@ -118,7 +118,10 @@ const DashboardHistory = () => {
       const label = format(new Date(h.hour), "EEE d");
       if (!seen.has(label)) seen.set(label, i);
     });
-    return [...seen.entries()];
+    // A partial first day would crowd the next label; drop it
+    const entries = [...seen.entries()];
+    if (entries.length > 1 && entries[1][1] - entries[0][1] < hours.length / 14) entries.shift();
+    return entries;
   }, [hours]);
 
   const noSnapshots = timeline && snapshotTimes.length === 0;
@@ -140,67 +143,69 @@ const DashboardHistory = () => {
             </span>
           </div>
           <div className="flex-1" />
-          <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Previous snapshot" disabled={index <= 0} onClick={() => step(-1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            aria-label={playing ? "Pause" : "Play"}
-            disabled={snapshotTimes.length < 2}
-            onClick={() => {
-              // Playing from the newest snapshot starts at the beginning of the week
-              if (!playing && index === snapshotTimes.length - 1) setPicked(snapshotTimes[0]);
-              setPlaying(!playing);
-            }}
-          >
-            {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Next snapshot"
-            disabled={index < 0 || index >= snapshotTimes.length - 1}
-            onClick={() => step(1)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-2 text-[13px] font-normal">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Pick a date
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={selected !== undefined ? new Date(selected) : undefined}
-                disabled={{ after: new Date() }}
-                onSelect={(day) => {
-                  if (!day) return;
-                  setPlaying(false);
-                  setWindowEnd(endOfDay(day));
-                  setPicked(undefined);
-                  setCalendarOpen(false);
-                }}
-              />
-            </PopoverContent>
-          </Popover>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-[13px] font-normal"
-            onClick={() => {
-              setPlaying(false);
-              setWindowEnd(undefined);
-              setPicked(undefined);
-            }}
-          >
-            Now
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Previous snapshot" disabled={index <= 0} onClick={() => step(-1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={playing ? "Pause" : "Play"}
+              disabled={snapshotTimes.length < 2}
+              onClick={() => {
+                // Playing from the newest snapshot starts at the beginning of the week
+                if (!playing && index === snapshotTimes.length - 1) setPicked(snapshotTimes[0]);
+                setPlaying(!playing);
+              }}
+            >
+              {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="Next snapshot"
+              disabled={index < 0 || index >= snapshotTimes.length - 1}
+              onClick={() => step(1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-2 text-[13px] font-normal">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Pick a date
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selected !== undefined ? new Date(selected) : undefined}
+                  disabled={{ after: new Date() }}
+                  onSelect={(day) => {
+                    if (!day) return;
+                    setPlaying(false);
+                    setWindowEnd(endOfDay(day));
+                    setPicked(undefined);
+                    setCalendarOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[13px] font-normal"
+              onClick={() => {
+                setPlaying(false);
+                setWindowEnd(undefined);
+                setPicked(undefined);
+              }}
+            >
+              Now
+            </Button>
+          </div>
         </div>
 
         {timeline ? (
