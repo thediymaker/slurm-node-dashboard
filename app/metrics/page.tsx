@@ -12,6 +12,7 @@ import { getDatabaseStatus, getFeatures } from "@/lib/features";
 import { getMetricsDb } from "@/lib/metrics-db";
 import { loadMetricsPage } from "@/lib/metrics/load";
 import { parseMetricsParams } from "@/lib/metrics/params";
+import { addDays, todayIn } from "@/lib/metrics/sql";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,15 @@ export default async function MetricsPage({ searchParams }: PageProps) {
   });
 
   const { data } = page;
+  // Ingestion normally trails by minutes; say so when the range runs a day or
+  // more past the newest job (a backfill in progress, or a stopped ingestor)
+  const through = page.historyThrough ? todayIn(metricsTimeZone, new Date(page.historyThrough)) : null;
+  const notice =
+    through && through < addDays(page.range.toDate, -1)
+      ? `Job history runs through ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(
+          new Date(`${through}T00:00:00Z`)
+        )}: jobs that ended after that haven't been written by the history ingestor yet, so this range is incomplete.`
+      : undefined;
   return (
     <div className="mb-5">
       <div className="mx-auto max-w-[1600px] px-4 pb-2">
@@ -55,7 +65,7 @@ export default async function MetricsPage({ searchParams }: PageProps) {
             toDate={page.range.toDate}
             hierarchy={options.hierarchy}
           >
-            <MetricsShell options={options}>
+            <MetricsShell options={options} notice={notice}>
               {data.tab === "overview" && <OverviewTab data={data.overview} />}
               {data.tab === "explorer" && <ExplorerTab result={data.explorer} />}
               {data.tab === "efficiency" && <EfficiencyTab data={data.efficiency} totalCpu={totalCpu} />}

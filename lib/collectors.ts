@@ -1,16 +1,18 @@
 import { pruneClusterCapacity, recordClusterCapacity } from "@/lib/cluster-capacity";
-import { readEnv } from "@/lib/config";
+import { getPublicConfig, readEnv } from "@/lib/config";
 import { ensureSchema, getDb } from "@/lib/db";
 import { getDatabaseStatus, getFeatures } from "@/lib/features";
 import { EventLog, eventLogConfig, type EventLogConfig } from "@/lib/event-log";
 import { handleCapture } from "@/lib/gpu-service";
+import { maintainRollups } from "@/lib/metrics/rollup";
 import { pruneNodeHistory, recordNodeEvents, recordNodeStates } from "@/lib/node-history";
 import { fetchNodesPayload, type NodesPayload } from "@/lib/nodes";
 import { rememberSlurmClusterName } from "@/lib/slurm-cluster";
 import { latestSnapshotTime, pruneSnapshots, saveSnapshot } from "@/lib/snapshots";
 
 // Background work that replaces the pre-3.0 cron jobs: node history, Rewind
-// snapshots and GPU history capture. Runs in the dashboard server process.
+// snapshots and GPU history capture, plus the metrics page's daily rollups.
+// Runs in the dashboard server process.
 // With several dashboard processes on one database, a Postgres advisory lock
 // picks one to collect; the others take over if it goes away.
 
@@ -42,6 +44,7 @@ export function startCollectors() {
   const snapshotIntervalM = seconds("SNAPSHOT_INTERVAL_MINUTES", 60);
   const retentionDays = seconds("SNAPSHOT_RETENTION_DAYS", 30);
   const gpuIntervalS = seconds("GPU_CAPTURE_INTERVAL_SECONDS", 60);
+  const rollupIntervalS = seconds("METRICS_ROLLUP_INTERVAL_SECONDS", 60);
 
   // One nodes fetch feeds both node history and snapshots when they line up
   let lastNodes: { at: number; payload: NodesPayload } | undefined;
@@ -136,6 +139,24 @@ export function startCollectors() {
         if (body.status !== 200 && body.status !== 429) {
           console.warn(`[collectors] GPU capture: ${body.message ?? body.status}`);
         }
+      },
+    });
+  }
+
+  if (rollupIntervalS > 0) {
+    jobs.push({
+      // Recomputes the days the ingestor wrote jobs for; the first build
+      // runs over several ticks, a minute of work each
+      name: "metrics rollups",
+      intervalMs: rollupIntervalS * 1000,
+      run: async () => {
+        const [features, db] = await Promise.all([getFeatures(), getDatabaseStatus()]);
+        if (!features.jobMetrics.enabled || !db.tables.jobHistory || db.schema !== "ready") return;
+        await maintainRollups(pool, {
+          timeZone: getPublicConfig().metricsTimeZone,
+          totalCpu: db.columns.totalCpuSeconds,
+          budgetMs: 60_000,
+        });
       },
     });
   }

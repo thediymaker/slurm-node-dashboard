@@ -1,4 +1,6 @@
 import { expandHostlist } from "@/lib/metrics/hostlist";
+import { hasListFilters } from "@/lib/metrics/params";
+import { daysIn } from "@/lib/metrics/rollup";
 import { Params, STATE_SQL, endedIn, filterConditions, num, where, type MetricsContext, type Queryable } from "@/lib/metrics/sql";
 
 // Preemption per node, from finished jobs' node lists. Jobs that share a node
@@ -34,6 +36,26 @@ export interface PreemptionSummary {
 }
 
 export async function getPreemptionByNode(db: Queryable, ctx: MetricsContext, limit = 10): Promise<PreemptionSummary> {
+  // The rollups keep nodes by cluster, partition and QoS only
+  if (ctx.rollup && !hasListFilters(ctx.filters, ["clusters", "partitions", "qos"])) {
+    const p = new Params();
+    const { rows } = await db.query(
+      `SELECT j.node, SUM(j.jobs) AS jobs, SUM(j.preempted) AS preempted
+       FROM job_daily_nodes j
+       ${where([daysIn(ctx, p), ...filterConditions(ctx.filters, p)])}
+       GROUP BY 1`,
+      p.values
+    );
+    const totals = rows.find((r) => r.node === "");
+    const nodes = rows
+      .filter((r) => r.node !== "" && num(r.preempted) > 0)
+      .map((r) => ({ node: r.node as string, jobs: num(r.jobs), preempted: num(r.preempted) }));
+    return {
+      nodes: nodes.sort((a, b) => b.preempted - a.preempted || b.jobs - a.jobs).slice(0, limit),
+      preempted: num(totals?.preempted),
+      jobs: num(totals?.jobs),
+    };
+  }
   const p = new Params();
   const from = p.add(ctx.range.from);
   const to = p.add(ctx.range.to);

@@ -22,6 +22,7 @@ import type {
   WallTimeUsed,
 } from "@/lib/metrics/overview";
 import { RANGE_PRESETS, defaultPeriod, type MetricsParams, type Period } from "@/lib/metrics/params";
+import { rollupReady } from "@/lib/metrics/rollup";
 import { addDays, resolveRange, todayIn, type MetricsContext, type MetricsRange, type Queryable } from "@/lib/metrics/sql";
 
 // Everything a metrics tab shows, fetched in parallel on the server. A panel
@@ -65,6 +66,9 @@ export interface MetricsPageData {
   range: MetricsRange;
   period: Period;
   data: TabData;
+  // When the newest job in job_history ended, so the page can say when a
+  // range runs past what the ingestor has written
+  historyThrough: string | null;
 }
 
 export interface LoadOptions {
@@ -95,7 +99,15 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
   const fromDate = f.range === "custom" && f.fromDate ? f.fromDate : addDays(today, -((preset?.days ?? 30) - 1));
   const toDate = f.range === "custom" && f.toDate ? f.toDate : today;
   const period = params.period ?? defaultPeriod(f);
-  const range = await resolveRange(db, fromDate, toDate, period, opts.timeZone);
+  const [range, rollup, historyThrough] = await Promise.all([
+    resolveRange(db, fromDate, toDate, period, opts.timeZone),
+    rollupReady(db, opts.timeZone),
+    safe(
+      "history coverage",
+      db.query("SELECT max(end_time) AS t FROM job_history").then((r) => (r.rows[0]?.t ? new Date(r.rows[0].t).toISOString() : null)),
+      null
+    ),
+  ]);
 
   const ctx: MetricsContext = {
     filters: f,
@@ -105,6 +117,7 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
     totalCpu: opts.totalCpu,
     gpuHistory: opts.gpuHistory,
     capacity: opts.capacity,
+    rollup,
   };
   const explorer = (metric: ExplorerResult["metric"], group: ExplorerResult["group"], topN: number, filters = f) =>
     safe(
@@ -205,5 +218,5 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
       break;
     }
   }
-  return { range, period, data };
+  return { range, period, data, historyThrough };
 }

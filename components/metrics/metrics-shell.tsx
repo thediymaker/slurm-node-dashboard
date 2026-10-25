@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { PERIODS, type MetricsTab, type Period } from "@/lib/metrics/params";
 import { MetricsFilter, type FilterOptions } from "@/components/metrics/metrics-filter";
 import { useMetricsNav } from "@/components/metrics/metrics-nav";
+import { QuietNote } from "@/components/metrics/panel";
 
 const TAB_LABELS: Record<MetricsTab, string> = {
   overview: "Overview",
@@ -21,8 +22,18 @@ const PERIOD_LABELS: Record<Period, string> = {
   year: "Year",
 };
 
-// Tabs, the period selector and the shared filter bar around the active tab
-export function MetricsShell({ options, children }: { options: FilterOptions; children: React.ReactNode }) {
+// Tabs, the period selector and the shared filter bar around the active tab.
+// notice: a note for the whole page, such as job history not reaching the end
+// of the range yet.
+export function MetricsShell({
+  options,
+  notice,
+  children,
+}: {
+  options: FilterOptions;
+  notice?: string;
+  children: React.ReactNode;
+}) {
   const { params, period, pending, navigate } = useMetricsNav();
   // Efficiency and Jobs don't chart over time
   const showPeriod = params.tab === "overview" || params.tab === "explorer";
@@ -69,6 +80,7 @@ export function MetricsShell({ options, children }: { options: FilterOptions; ch
       </div>
 
       <MetricsFilter options={options} />
+      {notice && <QuietNote>{notice}</QuietNote>}
 
       <div className={cn("flex flex-col gap-4 transition-opacity", pending && "opacity-60")}>{children}</div>
     </div>

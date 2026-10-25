@@ -1,4 +1,5 @@
 import type { ExplorerGroup, ExplorerMetric, MetricsFilters } from "@/lib/metrics/params";
+import { dayBucket, daysIn, isCurrent } from "@/lib/metrics/rollup";
 import {
   ACCOUNT_ORG_CTE,
   JOB_SIZE_BUCKETS,
@@ -23,7 +24,8 @@ import {
 // One metric grouped by one dimension: the engine behind the Explorer tab and
 // several Overview panels. A single query returns, for the top groups and the
 // rest ("Other"): each period bucket's value, the range's value, and the
-// previous range's value.
+// previous range's value. It reads the daily rollups once they're built
+// (ctx.rollup), where a row holds sums instead of one job.
 
 interface MetricDef {
   kind: "usage" | "job";
@@ -103,6 +105,32 @@ function metricDef(metric: ExplorerMetric, ctx: MetricsContext): MetricDef {
   }
 }
 
+// The job metrics over rollup rows; usage metrics keep their definitions,
+// since the rollups use the same column names (cpu_s, gpu_s, node_s, user_id).
+// sums: the rollup columns a metric adds up, summed per group and bucket
+// before ranking.
+const ROLLUP_JOB_METRICS: Partial<Record<ExplorerMetric, { value: string; rank: string; sums: string[] }>> = {
+  jobs: { value: "SUM(jobs)", rank: "SUM(jobs)", sums: ["jobs"] },
+  avgWait: { value: "SUM(wait_s) / NULLIF(SUM(wait_n), 0) / 60.0", rank: "SUM(jobs)", sums: ["jobs", "wait_s", "wait_n"] },
+  avgSize: { value: "SUM(cpus_sum) / NULLIF(SUM(cpus_n), 0)", rank: "SUM(jobs)", sums: ["jobs", "cpus_sum", "cpus_n"] },
+  avgWall: {
+    value: "SUM(runtime_s) / NULLIF(SUM(runtime_n), 0) / 3600.0",
+    rank: "SUM(jobs)",
+    sums: ["jobs", "runtime_s", "runtime_n"],
+  },
+  memEfficiency: {
+    value: "100.0 * SUM(mem_used) / NULLIF(SUM(mem_req), 0)",
+    rank: "SUM(mem_n)",
+    sums: ["mem_used", "mem_req", "mem_n"],
+  },
+  cpuEfficiency: {
+    value: "100.0 * SUM(cpu_used) / NULLIF(SUM(cpu_alloc), 0)",
+    rank: "SUM(cpu_alloc)",
+    sums: ["cpu_used", "cpu_alloc"],
+  },
+};
+const ROLLUP_USAGE_SUMS = ["cpu_s", "gpu_s", "node_s"];
+
 interface GroupDef {
   sql: string;
   joins: string[];
@@ -111,7 +139,11 @@ interface GroupDef {
   order?: string[];
 }
 
-function groupDef(group: ExplorerGroup): GroupDef {
+function groupDef(group: ExplorerGroup, rollup: boolean): GroupDef {
+  // The rollups store these buckets
+  if (rollup && group === "jobSize") return { sql: "j.size_bucket", joins: [], order: JOB_SIZE_BUCKETS };
+  if (rollup && group === "wallTime") return { sql: "j.wall_bucket", joins: [], order: WALL_TIME_BUCKETS };
+  if (rollup && group === "state") return { sql: "j.state", joins: [] };
   switch (group) {
     case "account":
       return { sql: "COALESCE(a.name, '(none)')", joins: ["LEFT JOIN accounts a ON a.id = j.account_id"] };
@@ -176,6 +208,32 @@ export interface ExplorerOptions {
   filters?: MetricsFilters;
 }
 
+// The base rows from job_history: one per job and period bucket for usage
+// metrics, one per job for the others
+function rawBase(ctx: MetricsContext, p: Params, def: MetricDef, cols: string, joins: string, filters: string[]): string {
+  const from = p.add(ctx.range.from);
+  const to = p.add(ctx.range.to);
+  const prevFrom = p.add(ctx.range.prevFrom);
+  const tz = p.add(ctx.timeZone);
+  let base: string;
+  if (def.kind === "usage") {
+    const part = (a: string, b: string, cur: boolean) => `
+      SELECT ${cols}, s.bucket, ${cur} AS cur
+      FROM job_history j
+      ${joins}
+      ${usageBuckets(a, b, ctx.period, tz)}
+      ${where([ranIn(a, b), "s.secs > 0", ...filters])}`;
+    base = `${part(from, to, true)}\n      UNION ALL${part(prevFrom, from, false)}`;
+  } else {
+    base = `
+      SELECT ${cols}, ${bucketOf("j.end_time", ctx.period, tz)} AS bucket, j.end_time >= ${from} AS cur
+      FROM job_history j
+      ${joins}
+      ${where([endedIn(prevFrom, to), ...filters])}`;
+  }
+  return base;
+}
+
 export async function runExplorer(db: Queryable, ctx: MetricsContext, opts: ExplorerOptions): Promise<ExplorerResult> {
   const { metric, group } = opts;
   const buckets = ctx.range.buckets;
@@ -197,31 +255,30 @@ export async function runExplorer(db: Queryable, ctx: MetricsContext, opts: Expl
   }
 
   const def = metricDef(metric, ctx);
-  const g = groupDef(group);
+  const rollupJob = ctx.rollup && def.kind === "job" ? ROLLUP_JOB_METRICS[metric] : undefined;
+  if (rollupJob) Object.assign(def, { value: rollupJob.value, rank: rollupJob.rank });
+  const g = groupDef(group, ctx.rollup);
   const p = new Params();
-  const from = p.add(ctx.range.from);
-  const to = p.add(ctx.range.to);
-  const prevFrom = p.add(ctx.range.prevFrom);
-  const tz = p.add(ctx.timeZone);
   const filters = filterConditions(opts.filters ?? ctx.filters, p);
   const joins = g.joins.join("\n");
   const cols = [`${g.sql} AS grp`, ...def.columns].join(", ");
 
   let base: string;
-  if (def.kind === "usage") {
-    const part = (a: string, b: string, cur: boolean) => `
-      SELECT ${cols}, s.bucket, ${cur} AS cur
-      FROM job_history j
-      ${joins}
-      ${usageBuckets(a, b, ctx.period, tz)}
-      ${where([ranIn(a, b), "s.secs > 0", ...filters])}`;
-    base = `${part(from, to, true)}\n      UNION ALL${part(prevFrom, from, false)}`;
-  } else {
+  if (ctx.rollup) {
+    // Usage rows have run_s, rows of jobs that ended have jobs. Summed per
+    // group and bucket first (and per user, for distinct users), which the
+    // metric's sums and ratios of sums don't change.
+    const sums = rollupJob?.sums ?? ROLLUP_USAGE_SUMS;
+    const users = metric === "users" ? ", j.user_id" : "";
     base = `
-      SELECT ${cols}, ${bucketOf("j.end_time", ctx.period, tz)} AS bucket, j.end_time >= ${from} AS cur
-      FROM job_history j
+      SELECT ${g.sql} AS grp, ${dayBucket(ctx.period)} AS bucket, ${isCurrent(ctx, p)} AS cur${users},
+             ${sums.map((c) => `SUM(j.${c}) AS ${c}`).join(", ")}
+      FROM job_daily j
       ${joins}
-      ${where([endedIn(prevFrom, to), ...filters])}`;
+      ${where([daysIn(ctx, p, "both"), def.kind === "usage" ? "j.run_s > 0" : "j.jobs > 0", ...filters])}
+      GROUP BY 1, 2, 3${users}`;
+  } else {
+    base = rawBase(ctx, p, def, cols, joins, filters);
   }
 
   const topN = p.add(g.order ? g.order.length : opts.topN);
@@ -327,7 +384,7 @@ export async function runExplorer(db: Queryable, ctx: MetricsContext, opts: Expl
   if (g.order) {
     named.sort(([x], [y]) => g.order!.indexOf(x) - g.order!.indexOf(y));
   } else {
-    named.sort(([, x], [, y]) => y.rank - x.rank);
+    named.sort(([kx, x], [ky, y]) => y.rank - x.rank || (kx < ky ? -1 : kx > ky ? 1 : 0));
   }
   const other = accs.get(null);
   for (const [key, a] of [...named, ...(other ? [["", other] as [string, Acc]] : [])]) {

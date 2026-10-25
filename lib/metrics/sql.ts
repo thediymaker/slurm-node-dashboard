@@ -21,7 +21,8 @@ export interface MetricsRange {
   to: Date; // exclusive
   prevFrom: Date; // the previous range of the same length ends at from
   fromDate: string;
-  toDate: string;
+  toDate: string; // inclusive
+  prevFromDate: string;
   // Every period bucket in the range, as YYYY-MM-DD of its first day
   buckets: string[];
 }
@@ -38,6 +39,9 @@ export interface MetricsContext {
   gpuHistory: boolean;
   // cluster_capacity exists
   capacity: boolean;
+  // The daily rollups are built in this time zone (lib/metrics/rollup.ts);
+  // otherwise queries read job_history
+  rollup: boolean;
 }
 
 export class Params {
@@ -191,6 +195,7 @@ export async function resolveRange(
     `SELECT (${f}::date)::timestamp AT TIME ZONE ${zone} AS from_ts,
             ((${t}::date) + 1)::timestamp AT TIME ZONE ${zone} AS to_ts,
             ((${f}::date) - ((${t}::date) - (${f}::date) + 1))::timestamp AT TIME ZONE ${zone} AS prev_from_ts,
+            to_char((${f}::date) - ((${t}::date) - (${f}::date) + 1), 'YYYY-MM-DD') AS prev_from_date,
             ARRAY(SELECT to_char(b, 'YYYY-MM-DD')
                   FROM generate_series(date_trunc('${period}', (${f}::date)::timestamp), (${t}::date)::timestamp,
                                        interval '${PERIOD_STEP[period]}') AS b) AS buckets`,
@@ -203,6 +208,7 @@ export async function resolveRange(
     prevFrom: new Date(r.prev_from_ts),
     fromDate,
     toDate,
+    prevFromDate: r.prev_from_date,
     buckets: r.buckets,
   };
 }

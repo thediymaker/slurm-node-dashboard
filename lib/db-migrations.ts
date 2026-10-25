@@ -119,4 +119,91 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_cluster_capacity_hour ON cluster_capacity (hour);
     `,
   },
+  {
+    // Daily rollups of job_history for the metrics page (lib/metrics/rollup.ts):
+    // one row per day and combination of the dimensions the page filters and
+    // groups by, so a year of reports reads a few hundred thousand rows
+    // instead of every job. Usage columns hold the part of each job's run
+    // that fell on the day; the rest describe the jobs that ended on it.
+    // job_daily_hist holds the distributions behind medians and histograms,
+    // job_daily_nodes the jobs per node behind preemption.
+    version: "005_metrics_rollups",
+    sql: `
+      CREATE TABLE IF NOT EXISTS metrics_rollup_state (
+        id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        definition TEXT,
+        time_zone TEXT,
+        ready BOOLEAN NOT NULL DEFAULT false,
+        max_job_seconds BIGINT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      CREATE TABLE IF NOT EXISTS metrics_rollup_dirty (
+        day DATE PRIMARY KEY
+      );
+
+      CREATE TABLE IF NOT EXISTS job_daily (
+        day DATE NOT NULL,
+        cluster TEXT NOT NULL,
+        partition TEXT,
+        qos TEXT,
+        account_id INT,
+        user_id INT,
+        state TEXT NOT NULL,
+        size_bucket TEXT NOT NULL,
+        wall_bucket TEXT NOT NULL,
+        run_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        cpu_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        gpu_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        node_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        gpu_util_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        gpu_known_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        jobs INT NOT NULL DEFAULT 0,
+        short_jobs INT NOT NULL DEFAULT 0,
+        wait_n INT NOT NULL DEFAULT 0,
+        wait_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        cpus_n INT NOT NULL DEFAULT 0,
+        cpus_sum DOUBLE PRECISION NOT NULL DEFAULT 0,
+        runtime_n INT NOT NULL DEFAULT 0,
+        runtime_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        core_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        eligible_jobs INT NOT NULL DEFAULT 0,
+        eligible_core_s DOUBLE PRECISION NOT NULL DEFAULT 0,
+        cpu_used DOUBLE PRECISION NOT NULL DEFAULT 0,
+        cpu_alloc DOUBLE PRECISION NOT NULL DEFAULT 0,
+        mem_n INT NOT NULL DEFAULT 0,
+        mem_used DOUBLE PRECISION NOT NULL DEFAULT 0,
+        mem_req DOUBLE PRECISION NOT NULL DEFAULT 0,
+        wall_used_min DOUBLE PRECISION NOT NULL DEFAULT 0,
+        wall_limit_min DOUBLE PRECISION NOT NULL DEFAULT 0,
+        gpu_eff_w DOUBLE PRECISION NOT NULL DEFAULT 0,
+        gpu_eff_s DOUBLE PRECISION NOT NULL DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_job_daily_day ON job_daily (day);
+
+      CREATE TABLE IF NOT EXISTS job_daily_hist (
+        day DATE NOT NULL,
+        cluster TEXT NOT NULL,
+        partition TEXT,
+        qos TEXT,
+        account_id INT,
+        user_id INT,
+        kind SMALLINT NOT NULL,
+        bin SMALLINT NOT NULL,
+        w DOUBLE PRECISION NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_job_daily_hist_day ON job_daily_hist (kind, day);
+
+      CREATE TABLE IF NOT EXISTS job_daily_nodes (
+        day DATE NOT NULL,
+        cluster TEXT NOT NULL,
+        partition TEXT,
+        qos TEXT,
+        node TEXT NOT NULL,
+        jobs INT NOT NULL,
+        preempted INT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_job_daily_nodes_day ON job_daily_nodes (day);
+    `,
+  },
 ];
