@@ -30,7 +30,8 @@ import { addDays, resolveRange, todayIn, type MetricsContext, type MetricsRange,
 // page.
 
 export interface OverviewData {
-  kpis: { current: OverviewKpis; previous: OverviewKpis };
+  // previous is null when job history doesn't reach back over the previous range
+  kpis: { current: OverviewKpis; previous: OverviewKpis | null };
   utilization: Utilization;
   previousUtilization: number | null;
   // null when no accounts are mapped to the hierarchy
@@ -99,15 +100,21 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
   const fromDate = f.range === "custom" && f.fromDate ? f.fromDate : addDays(today, -((preset?.days ?? 30) - 1));
   const toDate = f.range === "custom" && f.toDate ? f.toDate : today;
   const period = params.period ?? defaultPeriod(f);
-  const [range, rollup, historyThrough] = await Promise.all([
+  const [range, rollup, coverage] = await Promise.all([
     resolveRange(db, fromDate, toDate, period, opts.timeZone),
     rollupReady(db, opts.timeZone),
     safe(
       "history coverage",
-      db.query("SELECT max(end_time) AS t FROM job_history").then((r) => (r.rows[0]?.t ? new Date(r.rows[0].t).toISOString() : null)),
+      db.query("SELECT min(end_time) AS first, max(end_time) AS last FROM job_history").then((r) => r.rows[0]),
       null
     ),
   ]);
+  const historyThrough = coverage?.last ? new Date(coverage.last).toISOString() : null;
+  // Comparisons with a previous range that job history only partly covers
+  // (it starts where the ingestor's backfill did) would be meaningless
+  const priorCovered = !coverage?.first || new Date(coverage.first).getTime() <= range.prevFrom.getTime() + 86_400_000;
+  const withoutPrior = (r: ExplorerResult): ExplorerResult =>
+    priorCovered ? r : { ...r, prior: null, series: r.series.map((s) => ({ ...s, prior: null })) };
 
   const ctx: MetricsContext = {
     filters: f,
@@ -124,7 +131,7 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
       `${metric} by ${group}`,
       runExplorer(db, ctx, { metric, group, topN, filters }),
       emptyExplorer({ metric, group, buckets: range.buckets })
-    );
+    ).then(withoutPrior);
 
   let data: TabData;
   switch (params.tab) {
@@ -162,7 +169,7 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
       data = {
         tab: "overview",
         overview: {
-          kpis,
+          kpis: priorCovered ? kpis : { current: kpis.current, previous: null },
           utilization,
           previousUtilization: previous.percent,
           colleges,

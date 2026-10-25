@@ -27,7 +27,7 @@ import {
 // finishes the page reads job_history directly.
 
 // Bump to rebuild existing rollups after changing what they hold
-const DEFINITION = "2";
+const DEFINITION = "3";
 // Days recomputed per transaction
 const CHUNK_DAYS = 14;
 
@@ -200,6 +200,9 @@ const ENDED_COLS = [
   "gpu_eff_s",
 ];
 
+// A 0-1 ratio's 10% bin, NULL without a ratio (LEAST alone would make it 9)
+const bin10 = (ratio: string) => `CASE WHEN ${ratio} IS NOT NULL THEN LEAST(FLOOR(${ratio} * 10), 9)::int END`;
+
 // Recompute the given days: $1 days, $2 time zone, $3 longest job in seconds.
 // Returns each day's jobs per node list, which are expanded into nodes here.
 // The definitions match the job_history queries in this directory.
@@ -260,9 +263,9 @@ function computeSql(totalCpu: boolean): string {
              CASE WHEN tl > 0 AND run IS NOT NULL THEN
                CASE WHEN run < tl * 6 THEN FLOOR(run / (tl * 0.06))::int
                     ELSE LEAST(100 + FLOOR((run / (tl * 60.0) - 0.1) * 100), 189)::int END END AS wall_used_bin,
-             LEAST(FLOOR(r_cpu * 10), 9)::int AS cpu_bin, alloc / 3600.0 AS cpu_hours,
-             LEAST(FLOOR(r_mem * 10), 9)::int AS mem_bin,
-             LEAST(FLOOR(r_gpu * 10), 9)::int AS gpu_bin, COALESCE(gpu_count, 0) * run / 3600.0 AS gpu_hours
+             ${bin10("r_cpu")} AS cpu_bin, alloc / 3600.0 AS cpu_hours,
+             ${bin10("r_mem")} AS mem_bin,
+             ${bin10("r_gpu")} AS gpu_bin, COALESCE(gpu_count, 0) * run / 3600.0 AS gpu_hours
       FROM ratios
     ),
     usage AS (

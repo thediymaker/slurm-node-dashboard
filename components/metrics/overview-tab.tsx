@@ -50,7 +50,7 @@ export function OverviewTab({ data }: { data: OverviewData }) {
   }
 
   const waitChange =
-    k.medianWaitSeconds !== null && pk.medianWaitSeconds !== null
+    k.medianWaitSeconds !== null && pk && pk.medianWaitSeconds !== null
       ? `${k.medianWaitSeconds >= pk.medianWaitSeconds ? "+" : "−"}${fmtDuration(Math.abs(k.medianWaitSeconds - pk.medianWaitSeconds))} vs prior`
       : "no prior data";
 
@@ -71,10 +71,10 @@ export function OverviewTab({ data }: { data: OverviewData }) {
   return (
     <>
       <div className="grid gap-2.5 grid-cols-2 sm:grid-cols-4 xl:grid-cols-7">
-        <KpiTile label="CPU hours" value={fmtNum(k.cpuHours)} sub={change(k.cpuHours, pk.cpuHours)} />
-        <KpiTile label="GPU hours" value={fmtNum(k.gpuHours)} sub={change(k.gpuHours, pk.gpuHours)} />
-        <KpiTile label="Node hours" value={fmtNum(k.nodeHours)} sub={change(k.nodeHours, pk.nodeHours)} />
-        <KpiTile label="Jobs" value={fmtInt(k.jobs)} sub={change(k.jobs, pk.jobs)} />
+        <KpiTile label="CPU hours" value={fmtNum(k.cpuHours)} sub={change(k.cpuHours, pk?.cpuHours ?? null)} />
+        <KpiTile label="GPU hours" value={fmtNum(k.gpuHours)} sub={change(k.gpuHours, pk?.gpuHours ?? null)} />
+        <KpiTile label="Node hours" value={fmtNum(k.nodeHours)} sub={change(k.nodeHours, pk?.nodeHours ?? null)} />
+        <KpiTile label="Jobs" value={fmtInt(k.jobs)} sub={change(k.jobs, pk?.jobs ?? null)} />
         <KpiTile label="Active users" value={fmtInt(k.users)} sub={`${fmtInt(k.accounts)} accounts`} />
         <KpiTile label="Median wait" value={fmtDuration(k.medianWaitSeconds)} sub={waitChange} />
         <KpiTile

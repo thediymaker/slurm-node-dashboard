@@ -150,7 +150,8 @@ function efficiencyHistogramsRaw(db: Queryable, ctx: MetricsContext, p: Params) 
   const from = p.add(ctx.range.from);
   const to = p.add(ctx.range.to);
   const r = ratios(ctx);
-  const bin = (ratio: string) => `LEAST(FLOOR((${ratio}) * 10), 9)`;
+  // NULL without a ratio; LEAST alone would put those jobs in the top bin
+  const bin = (ratio: string) => `CASE WHEN (${ratio}) IS NOT NULL THEN LEAST(FLOOR((${ratio}) * 10), 9) END`;
   return db.query(
     `SELECT v.kind, v.bin, SUM(v.w) AS w
      FROM job_history j
