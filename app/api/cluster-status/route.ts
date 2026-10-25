@@ -88,91 +88,113 @@ function categorizeJobs(jobs: any[]): { running: number; pending: number } {
   return { running, pending };
 }
 
-export async function GET() {
-  try {
-    // Fetch data from existing SLURM endpoints and load config in parallel
-    const [nodesRes, jobsRes, config] = await Promise.all([
-      fetchSlurmData("/nodes"),
-      fetchSlurmData("/jobs"),
-      loadDashboardConfig()
-    ]);
+// This endpoint is public and polled by status widgets, and every build reads
+// the whole /jobs list, around 100 MB of JSON on a busy cluster. Callers within
+// CACHE_MS share one result and concurrent callers share one fetch, so a burst
+// of polls never holds several copies in memory or queues work on slurmctld.
+const CACHE_MS = 30_000;
+let cached: { at: number; status: any } | undefined;
+let inflight: Promise<any> | undefined;
 
-    if (nodesRes.error) {
-      throw new Error(`Failed to fetch nodes: ${nodesRes.error}`);
-    }
-    if (jobsRes.error) {
-      throw new Error(`Failed to fetch jobs: ${jobsRes.error}`);
-    }
+function getClusterStatus(): Promise<any> {
+  if (cached && Date.now() - cached.at < CACHE_MS) return Promise.resolve(cached.status);
+  inflight ??= buildClusterStatus()
+    .then((status) => {
+      cached = { at: Date.now(), status };
+      return status;
+    })
+    .finally(() => {
+      inflight = undefined;
+    });
+  return inflight;
+}
 
-    const allNodes = nodesRes.data?.nodes || [];
-    const jobs = jobsRes.data?.jobs || [];
+async function buildClusterStatus() {
+  // Fetch data from existing SLURM endpoints and load config in parallel
+  const [nodesRes, jobsRes, config] = await Promise.all([
+    fetchSlurmData("/nodes"),
+    fetchSlurmData("/jobs"),
+    loadDashboardConfig()
+  ]);
 
-    // Filter out excluded nodes
-    const excludedNodes = getExcludedNodeSet(config);
-    const nodes = excludedNodes.size > 0
-      ? allNodes.filter((node: any) => !excludedNodes.has(node.hostname))
-      : allNodes;
+  if (nodesRes.error) {
+    throw new Error(`Failed to fetch nodes: ${nodesRes.error}`);
+  }
+  if (jobsRes.error) {
+    throw new Error(`Failed to fetch jobs: ${jobsRes.error}`);
+  }
 
-    // Group nodes by cluster
-    const nodesClusters = groupNodesByCluster(nodes);
+  const allNodes = nodesRes.data?.nodes || [];
+  const jobs = jobsRes.data?.jobs || [];
 
-    // Calculate job statistics
-    const jobStats = categorizeJobs(jobs);
+  // Filter out excluded nodes
+  const excludedNodes = getExcludedNodeSet(config);
+  const nodes = excludedNodes.size > 0
+    ? allNodes.filter((node: any) => !excludedNodes.has(node.hostname))
+    : allNodes;
 
-    const clusters: any[] = [];
-    let totalNodes = 0;
-    let totalUtilization = 0;
+  // Group nodes by cluster
+  const nodesClusters = groupNodesByCluster(nodes);
 
-    Object.entries(nodesClusters).forEach(([clusterName, clusterNodes]) => {
-      const nodeStates = calculateNodeStates(clusterNodes);
+  // Calculate job statistics
+  const jobStats = categorizeJobs(jobs);
 
-      const totalCpus = clusterNodes.reduce((sum, node) => sum + (node.cpus || 0), 0);
-      const allocatedCpus = clusterNodes.reduce((sum, node) => sum + (node.alloc_cpus || 0), 0);
-      const totalMemory = clusterNodes.reduce((sum, node) => sum + (node.real_memory || 0), 0);
-      const allocatedMemory = clusterNodes.reduce((sum, node) => sum + (node.alloc_memory || 0), 0);
+  const clusters: any[] = [];
+  let totalNodes = 0;
+  let totalUtilization = 0;
 
-      const utilization = calculateUtilization(totalCpus, allocatedCpus);
+  Object.entries(nodesClusters).forEach(([clusterName, clusterNodes]) => {
+    const nodeStates = calculateNodeStates(clusterNodes);
 
-      clusters.push({
-        name: clusterName,
-        totalNodes: clusterNodes.length,
-        utilization,
-        nodeStates,
-        jobs: {
-          // For now, distribute jobs proportionally - in reality, you'd want to track this per cluster
-          running: Math.round(jobStats.running * (clusterNodes.length / nodes.length)),
-          pending: Math.round(jobStats.pending * (clusterNodes.length / nodes.length))
-        },
-        resources: {
-          totalCpus,
-          allocatedCpus,
-          totalMemory,
-          allocatedMemory
-        }
-      });
+    const totalCpus = clusterNodes.reduce((sum, node) => sum + (node.cpus || 0), 0);
+    const allocatedCpus = clusterNodes.reduce((sum, node) => sum + (node.alloc_cpus || 0), 0);
+    const totalMemory = clusterNodes.reduce((sum, node) => sum + (node.real_memory || 0), 0);
+    const allocatedMemory = clusterNodes.reduce((sum, node) => sum + (node.alloc_memory || 0), 0);
 
-      totalNodes += clusterNodes.length;
-      totalUtilization += utilization;
+    const utilization = calculateUtilization(totalCpus, allocatedCpus);
+
+    clusters.push({
+      name: clusterName,
+      totalNodes: clusterNodes.length,
+      utilization,
+      nodeStates,
+      jobs: {
+        // For now, distribute jobs proportionally - in reality, you'd want to track this per cluster
+        running: Math.round(jobStats.running * (clusterNodes.length / nodes.length)),
+        pending: Math.round(jobStats.pending * (clusterNodes.length / nodes.length))
+      },
+      resources: {
+        totalCpus,
+        allocatedCpus,
+        totalMemory,
+        allocatedMemory
+      }
     });
 
-    const averageUtilization = clusters.length > 0 ? Math.round(totalUtilization / clusters.length) : 0;
+    totalNodes += clusterNodes.length;
+    totalUtilization += utilization;
+  });
 
-    const response: any = {
-      timestamp: new Date().toISOString(),
-      clusters: clusters.sort((a, b) => a.name.localeCompare(b.name)),
-      summary: {
-        totalNodes,
-        totalJobs: jobStats.running + jobStats.pending,
-        averageUtilization
-      }
-    };
+  const averageUtilization = clusters.length > 0 ? Math.round(totalUtilization / clusters.length) : 0;
 
-    return NextResponse.json(response, {
+  return {
+    timestamp: new Date().toISOString(),
+    clusters: clusters.sort((a, b) => a.name.localeCompare(b.name)),
+    summary: {
+      totalNodes,
+      totalJobs: jobStats.running + jobStats.pending,
+      averageUtilization
+    }
+  };
+}
+
+export async function GET() {
+  try {
+    return NextResponse.json(await getClusterStatus(), {
       headers: {
         'Cache-Control': 'public, max-age=30, s-maxage=30',
       }
     });
-
   } catch (error) {
     console.error("Error fetching cluster status:", error);
     return NextResponse.json(
