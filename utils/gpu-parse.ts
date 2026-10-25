@@ -1,5 +1,3 @@
-"use client";
-
 import { GPUResource } from "@/types/types";
 
 export const parseGPUResources = (
