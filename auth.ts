@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { betterAuth, type BetterAuthPlugin } from "better-auth";
@@ -23,6 +23,11 @@ const TRUSTED_ORIGINS = Array.from(
   )
 );
 const AUTH_SECRET = process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "";
+// Next.js loads this module while collecting page data at build time, when no
+// secret is set, and better-auth throws on a missing secret in production. A
+// throwaway value keeps the build quiet; the server reads the real one.
+const BUILD_SECRET =
+  process.env.NEXT_PHASE === "phase-production-build" ? randomBytes(32).toString("hex") : undefined;
 const ADMIN_USER_ID = "admin";
 
 function constantTimeEquals(actual: string, expected: string) {
@@ -136,7 +141,7 @@ export const auth = betterAuth({
   // Origin only: Next.js strips basePath before route handlers run, so auth must
   // route at the default /api/auth, and a path here would replace that
   baseURL: new URL(AUTH_URL).origin,
-  secret: AUTH_SECRET,
+  secret: AUTH_SECRET || BUILD_SECRET,
   trustedOrigins: TRUSTED_ORIGINS,
   session: {
     expiresIn: 60 * 60 * 8,
