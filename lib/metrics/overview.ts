@@ -174,13 +174,16 @@ export async function getUtilization(db: Queryable, ctx: MetricsContext, which: 
        FROM cluster_capacity c
        ${where(capWhere)}
        GROUP BY 1`;
-  const jh = ctx.rollup
-    ? `
+  // A function, as building it adds its parameters, which only the query
+  // that uses it may have
+  const jh = () =>
+    ctx.rollup
+      ? `
        SELECT ${dayBucket(ctx.period)} AS bucket, SUM(j.cpu_s) AS cpu, SUM(j.gpu_s) AS gpu
        FROM job_daily j
        ${where([daysIn(ctx, p, which), ...filterConditions(ctx.filters, p)])}
        GROUP BY 1`
-    : `
+      : `
        SELECT s.bucket, SUM(j.req_cpus * s.secs) AS cpu, SUM(COALESCE(j.gpu_count, 0) * s.secs) AS gpu
        FROM job_history j
        ${usageBuckets(from, to, ctx.period, tz)}
@@ -189,7 +192,7 @@ export async function getUtilization(db: Queryable, ctx: MetricsContext, which: 
   const { rows } = await db.query(
     observed
       ? `${cap} ORDER BY 1`
-      : `WITH cap AS (${cap}), jh AS (${jh})
+      : `WITH cap AS (${cap}), jh AS (${jh()})
          SELECT cap.*, jh.cpu AS jh_cpu, jh.gpu AS jh_gpu
          FROM cap LEFT JOIN jh ON jh.bucket = cap.bucket
          ORDER BY cap.bucket`,
