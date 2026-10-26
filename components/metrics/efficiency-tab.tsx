@@ -99,6 +99,7 @@ export function EfficiencyTab({ data, totalCpu }: { data: EfficiencyData; totalC
         {totalCpu && (
           <Panel
             title="CPU efficiency"
+            alignBottom
             description="CPU hours by how much of the allocation was used"
             csv={() => ({
               filename: `cpu-efficiency_${range}`,
@@ -126,6 +127,7 @@ export function EfficiencyTab({ data, totalCpu }: { data: EfficiencyData; totalC
         {hasMem && (
           <Panel
             title="Memory used vs requested"
+            alignBottom
             description="jobs by peak memory as a share of the request"
             csv={() => ({
               filename: `memory-efficiency_${range}`,
@@ -153,6 +155,7 @@ export function EfficiencyTab({ data, totalCpu }: { data: EfficiencyData; totalC
         {gpuHistory && hasGpu && (
           <Panel
             title="GPU utilization"
+            alignBottom
             description="GPU hours by average utilization"
             csv={() => ({
               filename: `gpu-utilization_${range}`,

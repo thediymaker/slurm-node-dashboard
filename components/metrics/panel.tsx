@@ -13,12 +13,16 @@ export interface CsvData {
   rows: Cell[][];
 }
 
-// A metrics card: title, a short description, actions on the right
+// A metrics card: title, a short description, actions on the right. Only the
+// title and description wrap, so actions stay on the first line. alignBottom
+// pushes the content to the bottom, so charts side by side line up when one
+// header wraps and another doesn't.
 export function Panel({
   title,
   description,
   csv,
   actions,
+  alignBottom,
   className,
   children,
 }: {
@@ -26,19 +30,25 @@ export function Panel({
   description?: React.ReactNode;
   csv?: CsvData | (() => CsvData);
   actions?: React.ReactNode;
+  alignBottom?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className={cn("min-w-0 rounded-xl border bg-card text-card-foreground p-4 flex flex-col gap-3", className)}>
-      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {description && <span className="text-xs text-muted-foreground">{description}</span>}
-        <div className="flex-1" />
-        {actions}
-        {csv && <CsvButton csv={csv} />}
+      <div className="flex items-start gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 pt-1">
+          <h2 className="text-sm font-semibold">{title}</h2>
+          {description && <span className="text-xs text-muted-foreground">{description}</span>}
+        </div>
+        {(actions || csv) && (
+          <div className="flex shrink-0 items-center gap-1">
+            {actions}
+            {csv && <CsvButton csv={csv} />}
+          </div>
+        )}
       </div>
-      {children}
+      {alignBottom ? <div className="flex flex-1 flex-col justify-end gap-3">{children}</div> : children}
     </section>
   );
 }
