@@ -10,6 +10,7 @@ import {
   WALL_TIME_BUCKETS,
   WALL_TIME_SQL,
   bucketOf,
+  capacityScale,
   endedIn,
   filterConditions,
   num,
@@ -411,7 +412,8 @@ export async function runExplorer(db: Queryable, ctx: MetricsContext, opts: Expl
 }
 
 // Available core-seconds by range ("true" the current one, "false" the
-// previous one), bucket and cluster ("*" for all of them)
+// previous one), bucket and cluster ("*" for all of them), scaled to the
+// whole bucket where capacity was recorded for only part of it
 async function capacityByBucket(db: Queryable, ctx: MetricsContext, filters: MetricsFilters): Promise<Map<string, number>> {
   const p = new Params();
   const from = p.add(ctx.range.from);
@@ -420,9 +422,11 @@ async function capacityByBucket(db: Queryable, ctx: MetricsContext, filters: Met
   const tz = p.add(ctx.timeZone);
   const conditions = [`c.hour >= ${prevFrom}`, `c.hour < ${to}`];
   if (filters.clusters.length) conditions.push(`c.cluster = ANY(${p.add(filters.clusters)}::text[])`);
+  const lo = `CASE WHEN c.hour >= ${from} THEN ${from} ELSE ${prevFrom} END`;
+  const hi = `CASE WHEN c.hour >= ${from} THEN ${to} ELSE ${from} END`;
   const { rows } = await db.query(
     `SELECT c.hour >= ${from} AS cur, ${bucketOf("c.hour", ctx.period, tz)} AS bucket, c.cluster,
-            SUM(c.cpu_seconds_available) AS available
+            SUM(c.cpu_seconds_available) * ${capacityScale(lo, hi, ctx.period, tz)} AS available
      FROM cluster_capacity c
      ${where(conditions)}
      GROUP BY 1, 2, 3`,

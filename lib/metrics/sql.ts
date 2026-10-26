@@ -161,6 +161,19 @@ export function usageBuckets(from: string, to: string, period: Period, tz: strin
   ) s`;
 }
 
+// In a query over cluster_capacity c grouped by period bucket: how much
+// longer the bucket's part of [from, to) that has passed is than the hours
+// recorded in it. Capacity times this compares with job usage over the whole
+// bucket when capacity was recorded for only some of it, as in the bucket
+// recording started in.
+export function capacityScale(from: string, to: string, period: Period, tz: string): string {
+  const start = `MIN(date_trunc('${period}', c.hour AT TIME ZONE ${tz}))`;
+  const end = `(${start} + interval '${PERIOD_STEP[period]}')`;
+  return `EXTRACT(EPOCH FROM LEAST(${end} AT TIME ZONE ${tz}, (${to})::timestamptz, now())
+      - GREATEST(${start} AT TIME ZONE ${tz}, (${from})::timestamptz))
+    / NULLIF(SUM(LEAST(3600, EXTRACT(EPOCH FROM now() - c.hour))), 0)`;
+}
+
 export function where(conditions: string[]): string {
   return conditions.length ? `WHERE ${conditions.join("\n  AND ")}` : "";
 }

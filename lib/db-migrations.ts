@@ -206,4 +206,29 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_job_daily_nodes_day ON job_daily_nodes (day);
     `,
   },
+  {
+    // Node-seconds per hour next to the core- and GPU-seconds: in total, on
+    // nodes that could run jobs, and on nodes running jobs. NULL for hours
+    // recorded before this, except those node history still covers, which
+    // are filled from it.
+    version: "006_capacity_nodes",
+    sql: `
+      ALTER TABLE cluster_capacity
+        ADD COLUMN IF NOT EXISTS node_seconds_total BIGINT,
+        ADD COLUMN IF NOT EXISTS node_seconds_available BIGINT,
+        ADD COLUMN IF NOT EXISTS node_seconds_allocated BIGINT;
+      UPDATE cluster_capacity c SET
+        node_seconds_total = n.total,
+        node_seconds_available = n.available,
+        node_seconds_allocated = n.allocated
+      FROM (
+        SELECT cluster, hour, SUM(seconds) AS total,
+               SUM(seconds) FILTER (WHERE state NOT IN ('down', 'maintenance', 'drained', 'powered_down')) AS available,
+               SUM(seconds) FILTER (WHERE state IN ('allocated', 'mixed', 'draining')) AS allocated
+        FROM node_state_time
+        GROUP BY cluster, hour
+      ) n
+      WHERE n.cluster = c.cluster AND n.hour = c.hour AND c.node_seconds_total IS NULL;
+    `,
+  },
 ];

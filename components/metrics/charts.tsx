@@ -164,16 +164,16 @@ const ALLOCATED_COLOR = "hsl(var(--chart-1))";
 const IDLE_COLOR = "hsl(var(--muted))";
 const UNAVAILABLE_COLOR = "hsl(var(--muted-foreground))";
 
-export function UtilizationLegend() {
+export function UtilizationLegend({ nodes = false }: { nodes?: boolean }) {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-foreground/80">
       <span className="inline-flex items-center gap-1.5">
         <span className="h-2.5 w-2.5 rounded-sm" style={{ background: ALLOCATED_COLOR }} />
-        Allocated
+        {nodes ? "Running jobs" : "Allocated"}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-2.5 w-2.5 rounded-sm border" style={{ background: IDLE_COLOR }} />
-        Idle capacity
+        Idle
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span
@@ -186,14 +186,17 @@ export function UtilizationLegend() {
   );
 }
 
-// Allocated, idle and unavailable cores as shares of the cluster, per bucket
+// Allocated, idle and unavailable cores, GPUs or nodes as shares of the
+// cluster, per bucket
 export function UtilizationChart({
   points,
   period,
+  nodes = false,
   height = 220,
 }: {
   points: UtilizationPoint[];
   period: Period;
+  nodes?: boolean;
   height?: number;
 }) {
   const pct = (v: number | null) => (v === null ? "—" : `${(v * 100).toFixed(0)}%`);
@@ -234,7 +237,7 @@ export function UtilizationChart({
               <TooltipBox
                 title={bucketLabel(p.bucket, period, true)}
                 rows={[
-                  { label: "Allocated", color: ALLOCATED_COLOR, value: pct(p.allocated) },
+                  { label: nodes ? "Running jobs" : "Allocated", color: ALLOCATED_COLOR, value: pct(p.allocated) },
                   { label: "Idle", color: IDLE_COLOR, value: pct(p.idle) },
                   { label: "Unavailable", color: UNAVAILABLE_COLOR, value: pct(p.unavailable) },
                 ]}

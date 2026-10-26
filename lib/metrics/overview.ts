@@ -6,6 +6,7 @@ import {
   Params,
   STATE_SQL,
   bucketOf,
+  capacityScale,
   endedIn,
   filterConditions,
   num,
@@ -117,80 +118,108 @@ async function getOverviewKpisRollup(
   return { current: read("true"), previous: read("false") };
 }
 
-export interface UtilizationBucket {
-  bucket: string;
-  // Core-seconds
+// Seconds of cores, GPUs or nodes in a bucket
+export interface Capacity {
   total: number;
+  // On nodes that could run jobs
   available: number;
   allocated: number;
+}
+
+export interface UtilizationBucket {
+  bucket: string;
+  cpu: Capacity;
+  gpu: Capacity;
+  // Node-seconds on nodes running jobs; null when not recorded, or when
+  // allocation comes from job history
+  nodes: Capacity | null;
 }
 
 export interface Utilization {
   buckets: UtilizationBucket[];
   // Allocated over available, over the buckets with capacity recorded
   percent: number | null;
+  gpuPercent: number | null;
+  // Allocation as the collector saw it, running jobs included; otherwise
+  // from job history, which follows every filter but has only finished jobs
+  observed: boolean;
   // When the recorded capacity starts, if after the range's start
   since: string | null;
 }
 
-// Allocated core-seconds come from job_history, so they follow every filter.
 // Capacity is recorded per cluster only, so it follows the cluster filter.
-// Where job_history has nothing for a bucket (jobs not ingested yet, or
-// still running) and only clusters are filtered, the allocation the
-// collector saw stands in.
+// With only clusters filtered, allocation is what the collector saw over the
+// same hours, which counts jobs still running. With other filters it is the
+// selected jobs' usage from job history, against capacity scaled to the whole
+// bucket, so a bucket capacity was recorded for only part of doesn't show the
+// whole bucket's jobs on a fraction of its capacity.
 export async function getUtilization(db: Queryable, ctx: MetricsContext, which: "current" | "previous"): Promise<Utilization> {
-  if (!ctx.capacity) return { buckets: [], percent: null, since: null };
+  if (!ctx.capacity) return { buckets: [], percent: null, gpuPercent: null, observed: true, since: null };
+  const observed = !hasListFilters(ctx.filters, ["clusters"]);
   const p = new Params();
   const from = p.add(which === "current" ? ctx.range.from : ctx.range.prevFrom);
   const to = p.add(which === "current" ? ctx.range.to : ctx.range.from);
   const tz = p.add(ctx.timeZone);
   const capWhere = [`c.hour >= ${from}`, `c.hour < ${to}`];
   if (ctx.filters.clusters.length) capWhere.push(`c.cluster = ANY(${p.add(ctx.filters.clusters)}::text[])`);
-  const { rows } = await db.query(
-    `WITH cap AS (
+  const cap = `
        SELECT ${bucketOf("c.hour", ctx.period, tz)} AS bucket, MIN(c.hour) AS first_hour,
-              SUM(c.cpu_seconds_total) AS total, SUM(c.cpu_seconds_available) AS available,
-              SUM(c.cpu_seconds_allocated) AS allocated
+              SUM(c.cpu_seconds_total) AS cpu_total, SUM(c.cpu_seconds_available) AS cpu_available,
+              SUM(c.cpu_seconds_allocated) AS cpu_allocated,
+              SUM(c.gpu_seconds_total) AS gpu_total, SUM(c.gpu_seconds_available) AS gpu_available,
+              SUM(c.gpu_seconds_allocated) AS gpu_allocated,
+              SUM(c.node_seconds_total) AS node_total, SUM(c.node_seconds_available) AS node_available,
+              SUM(c.node_seconds_allocated) AS node_allocated,
+              ${observed ? "1" : capacityScale(from, to, ctx.period, tz)} AS scale
        FROM cluster_capacity c
        ${where(capWhere)}
-       GROUP BY 1
-     ),
-     jh AS (${
-       ctx.rollup
-         ? `
-       SELECT ${dayBucket(ctx.period)} AS bucket, SUM(j.cpu_s) AS allocated
+       GROUP BY 1`;
+  const jh = ctx.rollup
+    ? `
+       SELECT ${dayBucket(ctx.period)} AS bucket, SUM(j.cpu_s) AS cpu, SUM(j.gpu_s) AS gpu
        FROM job_daily j
        ${where([daysIn(ctx, p, which), ...filterConditions(ctx.filters, p)])}
        GROUP BY 1`
-         : `
-       SELECT s.bucket, SUM(j.req_cpus * s.secs) AS allocated
+    : `
+       SELECT s.bucket, SUM(j.req_cpus * s.secs) AS cpu, SUM(COALESCE(j.gpu_count, 0) * s.secs) AS gpu
        FROM job_history j
        ${usageBuckets(from, to, ctx.period, tz)}
        ${where([ranIn(from, to), "s.secs > 0", ...filterConditions(ctx.filters, p)])}
-       GROUP BY 1`
-     }
-     )
-     SELECT cap.bucket, cap.first_hour, cap.total, cap.available, cap.allocated AS cap_allocated,
-            jh.allocated AS jh_allocated
-     FROM cap LEFT JOIN jh ON jh.bucket = cap.bucket
-     ORDER BY cap.bucket`,
+       GROUP BY 1`;
+  const { rows } = await db.query(
+    observed
+      ? `${cap} ORDER BY 1`
+      : `WITH cap AS (${cap}), jh AS (${jh})
+         SELECT cap.*, jh.cpu AS jh_cpu, jh.gpu AS jh_gpu
+         FROM cap LEFT JOIN jh ON jh.bucket = cap.bucket
+         ORDER BY cap.bucket`,
     p.values
   );
-  const fallback = !hasListFilters(ctx.filters, ["clusters"]);
-  let used = 0;
-  let available = 0;
+  const used = { cpu: 0, gpu: 0 };
+  const avail = { cpu: 0, gpu: 0 };
   const buckets = rows.map((r): UtilizationBucket => {
-    const jh = num(r.jh_allocated);
-    const allocated = Math.min(jh > 0 || !fallback ? jh : num(r.cap_allocated), num(r.available));
-    used += allocated;
-    available += num(r.available);
-    return { bucket: r.bucket, total: num(r.total), available: num(r.available), allocated };
+    const scale = num(r.scale) || 1;
+    const side = (kind: "cpu" | "gpu"): Capacity => {
+      const total = num(r[`${kind}_total`]) * scale;
+      const available = num(r[`${kind}_available`]) * scale;
+      const allocated = Math.min(observed ? num(r[`${kind}_allocated`]) : num(r[`jh_${kind}`]), available);
+      used[kind] += allocated;
+      avail[kind] += available;
+      return { total, available, allocated };
+    };
+    const nodes =
+      observed && r.node_total !== null
+        ? { total: num(r.node_total), available: num(r.node_available), allocated: num(r.node_allocated) }
+        : null;
+    return { bucket: r.bucket, cpu: side("cpu"), gpu: side("gpu"), nodes };
   });
   const first = rows[0]?.first_hour ? new Date(rows[0].first_hour) : null;
   const start = which === "current" ? ctx.range.from : ctx.range.prevFrom;
   return {
     buckets,
-    percent: available > 0 ? (100 * used) / available : null,
+    percent: avail.cpu > 0 ? (100 * used.cpu) / avail.cpu : null,
+    gpuPercent: avail.gpu > 0 ? (100 * used.gpu) / avail.gpu : null,
+    observed,
     since: first && first.getTime() - start.getTime() > 3_600_000 ? first.toISOString() : null,
   };
 }

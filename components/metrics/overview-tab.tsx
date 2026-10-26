@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useHierarchyLabels } from "@/components/runtime-config";
 import type { OverviewData } from "@/lib/metrics/load";
 import { WALL_USED_BUCKETS } from "@/lib/metrics/overview";
@@ -262,53 +264,91 @@ export function OverviewTab({ data }: { data: OverviewData }) {
   );
 }
 
+const UTIL_KINDS = [
+  { value: "cpu", label: "Cores" },
+  { value: "gpu", label: "GPUs" },
+  { value: "nodes", label: "Nodes" },
+] as const;
+type UtilKind = (typeof UTIL_KINDS)[number]["value"];
+
 function UtilizationPanel({ data, range }: { data: OverviewData; range: string }) {
-  const { period, params } = useMetricsNav();
+  const { period } = useMetricsNav();
   const util = data.utilization;
+  const kinds = UTIL_KINDS.filter((k) =>
+    k.value === "cpu" ? true : util.buckets.some((b) => (k.value === "gpu" ? b.gpu.total > 0 : b.nodes !== null))
+  );
+  const [picked, setKind] = useState<UtilKind>("cpu");
+  const kind = kinds.some((k) => k.value === picked) ? picked : "cpu";
   const byBucket = new Map(util.buckets.map((b) => [b.bucket, b]));
   const buckets = data.colleges?.buckets ?? data.jobSize.buckets;
   const points: UtilizationPoint[] = buckets.map((bucket) => {
-    const b = byBucket.get(bucket);
-    if (!b || b.total <= 0) return { bucket, allocated: null, idle: null, unavailable: null };
+    const c = byBucket.get(bucket)?.[kind];
+    if (!c || c.total <= 0) return { bucket, allocated: null, idle: null, unavailable: null };
     return {
       bucket,
-      allocated: b.allocated / b.total,
-      idle: Math.max(0, b.available - b.allocated) / b.total,
-      unavailable: Math.max(0, b.total - b.available) / b.total,
+      allocated: c.allocated / c.total,
+      idle: Math.max(0, c.available - c.allocated) / c.total,
+      unavailable: Math.max(0, c.total - c.available) / c.total,
     };
   });
-  const filtered =
-    params.filters.accounts.length +
-      params.filters.users.length +
-      params.filters.colleges.length +
-      params.filters.departments.length +
-      params.filters.partitions.length +
-      params.filters.qos.length >
-    0;
+  const what = kind === "gpu" ? "GPUs" : "cores";
+  const measure =
+    kind === "nodes"
+      ? "nodes running at least one job, out of all nodes, each"
+      : util.observed
+        ? `allocated ${what}, running jobs included, against what the cluster could deliver each`
+        : `the selected jobs' ${what} against what the cluster could deliver each`;
+  const csvPart = (c: { total: number; available: number; allocated: number } | null | undefined) =>
+    c ? [c.total, c.available, c.allocated] : [null, null, null];
   return (
     <Panel
       title="Utilization"
       description={
         <>
-          {filtered ? "the selected jobs' allocated core hours" : "allocated core hours"} against what the cluster could deliver
-          each {PERIOD_NOUN[period]}
+          {measure} {PERIOD_NOUN[period]}
+          {!util.observed && " · finished jobs only, so recent days read low"}
           {util.since && ` · capacity recorded since ${bucketLabel(util.since.slice(0, 10), "day", true)}`}
         </>
       }
-      actions={<UtilizationLegend />}
+      actions={
+        kinds.length > 1 && (
+          <div role="group" aria-label="Resource" className="flex gap-0.5 rounded-lg border bg-card p-0.5">
+            {kinds.map((k) => (
+              <button
+                key={k.value}
+                type="button"
+                aria-pressed={kind === k.value}
+                onClick={() => setKind(k.value)}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground",
+                  kind === k.value && "bg-muted text-foreground"
+                )}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+        )
+      }
       csv={() => ({
         filename: `utilization_${range}`,
-        header: ["period_start", "core_seconds_total", "core_seconds_available", "core_seconds_allocated", "utilization_percent"],
-        rows: util.buckets.map((b) => [
-          b.bucket,
-          b.total,
-          b.available,
-          b.allocated,
-          b.available > 0 ? (100 * b.allocated) / b.available : null,
-        ]),
+        header: [
+          "period_start",
+          "core_seconds_total",
+          "core_seconds_available",
+          "core_seconds_allocated",
+          "gpu_seconds_total",
+          "gpu_seconds_available",
+          "gpu_seconds_allocated",
+          "node_seconds_total",
+          "node_seconds_available",
+          "node_seconds_with_jobs",
+        ],
+        rows: util.buckets.map((b) => [b.bucket, ...csvPart(b.cpu), ...csvPart(b.gpu), ...csvPart(b.nodes)]),
       })}
     >
-      <UtilizationChart points={points} period={period} />
+      <UtilizationChart points={points} period={period} nodes={kind === "nodes"} />
+      <UtilizationLegend nodes={kind === "nodes"} />
     </Panel>
   );
 }

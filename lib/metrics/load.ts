@@ -145,7 +145,7 @@ export async function loadMetricsPage(db: Queryable, params: MetricsParams, opts
         accounts: 0,
         medianWaitSeconds: null,
       };
-      const noUtil: Utilization = { buckets: [], percent: null, since: null };
+      const noUtil: Utilization = { buckets: [], percent: null, gpuPercent: null, observed: true, since: null };
       const drill = params.drill && opts.hierarchy ? params.drill : undefined;
       const [kpis, utilization, previous, colleges, departments, accounts, jobSize, wallTime, queueWait, outcomes, gpu, preemption] =
         await Promise.all([
